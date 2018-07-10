@@ -109,8 +109,8 @@ namespace SimpleWeb {
 
     private:
       template <typename... Args>
-      Connection(std::shared_ptr<ScopeRunner> handler_runner, long timeout_idle, Args &&... args) noexcept
-          : handler_runner(std::move(handler_runner)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
+      Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
+          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
 
       std::shared_ptr<ScopeRunner> handler_runner;
 
@@ -172,8 +172,8 @@ namespace SimpleWeb {
 
       class SendData {
       public:
-        SendData(std::shared_ptr<SendStream> send_stream, std::function<void(const error_code)> &&callback) noexcept
-            : send_stream(std::move(send_stream)), callback(std::move(callback)) {}
+        SendData(std::shared_ptr<SendStream> send_stream_, std::function<void(const error_code)> &&callback_) noexcept
+            : send_stream(std::move(send_stream_)), callback(std::move(callback_)) {}
         std::shared_ptr<SendStream> send_stream;
         std::function<void(const error_code)> callback;
       };

@@ -104,7 +104,7 @@ namespace SimpleWeb {
       friend class SocketServer<socket_type>;
 
     public:
-      Connection(std::unique_ptr<socket_type> &&socket) noexcept : socket(std::move(socket)), timeout_idle(0), strand(this->socket->get_io_service()), closed(false) {}
+      Connection(std::unique_ptr<socket_type> &&socket_) noexcept : socket(std::move(socket_)), timeout_idle(0), strand(this->socket->get_io_service()), closed(false) {}
 
       std::string method, path, query_string, http_version;
 
@@ -129,8 +129,8 @@ namespace SimpleWeb {
 
     private:
       template <typename... Args>
-      Connection(std::shared_ptr<ScopeRunner> handler_runner, long timeout_idle, Args &&... args) noexcept
-          : handler_runner(std::move(handler_runner)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
+      Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
+          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
 
       std::shared_ptr<ScopeRunner> handler_runner;
 
@@ -211,9 +211,9 @@ namespace SimpleWeb {
 
       class SendData {
       public:
-        SendData(std::shared_ptr<SendStream> header_stream, std::shared_ptr<SendStream> message_stream,
-                 std::function<void(const error_code)> &&callback) noexcept
-            : header_stream(std::move(header_stream)), message_stream(std::move(message_stream)), callback(std::move(callback)) {}
+        SendData(std::shared_ptr<SendStream> header_stream_, std::shared_ptr<SendStream> message_stream_,
+                 std::function<void(const error_code)> &&callback_) noexcept
+            : header_stream(std::move(header_stream_)), message_stream(std::move(message_stream_)), callback(std::move(callback_)) {}
         std::shared_ptr<SendStream> header_stream;
         std::shared_ptr<SendStream> message_stream;
         std::function<void(const error_code)> callback;
