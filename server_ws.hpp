@@ -233,22 +233,30 @@ namespace SimpleWeb {
                 auto lock = self->handler_runner->continue_lock();
                 if(!lock)
                   return;
-                auto send_queued = self->send_queue.begin();
-                if(send_queued->callback)
-                  send_queued->callback(ec);
                 if(!ec) {
-                  self->send_queue.erase(send_queued);
+                  auto it = self->send_queue.begin();
+                  if(it->callback)
+                    it->callback(ec);
+                  self->send_queue.erase(it);
                   if(self->send_queue.size() > 0)
                     self->send_from_queue();
                 }
-                else
+                else {
+                  // All handlers in the queue is called with ec:
+                  for(auto &send_data : self->send_queue) {
+                    if(send_data.callback)
+                      send_data.callback(ec);
+                  }
                   self->send_queue.clear();
+                }
               }));
             }
             else {
-              auto send_queued = self->send_queue.begin();
-              if(send_queued->callback)
-                send_queued->callback(ec);
+              // All handlers in the queue is called with ec:
+              for(auto &send_data : self->send_queue) {
+                if(send_data.callback)
+                  send_data.callback(ec);
+              }
               self->send_queue.clear();
             }
           }));
