@@ -83,9 +83,9 @@ public:
 
   void parse_response_header_test() {
     auto connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service));
-    connection->message = std::shared_ptr<Message>(new Message());
+    connection->in_message = std::shared_ptr<InMessage>(new InMessage());
 
-    ostream stream(&connection->message->streambuf);
+    ostream stream(&connection->in_message->streambuf);
     stream << "HTTP/1.1 200 OK\r\n";
     stream << "TestHeader: test\r\n";
     stream << "TestHeader2:test2\r\n";
@@ -93,7 +93,7 @@ public:
     stream << "TestHeader3:test3b\r\n";
     stream << "\r\n";
 
-    assert(ResponseMessage::parse(*connection->message, connection->http_version, connection->status_code, connection->header));
+    assert(ResponseMessage::parse(*connection->in_message, connection->http_version, connection->status_code, connection->header));
 
     assert(connection->header.size() == 4);
     auto header_it = connection->header.find("TestHeader");
