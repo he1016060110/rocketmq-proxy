@@ -40,6 +40,7 @@ namespace SimpleWeb {
   public:
     class InMessage : public std::istream {
       friend class SocketClientBase<socket_type>;
+      friend class SocketClient<socket_type>;
       friend class Connection;
 
     public:
@@ -310,9 +311,11 @@ namespace SimpleWeb {
       /// Maximum size of incoming messages. Defaults to architecture maximum.
       /// Exceeding this limit will result in a message_size error code and the connection will be closed.
       std::size_t max_message_size = std::numeric_limits<std::size_t>::max();
-      /// Additional header fields to send when performing WebSocket handshake.
+      /// Additional header fields to send when performing WebSocket upgrade.
       /// Use this variable to for instance set Sec-WebSocket-Protocol.
       CaseInsensitiveMultimap header;
+      /// Set proxy server (server:port)
+      std::string proxy_server;
     };
     /// Set before calling start().
     Config config;
@@ -371,31 +374,34 @@ namespace SimpleWeb {
     std::shared_ptr<ScopeRunner> handler_runner;
 
     SocketClientBase(const std::string &host_port_path, unsigned short default_port) noexcept : handler_runner(new ScopeRunner()) {
-      std::size_t host_end = host_port_path.find(':');
-      std::size_t host_port_end = host_port_path.find('/');
+      auto host_port_end = host_port_path.find('/');
+      auto host_port = parse_host_port(host_port_path.substr(0, host_port_end), default_port);
+      host = std::move(host_port.first);
+      port = host_port.second;
+
+      if(host_port_end != std::string::npos)
+        path = host_port_path.substr(host_port_end);
+      else
+        path = "/";
+    }
+
+    std::pair<std::string, unsigned short> parse_host_port(const std::string &host_port, unsigned short default_port) const noexcept {
+      std::pair<std::string, unsigned short> parsed_host_port;
+      std::size_t host_end = host_port.find(':');
       if(host_end == std::string::npos) {
-        host_end = host_port_end;
-        port = default_port;
+        parsed_host_port.first = host_port;
+        parsed_host_port.second = default_port;
       }
       else {
-        if(host_port_end == std::string::npos)
-          port = static_cast<unsigned short>(stoul(host_port_path.substr(host_end + 1)));
-        else
-          port = static_cast<unsigned short>(stoul(host_port_path.substr(host_end + 1, host_port_end - (host_end + 1))));
+        parsed_host_port.first = host_port.substr(0, host_end);
+        parsed_host_port.second = static_cast<unsigned short>(stoul(host_port.substr(host_end + 1)));
       }
-      if(host_port_end == std::string::npos)
-        path = "/";
-      else
-        path = host_port_path.substr(host_port_end);
-      if(host_end == std::string::npos)
-        host = host_port_path;
-      else
-        host = host_port_path.substr(0, host_end);
+      return parsed_host_port;
     }
 
     virtual void connect() = 0;
 
-    void handshake(const std::shared_ptr<Connection> &connection) {
+    void upgrade(const std::shared_ptr<Connection> &connection) {
       connection->read_remote_endpoint();
 
       auto write_buffer = std::make_shared<asio::streambuf>();
@@ -445,9 +451,12 @@ namespace SimpleWeb {
               // streambuf (maybe some bytes of a message) is appended to in the next async_read-function
               std::size_t num_additional_bytes = connection->in_message->streambuf.size() - bytes_transferred;
 
-              if(!ResponseMessage::parse(*connection->in_message, connection->http_version, connection->status_code, connection->header) ||
-                 connection->status_code.empty() || connection->status_code.compare(0, 4, "101 ") != 0) {
+              if(!ResponseMessage::parse(*connection->in_message, connection->http_version, connection->status_code, connection->header)) {
                 this->connection_error(connection, make_error_code::make_error_code(errc::protocol_error));
+                return;
+              }
+              if(connection->status_code.compare(0, 4, "101 ") != 0) {
+                this->connection_error(connection, make_error_code::make_error_code(errc::permission_denied));
                 return;
               }
               auto header_it = connection->header.find("Sec-WebSocket-Accept");
@@ -570,7 +579,7 @@ namespace SimpleWeb {
         if(!ec) {
           std::size_t num_additional_bytes = connection->in_message->streambuf.size() - bytes_transferred;
           std::shared_ptr<InMessage> next_in_message;
-          if(num_additional_bytes > 0) { // Extract bytes that are not extra bytes in buffer (only happen when several messages are sent in handshake response)
+          if(num_additional_bytes > 0) { // Extract bytes that are not extra bytes in buffer (only happen when several messages are sent in upgrade response)
             next_in_message = connection->in_message;
             connection->in_message = std::shared_ptr<InMessage>(new InMessage(next_in_message->fin_rsv_opcode, next_in_message->length));
             std::ostream ostream(&connection->in_message->streambuf);
@@ -708,10 +717,18 @@ namespace SimpleWeb {
       std::unique_lock<std::mutex> lock(connection_mutex);
       auto connection = this->connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service));
       lock.unlock();
-      asio::ip::tcp::resolver::query query(host, std::to_string(port));
+
+      std::unique_ptr<asio::ip::tcp::resolver::query> query;
+      if(config.proxy_server.empty())
+        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(host, std::to_string(port)));
+      else {
+        auto proxy_host_port = parse_host_port(config.proxy_server, 8080);
+        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(proxy_host_port.first, std::to_string(proxy_host_port.second)));
+      }
+
       auto resolver = std::make_shared<asio::ip::tcp::resolver>(*io_service);
       connection->set_timeout(config.timeout_request);
-      resolver->async_resolve(query, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator it) {
+      resolver->async_resolve(*query, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator it) {
         connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
@@ -727,7 +744,7 @@ namespace SimpleWeb {
               asio::ip::tcp::no_delay option(true);
               connection->socket->set_option(option);
 
-              this->handshake(connection);
+              this->upgrade(connection);
             }
             else
               this->connection_error(connection, ec);
