@@ -135,7 +135,6 @@ namespace SimpleWeb {
       std::shared_ptr<ScopeRunner> handler_runner;
 
       std::unique_ptr<socket_type> socket; // Socket must be unique_ptr since asio::ssl::stream<asio::ip::tcp::socket> is not movable
-      std::mutex socket_close_mutex;
 
       asio::streambuf read_buffer;
       std::shared_ptr<InMessage> fragmented_in_message;
@@ -146,9 +145,8 @@ namespace SimpleWeb {
 
       void close() noexcept {
         error_code ec;
-        std::unique_lock<std::mutex> lock(socket_close_mutex); // The following operations seems to be needed to run sequentially
         socket->lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-        socket->lowest_layer().close(ec);
+        socket->lowest_layer().cancel(ec);
       }
 
       void set_timeout(long seconds = -1) noexcept {
