@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-#if __cplusplus > 201402L || (defined(_MSC_VER) && _MSC_VER >= 1910)
+#if __cplusplus > 201402L || _MSVC_LANG > 201402L
 #include <string_view>
 namespace SimpleWeb {
   using string_view = std::string_view;
