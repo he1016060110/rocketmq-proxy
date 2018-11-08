@@ -186,7 +186,7 @@ namespace SimpleWeb {
         }
       }
 
-      bool generate_handshake(const std::shared_ptr<asio::streambuf> &write_buffer) {
+      bool generate_handshake(const std::shared_ptr<asio::streambuf> &write_buffer, const CaseInsensitiveMultimap &additional_header_fields) {
         std::ostream handshake(write_buffer.get());
 
         auto header_it = header.find("Sec-WebSocket-Key");
@@ -200,6 +200,8 @@ namespace SimpleWeb {
         handshake << "Upgrade: websocket\r\n";
         handshake << "Connection: Upgrade\r\n";
         handshake << "Sec-WebSocket-Accept: " << Crypto::Base64::encode(sha1) << "\r\n";
+        for(auto &header_field : additional_header_fields)
+          handshake << header_field.first << ": " << header_field.second << "\r\n";
         handshake << "\r\n";
 
         return true;
@@ -377,6 +379,8 @@ namespace SimpleWeb {
       /// Maximum size of incoming messages. Defaults to architecture maximum.
       /// Exceeding this limit will result in a message_size error code and the connection will be closed.
       std::size_t max_message_size = std::numeric_limits<std::size_t>::max();
+      /// Additional header fields to send when performing WebSocket handshake.
+      CaseInsensitiveMultimap header;
       /// IPv4 address in dotted decimal form or IPv6 address in hexadecimal notation.
       /// If empty, the address will be any address.
       std::string address;
@@ -563,7 +567,7 @@ namespace SimpleWeb {
         if(regex::regex_match(connection->path, path_match, regex_endpoint.first)) {
           auto write_buffer = std::make_shared<asio::streambuf>();
 
-          if(connection->generate_handshake(write_buffer)) {
+          if(connection->generate_handshake(write_buffer, config.header)) {
             connection->path_match = std::move(path_match);
             connection->set_timeout(config.timeout_request);
             asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint](const error_code &ec, std::size_t /*bytes_transferred*/) {
