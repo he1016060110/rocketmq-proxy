@@ -190,8 +190,10 @@ namespace SimpleWeb {
         std::ostream handshake(write_buffer.get());
 
         auto header_it = header.find("Sec-WebSocket-Key");
-        if(header_it == header.end())
+        if(header_it == header.end()) {
+          handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
           return false;
+        }
 
         static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
@@ -572,23 +574,23 @@ namespace SimpleWeb {
         if(regex::regex_match(connection->path, path_match, regex_endpoint.first)) {
           auto write_buffer = std::make_shared<asio::streambuf>();
 
-          if(connection->generate_handshake(write_buffer, config.header)) {
-            connection->path_match = std::move(path_match);
-            connection->set_timeout(config.timeout_request);
-            asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint](const error_code &ec, std::size_t /*bytes_transferred*/) {
-              connection->cancel_timeout();
-              auto lock = connection->handler_runner->continue_lock();
-              if(!lock)
-                return;
-              if(!ec) {
-                connection_open(connection, regex_endpoint.second);
-                read_message(connection, regex_endpoint.second);
-              }
-              else
-                connection_error(connection, regex_endpoint.second, ec);
-            });
-          }
-          return;
+          bool handshake_success = connection->generate_handshake(write_buffer, config.header);
+          connection->path_match = std::move(path_match);
+          connection->set_timeout(config.timeout_request);
+          asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint, handshake_success](const error_code &ec, std::size_t /*bytes_transferred*/) {
+            connection->cancel_timeout();
+            auto lock = connection->handler_runner->continue_lock();
+            if(!lock)
+              return;
+            if(!handshake_success)
+              return;
+            if(!ec) {
+              connection_open(connection, regex_endpoint.second);
+              read_message(connection, regex_endpoint.second);
+            }
+            else
+              connection_error(connection, regex_endpoint.second, ec);
+          });
         }
       }
     }
