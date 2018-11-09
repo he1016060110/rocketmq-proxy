@@ -186,29 +186,6 @@ namespace SimpleWeb {
         }
       }
 
-      bool generate_handshake(const std::shared_ptr<asio::streambuf> &write_buffer, const CaseInsensitiveMultimap &additional_header_fields) {
-        std::ostream handshake(write_buffer.get());
-
-        auto header_it = header.find("Sec-WebSocket-Key");
-        if(header_it == header.end()) {
-          handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
-          return false;
-        }
-
-        static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-        auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
-
-        handshake << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
-        handshake << "Upgrade: websocket\r\n";
-        handshake << "Connection: Upgrade\r\n";
-        handshake << "Sec-WebSocket-Accept: " << Crypto::Base64::encode(sha1) << "\r\n";
-        for(auto &header_field : additional_header_fields)
-          handshake << header_field.first << ": " << header_field.second << "\r\n";
-        handshake << "\r\n";
-
-        return true;
-      }
-
       asio::io_service::strand strand;
 
       class OutData {
@@ -573,8 +550,29 @@ namespace SimpleWeb {
         regex::smatch path_match;
         if(regex::regex_match(connection->path, path_match, regex_endpoint.first)) {
           auto write_buffer = std::make_shared<asio::streambuf>();
+          std::ostream handshake(write_buffer.get());
 
-          bool handshake_success = connection->generate_handshake(write_buffer, config.header);
+          bool handshake_success;
+
+          auto header_it = connection->header.find("Sec-WebSocket-Key");
+          if(header_it == connection->header.end()) {
+            handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
+            handshake_success = false;
+          }
+          else {
+            static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
+
+            handshake << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
+            handshake << "Upgrade: websocket\r\n";
+            handshake << "Connection: Upgrade\r\n";
+            handshake << "Sec-WebSocket-Accept: " << Crypto::Base64::encode(sha1) << "\r\n";
+            for(auto &header_field : config.header)
+              handshake << header_field.first << ": " << header_field.second << "\r\n";
+            handshake << "\r\n";
+            handshake_success = true;
+          }
+
           connection->path_match = std::move(path_match);
           connection->set_timeout(config.timeout_request);
           asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint, handshake_success](const error_code &ec, std::size_t /*bytes_transferred*/) {
@@ -591,6 +589,7 @@ namespace SimpleWeb {
             else
               connection_error(connection, regex_endpoint.second, ec);
           });
+          return;
         }
       }
     }
