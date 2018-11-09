@@ -325,6 +325,7 @@ namespace SimpleWeb {
       std::mutex connections_mutex;
 
     public:
+      std::function<StatusCode(std::shared_ptr<Connection>)> on_handshake;
       std::function<void(std::shared_ptr<Connection>)> on_open;
       std::function<void(std::shared_ptr<Connection>, std::shared_ptr<InMessage>)> on_message;
       std::function<void(std::shared_ptr<Connection>, int, const std::string &)> on_close;
@@ -554,23 +555,33 @@ namespace SimpleWeb {
 
           bool handshake_success;
 
-          auto header_it = connection->header.find("Sec-WebSocket-Key");
-          if(header_it == connection->header.end()) {
-            handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
-            handshake_success = false;
+          StatusCode status_code = StatusCode::success_ok;
+          if(regex_endpoint.second.on_handshake)
+            status_code = regex_endpoint.second.on_handshake(connection);
+
+          if(status_code == StatusCode::success_ok) {
+            auto header_it = connection->header.find("Sec-WebSocket-Key");
+            if(header_it == connection->header.end()) {
+              handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
+              handshake_success = false;
+            }
+            else {
+              static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+              auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
+
+              handshake << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
+              handshake << "Upgrade: websocket\r\n";
+              handshake << "Connection: Upgrade\r\n";
+              handshake << "Sec-WebSocket-Accept: " << Crypto::Base64::encode(sha1) << "\r\n";
+              for(auto &header_field : config.header)
+                handshake << header_field.first << ": " << header_field.second << "\r\n";
+              handshake << "\r\n";
+              handshake_success = true;
+            }
           }
           else {
-            static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-            auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
-
-            handshake << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
-            handshake << "Upgrade: websocket\r\n";
-            handshake << "Connection: Upgrade\r\n";
-            handshake << "Sec-WebSocket-Accept: " << Crypto::Base64::encode(sha1) << "\r\n";
-            for(auto &header_field : config.header)
-              handshake << header_field.first << ": " << header_field.second << "\r\n";
-            handshake << "\r\n";
-            handshake_success = true;
+            handshake << "HTTP/1.1 " + SimpleWeb::status_code(status_code) + "\r\n\r\n";
+            handshake_success = false;
           }
 
           connection->path_match = std::move(path_match);
