@@ -22,8 +22,7 @@ target_link_libraries(simple-websocket-server INTERFACE ${CMAKE_THREAD_LIBS_INIT
 # Remove Boost system, thread, regex components; use Boost::<component> aliases; remove Boost target_include_directories
 if(USE_STANDALONE_ASIO)
     target_compile_definitions(simple-websocket-server INTERFACE USE_STANDALONE_ASIO)
-    include(CheckIncludeFileCXX)
-    CHECK_INCLUDE_FILE_CXX(asio.hpp HAVE_ASIO)
+    find_file(HAVE_ASIO asio.hpp)
     if(NOT HAVE_ASIO)
         message(FATAL_ERROR "Standalone Asio not found")
     endif()
