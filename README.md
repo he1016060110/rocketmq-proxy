@@ -19,7 +19,7 @@ See https://gitlab.com/eidheim/Simple-Web-Server for an easy way to make REST re
 
 ### Usage
 
-See ws_examples.cpp or wss_examples.cpp for example usage. 
+See [ws_examples.cpp](ws_examples.cpp) or [wss_examples.cpp](wss_examples.cpp) for example usage. 
 
 ### Dependencies
 
