@@ -741,8 +741,9 @@ namespace SimpleWeb {
             connection->set_timeout();
 
             // Send pong
-            auto empty_send_stream = std::make_shared<OutMessage>();
-            connection->send(empty_send_stream, nullptr, fin_rsv_opcode + 1);
+            auto out_message = std::make_shared<OutMessage>();
+            *out_message << in_message->string();
+            connection->send(out_message, nullptr, fin_rsv_opcode + 1);
 
             if(endpoint.on_ping)
               endpoint.on_ping(connection);
