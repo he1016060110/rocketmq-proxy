@@ -136,7 +136,7 @@ namespace SimpleWeb {
           seconds = timeout_idle;
         }
 
-        std::unique_lock<std::mutex> lock(timer_mutex);
+        std::lock_guard<std::mutex> lock(timer_mutex);
 
         if(seconds == 0) {
           timer = nullptr;
@@ -159,7 +159,7 @@ namespace SimpleWeb {
       }
 
       void cancel_timeout() noexcept {
-        std::unique_lock<std::mutex> lock(timer_mutex);
+        std::lock_guard<std::mutex> lock(timer_mutex);
         if(timer) {
           error_code ec;
           timer->cancel(ec);
@@ -339,7 +339,7 @@ namespace SimpleWeb {
 
     void stop() noexcept {
       {
-        std::unique_lock<std::mutex> lock(connection_mutex);
+        std::lock_guard<std::mutex> lock(connection_mutex);
         if(connection)
           connection->close();
       }

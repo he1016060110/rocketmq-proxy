@@ -156,7 +156,7 @@ namespace SimpleWeb {
           seconds = timeout_idle;
         }
 
-        std::unique_lock<std::mutex> lock(timer_mutex);
+        std::lock_guard<std::mutex> lock(timer_mutex);
 
         if(seconds == 0) {
           timer = nullptr;
@@ -179,7 +179,7 @@ namespace SimpleWeb {
       }
 
       void cancel_timeout() noexcept {
-        std::unique_lock<std::mutex> lock(timer_mutex);
+        std::lock_guard<std::mutex> lock(timer_mutex);
         if(timer) {
           error_code ec;
           timer->cancel(ec);
@@ -334,7 +334,7 @@ namespace SimpleWeb {
       std::function<void(std::shared_ptr<Connection>)> on_pong;
 
       std::unordered_set<std::shared_ptr<Connection>> get_connections() noexcept {
-        std::unique_lock<std::mutex> lock(connections_mutex);
+        std::lock_guard<std::mutex> lock(connections_mutex);
         auto copy = connections;
         return copy;
       }
@@ -454,7 +454,7 @@ namespace SimpleWeb {
         acceptor->close(ec);
 
         for(auto &pair : endpoint) {
-          std::unique_lock<std::mutex> lock(pair.second.connections_mutex);
+          std::lock_guard<std::mutex> lock(pair.second.connections_mutex);
           for(auto &connection : pair.second.connections)
             connection->close();
           pair.second.connections.clear();
@@ -478,7 +478,7 @@ namespace SimpleWeb {
     std::unordered_set<std::shared_ptr<Connection>> get_connections() noexcept {
       std::unordered_set<std::shared_ptr<Connection>> all_connections;
       for(auto &e : endpoint) {
-        std::unique_lock<std::mutex> lock(e.second.connections_mutex);
+        std::lock_guard<std::mutex> lock(e.second.connections_mutex);
         all_connections.insert(e.second.connections.begin(), e.second.connections.end());
       }
       return all_connections;
@@ -790,7 +790,7 @@ namespace SimpleWeb {
       connection->set_timeout();
 
       {
-        std::unique_lock<std::mutex> lock(endpoint.connections_mutex);
+        std::lock_guard<std::mutex> lock(endpoint.connections_mutex);
         endpoint.connections.insert(connection);
       }
 
@@ -803,7 +803,7 @@ namespace SimpleWeb {
       connection->set_timeout();
 
       {
-        std::unique_lock<std::mutex> lock(endpoint.connections_mutex);
+        std::lock_guard<std::mutex> lock(endpoint.connections_mutex);
         endpoint.connections.erase(connection);
       }
 
@@ -816,7 +816,7 @@ namespace SimpleWeb {
       connection->set_timeout();
 
       {
-        std::unique_lock<std::mutex> lock(endpoint.connections_mutex);
+        std::lock_guard<std::mutex> lock(endpoint.connections_mutex);
         endpoint.connections.erase(connection);
       }
 
