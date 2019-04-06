@@ -548,20 +548,16 @@ namespace SimpleWeb {
           auto write_buffer = std::make_shared<asio::streambuf>();
           std::ostream handshake(write_buffer.get());
 
-          bool handshake_success = true;
-          auto header_it = connection->header.find("Sec-WebSocket-Key");
-          if(header_it == connection->header.end()) {
-            handshake << "HTTP/1.1 426 Upgrade Required\r\n\r\n";
-            handshake_success = false;
-          }
+          StatusCode status_code = StatusCode::information_switching_protocols;
+          auto key_it = connection->header.find("Sec-WebSocket-Key");
+          if(key_it == connection->header.end())
+            status_code = StatusCode::client_error_upgrade_required;
           else {
-            StatusCode status_code = StatusCode::information_switching_protocols;
-
             CaseInsensitiveMultimap response_header = config.header;
             response_header.emplace("Upgrade", "websocket");
             response_header.emplace("Connection", "Upgrade");
             static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-            auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
+            auto sha1 = Crypto::sha1(key_it->second + ws_magic_string);
             response_header.emplace("Sec-WebSocket-Accept", Crypto::Base64::encode(sha1));
 
             if(regex_endpoint.second.on_handshake)
@@ -573,20 +569,18 @@ namespace SimpleWeb {
                 handshake << header_field.first << ": " << header_field.second << "\r\n";
               handshake << "\r\n";
             }
-            else {
-              handshake << "HTTP/1.1 " + SimpleWeb::status_code(status_code) + "\r\n\r\n";
-              handshake_success = false;
-            }
           }
+          if(status_code != StatusCode::information_switching_protocols)
+            handshake << "HTTP/1.1 " + SimpleWeb::status_code(status_code) + "\r\n\r\n";
 
           connection->path_match = std::move(path_match);
           connection->set_timeout(config.timeout_request);
-          asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint, handshake_success](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint, status_code](const error_code &ec, std::size_t /*bytes_transferred*/) {
             connection->cancel_timeout();
             auto lock = connection->handler_runner->continue_lock();
             if(!lock)
               return;
-            if(!handshake_success)
+            if(status_code != StatusCode::information_switching_protocols)
               return;
             if(!ec) {
               connection_open(connection, regex_endpoint.second);
