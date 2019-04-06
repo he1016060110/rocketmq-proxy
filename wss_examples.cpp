@@ -50,6 +50,11 @@ int main() {
     cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
   };
 
+  // Can modify handshake response header here if needed
+  echo.on_handshake = [](shared_ptr<WssServer::Connection> /*connection*/, SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+    return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
+  };
+
   // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
   echo.on_error = [](shared_ptr<WssServer::Connection> connection, const SimpleWeb::error_code &ec) {
     cout << "Server: Error in connection " << connection.get() << ". "
