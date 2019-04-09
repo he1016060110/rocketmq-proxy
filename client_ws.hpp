@@ -234,8 +234,9 @@ namespace SimpleWeb {
           mask[c] = static_cast<unsigned char>(dist(rd));
 
         std::size_t length = out_message->size();
-
-        auto out_header_and_message = std::make_shared<OutMessage>(length + 12); // at most 12 header bytes added
+ 
+        std::size_t max_additional_bytes = 14; // ws protocol adds at most 14 bytes
+        auto out_header_and_message = std::make_shared<OutMessage>(length + max_additional_bytes);
 
         out_header_and_message->put(static_cast<char>(fin_rsv_opcode));
         // Masked (first length byte>=128)
