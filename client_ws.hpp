@@ -364,6 +364,7 @@ namespace SimpleWeb {
 
     std::string host;
     unsigned short port;
+    unsigned short default_port;
     std::string path;
 
     std::shared_ptr<Connection> connection;
@@ -371,7 +372,7 @@ namespace SimpleWeb {
 
     std::shared_ptr<ScopeRunner> handler_runner;
 
-    SocketClientBase(const std::string &host_port_path, unsigned short default_port) noexcept : handler_runner(new ScopeRunner()) {
+    SocketClientBase(const std::string &host_port_path, unsigned short default_port) noexcept : default_port(default_port), handler_runner(new ScopeRunner()) {
       auto host_port_end = host_port_path.find('/');
       auto host_port = parse_host_port(host_port_path.substr(0, host_port_end), default_port);
       host = std::move(host_port.first);
@@ -402,15 +403,19 @@ namespace SimpleWeb {
     void upgrade(const std::shared_ptr<Connection> &connection) {
       connection->read_remote_endpoint();
 
+      auto corrected_path = path;
+      if(!config.proxy_server.empty() && std::is_same<socket_type, asio::ip::tcp::socket>::value)
+        corrected_path = "http://" + host + ':' + std::to_string(port) + corrected_path;
+
       auto write_buffer = std::make_shared<asio::streambuf>();
-
-      std::ostream request(write_buffer.get());
-
-      request << "GET " << path << " HTTP/1.1"
-              << "\r\n";
-      request << "Host: " << host << "\r\n";
-      request << "Upgrade: websocket\r\n";
-      request << "Connection: Upgrade\r\n";
+      std::ostream ostream(write_buffer.get());
+      ostream << "GET " << corrected_path << " HTTP/1.1\r\n";
+      ostream << "Host: " << host;
+      if(port != default_port)
+        ostream << ':' << std::to_string(port);
+      ostream << "\r\n";
+      ostream << "Upgrade: websocket\r\n";
+      ostream << "Connection: Upgrade\r\n";
 
       // Make random 16-byte nonce
       std::string nonce;
@@ -421,11 +426,11 @@ namespace SimpleWeb {
         nonce += static_cast<char>(dist(rd));
 
       auto nonce_base64 = std::make_shared<std::string>(Crypto::Base64::encode(nonce));
-      request << "Sec-WebSocket-Key: " << *nonce_base64 << "\r\n";
-      request << "Sec-WebSocket-Version: 13\r\n";
+      ostream << "Sec-WebSocket-Key: " << *nonce_base64 << "\r\n";
+      ostream << "Sec-WebSocket-Version: 13\r\n";
       for(auto &header_field : config.header)
-        request << header_field.first << ": " << header_field.second << "\r\n";
-      request << "\r\n";
+        ostream << header_field.first << ": " << header_field.second << "\r\n";
+      ostream << "\r\n";
 
       connection->in_message = std::shared_ptr<InMessage>(new InMessage());
 
