@@ -70,7 +70,8 @@ namespace SimpleWeb {
               return;
             if(!ec) {
               asio::ip::tcp::no_delay option(true);
-              connection->socket->lowest_layer().set_option(option);
+              error_code ec;
+              connection->socket->lowest_layer().set_option(option, ec);
 
               if(!this->config.proxy_server.empty()) {
                 auto write_buffer = std::make_shared<asio::streambuf>();
