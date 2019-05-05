@@ -78,6 +78,9 @@ namespace SimpleWeb {
 
     public:
       OutMessage() noexcept : std::iostream(&streambuf) {}
+      OutMessage(std::size_t capacity) noexcept : std::iostream(&streambuf) {
+        streambuf.prepare(capacity);
+      }
 
       /// Returns the size of the buffer
       std::size_t size() const noexcept {
@@ -231,9 +234,10 @@ namespace SimpleWeb {
         for(std::size_t c = 0; c < 4; c++)
           mask[c] = static_cast<unsigned char>(dist(rd));
 
-        auto out_header_and_message = std::make_shared<OutMessage>();
-
         std::size_t length = out_message->size();
+ 
+        std::size_t max_additional_bytes = 14; // ws protocol adds at most 14 bytes
+        auto out_header_and_message = std::make_shared<OutMessage>(length + max_additional_bytes);
 
         out_header_and_message->put(static_cast<char>(fin_rsv_opcode));
         // Masked (first length byte>=128)

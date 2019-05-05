@@ -48,7 +48,7 @@ cd ..
 
 ### WSS
 
-Before running the WSS-examples, an RSA private key (server.key) and an SSL certificate (server.crt) must be created. Follow, for instance, the instructions given here (for a self-signed certificate): http://www.akadia.com/services/ssh_test_certificate.html
+Before running the WSS-examples, an RSA private key (server.key) and an SSL certificate (server.crt) must be created. Follow, for instance, the instructions given here (for a self-signed certificate): https://www.akadia.com/services/ssh_test_certificate.html
 
 Then:
 ```
