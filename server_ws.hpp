@@ -92,6 +92,9 @@ namespace SimpleWeb {
 
     public:
       OutMessage() noexcept : std::ostream(&streambuf) {}
+      OutMessage(std::size_t capacity) noexcept : std::ostream(&streambuf) {
+        streambuf.prepare(capacity);
+      }
 
       /// Returns the size of the buffer
       std::size_t size() const noexcept {
@@ -259,9 +262,9 @@ namespace SimpleWeb {
         cancel_timeout();
         set_timeout();
 
-        auto out_header = std::make_shared<OutMessage>();
-
         std::size_t length = out_message->size();
+
+        auto out_header = std::make_shared<OutMessage>(10); // Header is at most 10 bytes
 
         out_header->put(static_cast<char>(fin_rsv_opcode));
         // Unmasked (first length byte<128)
