@@ -46,24 +46,24 @@ namespace SimpleWeb {
       auto connection = this->connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service, context));
       connection_lock.unlock();
 
-      std::unique_ptr<asio::ip::tcp::resolver::query> query;
+      std::pair<std::string, std::string> host_port;
       if(config.proxy_server.empty())
-        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(host, std::to_string(port)));
+        host_port = {host, std::to_string(port)};
       else {
         auto proxy_host_port = parse_host_port(config.proxy_server, 8080);
-        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(proxy_host_port.first, std::to_string(proxy_host_port.second)));
+        host_port = {proxy_host_port.first, std::to_string(proxy_host_port.second)};
       }
 
       auto resolver = std::make_shared<asio::ip::tcp::resolver>(*io_service);
       connection->set_timeout(config.timeout_request);
-      resolver->async_resolve(*query, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator it) {
+      async_resolve(*resolver, host_port, [this, connection, resolver](const error_code &ec, resolver_results results) {
         connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
         if(!ec) {
           connection->set_timeout(this->config.timeout_request);
-          asio::async_connect(connection->socket->lowest_layer(), it, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator /*it*/) {
+          asio::async_connect(connection->socket->lowest_layer(), results, [this, connection, resolver](const error_code &ec, async_connect_endpoint /*endpoint*/) {
             connection->cancel_timeout();
             auto lock = connection->handler_runner->continue_lock();
             if(!lock)

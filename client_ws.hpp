@@ -1,9 +1,9 @@
 #ifndef CLIENT_WS_HPP
 #define CLIENT_WS_HPP
 
+#include "asio_compatibility.hpp"
 #include "crypto.hpp"
 #include "utility.hpp"
-
 #include <array>
 #include <atomic>
 #include <iostream>
@@ -11,25 +11,6 @@
 #include <list>
 #include <mutex>
 #include <random>
-
-#ifdef USE_STANDALONE_ASIO
-#include <asio.hpp>
-#include <asio/steady_timer.hpp>
-namespace SimpleWeb {
-  using error_code = std::error_code;
-  using errc = std::errc;
-  namespace make_error_code = std;
-} // namespace SimpleWeb
-#else
-#include <boost/asio.hpp>
-#include <boost/asio/steady_timer.hpp>
-namespace SimpleWeb {
-  namespace asio = boost::asio;
-  using error_code = boost::system::error_code;
-  namespace errc = boost::system::errc;
-  namespace make_error_code = boost::system::errc;
-} // namespace SimpleWeb
-#endif
 
 namespace SimpleWeb {
   template <class socket_type>
@@ -114,7 +95,7 @@ namespace SimpleWeb {
     private:
       template <typename... Args>
       Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
-          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
+          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), closed(false) {}
 
       std::shared_ptr<ScopeRunner> handler_runner;
 
@@ -147,8 +128,7 @@ namespace SimpleWeb {
           return;
         }
 
-        timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(socket->get_io_service()));
-        timer->expires_from_now(std::chrono::seconds(seconds));
+        timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(get_socket_executor(*socket), std::chrono::seconds(seconds)));
         std::weak_ptr<Connection> connection_weak(this->shared_from_this()); // To avoid keeping Connection instance alive longer than needed
         timer->async_wait([connection_weak, use_timeout_idle](const error_code &ec) {
           if(!ec) {
@@ -165,12 +145,13 @@ namespace SimpleWeb {
       void cancel_timeout() noexcept {
         std::lock_guard<std::mutex> lock(timer_mutex);
         if(timer) {
-          error_code ec;
-          timer->cancel(ec);
+          try {
+            timer->cancel();
+          }
+          catch(...) {
+          }
         }
       }
-
-      asio::io_service::strand strand;
 
       class OutData {
       public:
@@ -180,32 +161,43 @@ namespace SimpleWeb {
         std::function<void(const error_code)> callback;
       };
 
+      std::mutex send_queue_mutex;
       std::list<OutData> send_queue;
 
+      /// send_queue_mutex must be locked here
       void send_from_queue() {
         auto self = this->shared_from_this();
-        strand.post([self]() {
-          asio::async_write(*self->socket, self->send_queue.begin()->out_message->streambuf, self->strand.wrap([self](const error_code &ec, std::size_t /*bytes_transferred*/) {
-            auto lock = self->handler_runner->continue_lock();
-            if(!lock)
-              return;
+        asio::async_write(*self->socket, self->send_queue.begin()->out_message->streambuf, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          auto lock = self->handler_runner->continue_lock();
+          if(!lock)
+            return;
+          {
+            std::unique_lock<std::mutex> lock(self->send_queue_mutex);
             if(!ec) {
               auto it = self->send_queue.begin();
-              if(it->callback)
-                it->callback(ec);
+              auto callback = std::move(it->callback);
               self->send_queue.erase(it);
               if(self->send_queue.size() > 0)
                 self->send_from_queue();
+
+              lock.unlock();
+              if(callback)
+                callback(ec);
             }
             else {
               // All handlers in the queue is called with ec:
+              std::vector<std::function<void(const error_code &)>> callbacks;
               for(auto &out_data : self->send_queue) {
                 if(out_data.callback)
-                  out_data.callback(ec);
+                  callbacks.emplace_back(std::move(out_data.callback));
               }
               self->send_queue.clear();
+
+              lock.unlock();
+              for(auto &callback : callbacks)
+                callback(ec);
             }
-          }));
+          }
         });
       }
 
@@ -235,7 +227,7 @@ namespace SimpleWeb {
           mask[c] = static_cast<unsigned char>(dist(rd));
 
         std::size_t length = out_message->size();
- 
+
         std::size_t max_additional_bytes = 14; // ws protocol adds at most 14 bytes
         auto out_header_and_message = std::make_shared<OutMessage>(length + max_additional_bytes);
 
@@ -264,12 +256,10 @@ namespace SimpleWeb {
         for(std::size_t c = 0; c < length; c++)
           out_header_and_message->put(out_message->get() ^ mask[c % 4]);
 
-        auto self = this->shared_from_this();
-        strand.post([self, out_header_and_message, callback]() {
-          self->send_queue.emplace_back(out_header_and_message, callback);
-          if(self->send_queue.size() == 1)
-            self->send_from_queue();
-        });
+        std::lock_guard<std::mutex> lock(send_queue_mutex);
+        send_queue.emplace_back(out_header_and_message, callback);
+        if(send_queue.size() == 1)
+          send_from_queue();
       }
 
       /// Convenience function for sending a string.
@@ -331,12 +321,12 @@ namespace SimpleWeb {
 
     void start() {
       if(!io_service) {
-        io_service = std::make_shared<asio::io_service>();
+        io_service = std::make_shared<io_context>();
         internal_io_service = true;
       }
 
       if(io_service->stopped())
-        io_service->reset();
+        restart(*io_service);
 
       connect();
 
@@ -360,8 +350,8 @@ namespace SimpleWeb {
       stop();
     }
 
-    /// If you have your own asio::io_service, store its pointer here before running start().
-    std::shared_ptr<asio::io_service> io_service;
+    /// If you have your own io_context, store its pointer here before running start().
+    std::shared_ptr<io_context> io_service;
 
   protected:
     bool internal_io_service = false;
@@ -726,24 +716,24 @@ namespace SimpleWeb {
       auto connection = this->connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service));
       lock.unlock();
 
-      std::unique_ptr<asio::ip::tcp::resolver::query> query;
+      std::pair<std::string, std::string> host_port;
       if(config.proxy_server.empty())
-        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(host, std::to_string(port)));
+        host_port = {host, std::to_string(port)};
       else {
         auto proxy_host_port = parse_host_port(config.proxy_server, 8080);
-        query = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query(proxy_host_port.first, std::to_string(proxy_host_port.second)));
+        host_port = {proxy_host_port.first, std::to_string(proxy_host_port.second)};
       }
 
       auto resolver = std::make_shared<asio::ip::tcp::resolver>(*io_service);
       connection->set_timeout(config.timeout_request);
-      resolver->async_resolve(*query, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator it) {
+      async_resolve(*resolver, host_port, [this, connection, resolver](const error_code &ec, resolver_results results) {
         connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
         if(!ec) {
           connection->set_timeout(this->config.timeout_request);
-          asio::async_connect(*connection->socket, it, [this, connection, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator /*it*/) {
+          asio::async_connect(*connection->socket, results, [this, connection, resolver](const error_code &ec, async_connect_endpoint /*endpoint*/) {
             connection->cancel_timeout();
             auto lock = connection->handler_runner->continue_lock();
             if(!lock)

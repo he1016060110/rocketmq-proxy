@@ -1,9 +1,9 @@
 #ifndef SERVER_WS_HPP
 #define SERVER_WS_HPP
 
+#include "asio_compatibility.hpp"
 #include "crypto.hpp"
 #include "utility.hpp"
-
 #include <array>
 #include <atomic>
 #include <iostream>
@@ -13,25 +13,6 @@
 #include <mutex>
 #include <thread>
 #include <unordered_set>
-
-#ifdef USE_STANDALONE_ASIO
-#include <asio.hpp>
-#include <asio/steady_timer.hpp>
-namespace SimpleWeb {
-  using error_code = std::error_code;
-  using errc = std::errc;
-  namespace make_error_code = std;
-} // namespace SimpleWeb
-#else
-#include <boost/asio.hpp>
-#include <boost/asio/steady_timer.hpp>
-namespace SimpleWeb {
-  namespace asio = boost::asio;
-  using error_code = boost::system::error_code;
-  namespace errc = boost::system::errc;
-  namespace make_error_code = boost::system::errc;
-} // namespace SimpleWeb
-#endif
 
 // Late 2017 TODO: remove the following checks and always use std::regex
 #ifdef USE_BOOST_REGEX
@@ -107,7 +88,7 @@ namespace SimpleWeb {
       friend class SocketServer<socket_type>;
 
     public:
-      Connection(std::unique_ptr<socket_type> &&socket_) noexcept : socket(std::move(socket_)), timeout_idle(0), strand(this->socket->get_io_service()), closed(false) {}
+      Connection(std::unique_ptr<socket_type> &&socket_) noexcept : socket(std::move(socket_)), timeout_idle(0), closed(false) {}
 
       std::string method, path, query_string, http_version;
 
@@ -133,7 +114,7 @@ namespace SimpleWeb {
     private:
       template <typename... Args>
       Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
-          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), strand(socket->get_io_service()), closed(false) {}
+          : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), closed(false) {}
 
       std::shared_ptr<ScopeRunner> handler_runner;
 
@@ -166,8 +147,7 @@ namespace SimpleWeb {
           return;
         }
 
-        timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(socket->get_io_service()));
-        timer->expires_from_now(std::chrono::seconds(seconds));
+        timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(get_socket_executor(*socket), std::chrono::seconds(seconds)));
         std::weak_ptr<Connection> connection_weak(this->shared_from_this()); // To avoid keeping Connection instance alive longer than needed
         timer->async_wait([connection_weak, use_timeout_idle](const error_code &ec) {
           if(!ec) {
@@ -184,12 +164,13 @@ namespace SimpleWeb {
       void cancel_timeout() noexcept {
         std::lock_guard<std::mutex> lock(timer_mutex);
         if(timer) {
-          error_code ec;
-          timer->cancel(ec);
+          try {
+            timer->cancel();
+          }
+          catch(...) {
+          }
         }
       }
-
-      asio::io_service::strand strand;
 
       class OutData {
       public:
@@ -201,47 +182,44 @@ namespace SimpleWeb {
         std::function<void(const error_code)> callback;
       };
 
+      std::mutex send_queue_mutex;
       std::list<OutData> send_queue;
 
+      /// send_queue_mutex must be locked here
       void send_from_queue() {
+        std::array<asio::const_buffer, 2> buffers{send_queue.begin()->out_header->streambuf.data(), send_queue.begin()->out_message->streambuf.data()};
         auto self = this->shared_from_this();
-        strand.post([self]() {
-          asio::async_write(*self->socket, self->send_queue.begin()->out_header->streambuf, self->strand.wrap([self](const error_code &ec, std::size_t /*bytes_transferred*/) {
-            auto lock = self->handler_runner->continue_lock();
-            if(!lock)
-              return;
+        asio::async_write(*socket, buffers, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          auto lock = self->handler_runner->continue_lock();
+          if(!lock)
+            return;
+          {
+            std::unique_lock<std::mutex> lock(self->send_queue_mutex);
             if(!ec) {
-              asio::async_write(*self->socket, self->send_queue.begin()->out_message->streambuf.data(), self->strand.wrap([self](const error_code &ec, std::size_t /*bytes_transferred*/) {
-                auto lock = self->handler_runner->continue_lock();
-                if(!lock)
-                  return;
-                if(!ec) {
-                  auto it = self->send_queue.begin();
-                  if(it->callback)
-                    it->callback(ec);
-                  self->send_queue.erase(it);
-                  if(self->send_queue.size() > 0)
-                    self->send_from_queue();
-                }
-                else {
-                  // All handlers in the queue is called with ec:
-                  for(auto &out_data : self->send_queue) {
-                    if(out_data.callback)
-                      out_data.callback(ec);
-                  }
-                  self->send_queue.clear();
-                }
-              }));
+              auto it = self->send_queue.begin();
+              auto callback = std::move(it->callback);
+              self->send_queue.erase(it);
+              if(self->send_queue.size() > 0)
+                self->send_from_queue();
+
+              lock.unlock();
+              if(callback)
+                callback(ec);
             }
             else {
               // All handlers in the queue is called with ec:
+              std::vector<std::function<void(const error_code &)>> callbacks;
               for(auto &out_data : self->send_queue) {
                 if(out_data.callback)
-                  out_data.callback(ec);
+                  callbacks.emplace_back(std::move(out_data.callback));
               }
               self->send_queue.clear();
+
+              lock.unlock();
+              for(auto &callback : callbacks)
+                callback(ec);
             }
-          }));
+          }
         });
       }
 
@@ -285,12 +263,10 @@ namespace SimpleWeb {
         else
           out_header->put(static_cast<char>(length));
 
-        auto self = this->shared_from_this();
-        strand.post([self, out_header, out_message, callback]() {
-          self->send_queue.emplace_back(out_header, out_message, callback);
-          if(self->send_queue.size() == 1)
-            self->send_from_queue();
-        });
+        std::lock_guard<std::mutex> lock(send_queue_mutex);
+        send_queue.emplace_back(out_header, out_message, callback);
+        if(send_queue.size() == 1)
+          send_from_queue();
       }
 
       /// Convenience function for sending a string.
@@ -395,12 +371,12 @@ namespace SimpleWeb {
     unsigned short bind() {
       asio::ip::tcp::endpoint endpoint;
       if(config.address.size() > 0)
-        endpoint = asio::ip::tcp::endpoint(asio::ip::address::from_string(config.address), config.port);
+        endpoint = asio::ip::tcp::endpoint(make_address(config.address), config.port);
       else
         endpoint = asio::ip::tcp::endpoint(asio::ip::tcp::v6(), config.port);
 
       if(!io_service) {
-        io_service = std::make_shared<asio::io_service>();
+        io_service = std::make_shared<io_context>();
         internal_io_service = true;
       }
 
@@ -424,7 +400,7 @@ namespace SimpleWeb {
 
       if(internal_io_service) {
         if(io_service->stopped())
-          io_service->reset();
+          restart(*io_service);
 
         // If thread_pool_size>1, start m_io_service.run() in (thread_pool_size-1) threads for thread-pooling
         threads.clear();
@@ -511,8 +487,8 @@ namespace SimpleWeb {
       write_handshake(connection);
     }
 
-    /// If you have your own asio::io_service, store its pointer here before running start().
-    std::shared_ptr<asio::io_service> io_service;
+    /// If you have your own io_context, store its pointer here before running start().
+    std::shared_ptr<io_context> io_service;
 
   protected:
     bool internal_io_service = false;
