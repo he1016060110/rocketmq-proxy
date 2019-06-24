@@ -817,7 +817,7 @@ namespace SimpleWeb {
         if(!lock)
           return;
         // Immediately start accepting a new connection (if io_service hasn't been stopped)
-        if(ec != asio::error::operation_aborted)
+        if(ec != error::operation_aborted)
           accept();
 
         if(!ec) {

@@ -7,6 +7,7 @@
 #include <asio.hpp>
 #include <asio/steady_timer.hpp>
 namespace SimpleWeb {
+  namespace error = asio::error;
   using error_code = std::error_code;
   using errc = std::errc;
   using system_error = std::system_error;
@@ -17,6 +18,7 @@ namespace SimpleWeb {
 #include <boost/asio/steady_timer.hpp>
 namespace SimpleWeb {
   namespace asio = boost::asio;
+  namespace error = asio::error;
   using error_code = boost::system::error_code;
   namespace errc = boost::system::errc;
   using system_error = boost::system::system_error;
