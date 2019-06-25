@@ -283,7 +283,7 @@ namespace SimpleWeb {
         else
           return false;
         if((version_end + 1) < line.size())
-          status_code = line.substr(version_end + 1, line.size() - (version_end + 1) - 1);
+          status_code = line.substr(version_end + 1, line.size() - (version_end + 1) - (line.back() == '\r' ? 1 : 0));
         else
           return false;
 
