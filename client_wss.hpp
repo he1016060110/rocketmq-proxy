@@ -42,7 +42,7 @@ namespace SimpleWeb {
     asio::ssl::context context;
 
     void connect() override {
-      std::unique_lock<std::mutex> connection_lock(connection_mutex);
+      LockGuard connection_lock(connection_mutex);
       auto connection = this->connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service, context));
       connection_lock.unlock();
 

@@ -3,13 +3,13 @@
 
 #include "asio_compatibility.hpp"
 #include "crypto.hpp"
+#include "mutex.hpp"
 #include "utility.hpp"
 #include <array>
 #include <atomic>
 #include <iostream>
 #include <limits>
 #include <list>
-#include <mutex>
 #include <random>
 
 namespace SimpleWeb {
@@ -105,8 +105,8 @@ namespace SimpleWeb {
       std::shared_ptr<InMessage> fragmented_in_message;
 
       long timeout_idle;
-      std::unique_ptr<asio::steady_timer> timer;
-      std::mutex timer_mutex;
+      Mutex timer_mutex;
+      std::unique_ptr<asio::steady_timer> timer GUARDED_BY(timer_mutex);
 
       void close() noexcept {
         error_code ec;
@@ -121,7 +121,7 @@ namespace SimpleWeb {
           seconds = timeout_idle;
         }
 
-        std::lock_guard<std::mutex> lock(timer_mutex);
+        LockGuard lock(timer_mutex);
 
         if(seconds == 0) {
           timer = nullptr;
@@ -143,7 +143,7 @@ namespace SimpleWeb {
       }
 
       void cancel_timeout() noexcept {
-        std::lock_guard<std::mutex> lock(timer_mutex);
+        LockGuard lock(timer_mutex);
         if(timer) {
           try {
             timer->cancel();
@@ -161,18 +161,17 @@ namespace SimpleWeb {
         std::function<void(const error_code)> callback;
       };
 
-      std::mutex send_queue_mutex;
-      std::list<OutData> send_queue;
+      Mutex send_queue_mutex;
+      std::list<OutData> send_queue GUARDED_BY(send_queue_mutex);
 
-      /// send_queue_mutex must be locked here
-      void send_from_queue() {
+      void send_from_queue() REQUIRES(send_queue_mutex) {
         auto self = this->shared_from_this();
-        asio::async_write(*self->socket, self->send_queue.begin()->out_message->streambuf, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
+        asio::async_write(*self->socket, send_queue.begin()->out_message->streambuf, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
           auto lock = self->handler_runner->continue_lock();
           if(!lock)
             return;
           {
-            std::unique_lock<std::mutex> lock(self->send_queue_mutex);
+            LockGuard lock(self->send_queue_mutex);
             if(!ec) {
               auto it = self->send_queue.begin();
               auto callback = std::move(it->callback);
@@ -256,7 +255,7 @@ namespace SimpleWeb {
         for(std::size_t c = 0; c < length; c++)
           out_header_and_message->put(out_message->get() ^ mask[c % 4]);
 
-        std::lock_guard<std::mutex> lock(send_queue_mutex);
+        LockGuard lock(send_queue_mutex);
         send_queue.emplace_back(out_header_and_message, callback);
         if(send_queue.size() == 1)
           send_from_queue();
@@ -336,7 +335,7 @@ namespace SimpleWeb {
 
     void stop() noexcept {
       {
-        std::lock_guard<std::mutex> lock(connection_mutex);
+        LockGuard lock(connection_mutex);
         if(connection)
           connection->close();
       }
@@ -361,8 +360,8 @@ namespace SimpleWeb {
     unsigned short default_port;
     std::string path;
 
-    std::shared_ptr<Connection> connection;
-    std::mutex connection_mutex;
+    Mutex connection_mutex;
+    std::shared_ptr<Connection> connection GUARDED_BY(connection_mutex);
 
     std::shared_ptr<ScopeRunner> handler_runner;
 
@@ -712,7 +711,7 @@ namespace SimpleWeb {
 
   protected:
     void connect() override {
-      std::unique_lock<std::mutex> lock(connection_mutex);
+      LockGuard lock(connection_mutex);
       auto connection = this->connection = std::shared_ptr<Connection>(new Connection(handler_runner, config.timeout_idle, *io_service));
       lock.unlock();
 
