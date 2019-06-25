@@ -1,5 +1,5 @@
-#ifndef SERVER_WSS_HPP
-#define SERVER_WSS_HPP
+#ifndef SIMPLE_WEB_SERVER_WSS_HPP
+#define SIMPLE_WEB_SERVER_WSS_HPP
 
 #include "server_ws.hpp"
 #include <algorithm>
@@ -76,4 +76,4 @@ namespace SimpleWeb {
   };
 } // namespace SimpleWeb
 
-#endif /* SERVER_WSS_HPP */
+#endif /* SIMPLE_WEB_SERVER_WSS_HPP */

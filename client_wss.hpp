@@ -1,5 +1,5 @@
-#ifndef CLIENT_WSS_HPP
-#define CLIENT_WSS_HPP
+#ifndef SIMPLE_WEB_CLIENT_WSS_HPP
+#define SIMPLE_WEB_CLIENT_WSS_HPP
 
 #include "client_ws.hpp"
 
@@ -140,4 +140,4 @@ namespace SimpleWeb {
   };
 } // namespace SimpleWeb
 
-#endif /* CLIENT_WSS_HPP */
+#endif /* SIMPLE_WEB_CLIENT_WSS_HPP */

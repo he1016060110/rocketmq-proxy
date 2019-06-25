@@ -1,5 +1,5 @@
-#ifndef SIMPLE_WEB_ASIO_HPP
-#define SIMPLE_WEB_ASIO_HPP
+#ifndef SIMPLE_WEB_ASIO_COMPATIBILITY_HPP
+#define SIMPLE_WEB_ASIO_COMPATIBILITY_HPP
 
 #include <memory>
 
@@ -68,4 +68,4 @@ namespace SimpleWeb {
 #endif
 } // namespace SimpleWeb
 
-#endif /* SIMPLE_WEB_ASIO_HPP */
+#endif /* SIMPLE_WEB_ASIO_COMPATIBILITY_HPP */

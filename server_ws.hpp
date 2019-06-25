@@ -1,5 +1,5 @@
-#ifndef SERVER_WS_HPP
-#define SERVER_WS_HPP
+#ifndef SIMPLE_WEB_SERVER_WS_HPP
+#define SIMPLE_WEB_SERVER_WS_HPP
 
 #include "asio_compatibility.hpp"
 #include "crypto.hpp"
@@ -832,4 +832,4 @@ namespace SimpleWeb {
   };
 } // namespace SimpleWeb
 
-#endif /* SERVER_WS_HPP */
+#endif /* SIMPLE_WEB_SERVER_WS_HPP */
