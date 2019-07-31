@@ -96,19 +96,22 @@ namespace SimpleWeb {
 
       regex::smatch path_match;
 
-      asio::ip::tcp::endpoint remote_endpoint;
-
       std::string remote_endpoint_address() noexcept {
         try {
-          return remote_endpoint.address().to_string();
+          return socket->lowest_layer().remote_endpoint().address().to_string();
         }
         catch(...) {
-          return std::string();
         }
+        return std::string();
       }
 
       unsigned short remote_endpoint_port() noexcept {
-        return remote_endpoint.port();
+        try {
+          return socket->lowest_layer().remote_endpoint().port();
+        }
+        catch(...) {
+        }
+        return 0;
       }
 
     private:
@@ -225,14 +228,6 @@ namespace SimpleWeb {
       }
 
       std::atomic<bool> closed;
-
-      void read_remote_endpoint() noexcept {
-        try {
-          remote_endpoint = socket->lowest_layer().remote_endpoint();
-        }
-        catch(...) {
-        }
-      }
 
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
@@ -478,7 +473,6 @@ namespace SimpleWeb {
      *   connection->query_string=std::move(request->query_string);
      *   connection->http_version=std::move(request->http_version);
      *   connection->header=std::move(request->header);
-     *   connection->remote_endpoint=std::move(*request->remote_endpoint);
      *   socket_server.upgrade(connection);
      * }
      */
@@ -505,8 +499,6 @@ namespace SimpleWeb {
     virtual void accept() = 0;
 
     void read_handshake(const std::shared_ptr<Connection> &connection) {
-      connection->read_remote_endpoint();
-
       connection->set_timeout(config.timeout_request);
       asio::async_read_until(*connection->socket, connection->read_buffer, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t /*bytes_transferred*/) {
         connection->cancel_timeout();
