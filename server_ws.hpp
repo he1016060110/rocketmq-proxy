@@ -96,7 +96,16 @@ namespace SimpleWeb {
 
       regex::smatch path_match;
 
-      std::string remote_endpoint_address() noexcept {
+      asio::ip::tcp::endpoint remote_endpoint() const noexcept {
+        try {
+          return socket->lowest_layer().remote_endpoint();
+        }
+        catch(...) {
+        }
+        return asio::ip::tcp::endpoint();
+      }
+
+      std::string remote_endpoint_address() const noexcept {
         try {
           return socket->lowest_layer().remote_endpoint().address().to_string();
         }
@@ -105,7 +114,7 @@ namespace SimpleWeb {
         return std::string();
       }
 
-      unsigned short remote_endpoint_port() noexcept {
+      unsigned short remote_endpoint_port() const noexcept {
         try {
           return socket->lowest_layer().remote_endpoint().port();
         }

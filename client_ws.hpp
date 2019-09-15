@@ -77,19 +77,31 @@ namespace SimpleWeb {
       std::string http_version, status_code;
       CaseInsensitiveMultimap header;
 
-      asio::ip::tcp::endpoint remote_endpoint;
-
-      std::string remote_endpoint_address() noexcept {
+      asio::ip::tcp::endpoint remote_endpoint() const noexcept {
         try {
-          return remote_endpoint.address().to_string();
+          return socket->lowest_layer().remote_endpoint();
         }
         catch(...) {
-          return std::string();
         }
+        return asio::ip::tcp::endpoint();
       }
 
-      unsigned short remote_endpoint_port() noexcept {
-        return remote_endpoint.port();
+      std::string remote_endpoint_address() const noexcept {
+        try {
+          return socket->lowest_layer().remote_endpoint().address().to_string();
+        }
+        catch(...) {
+        }
+        return std::string();
+      }
+
+      unsigned short remote_endpoint_port() const noexcept {
+        try {
+          return socket->lowest_layer().remote_endpoint().port();
+        }
+        catch(...) {
+        }
+        return 0;
       }
 
     private:
@@ -201,15 +213,6 @@ namespace SimpleWeb {
       }
 
       std::atomic<bool> closed;
-
-      void read_remote_endpoint() noexcept {
-        try {
-          remote_endpoint = socket->lowest_layer().remote_endpoint();
-        }
-        catch(const std::exception &e) {
-          std::cerr << e.what() << std::endl;
-        }
-      }
 
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
@@ -394,8 +397,6 @@ namespace SimpleWeb {
     virtual void connect() = 0;
 
     void upgrade(const std::shared_ptr<Connection> &connection) {
-      connection->read_remote_endpoint();
-
       auto corrected_path = path;
       if(!config.proxy_server.empty() && std::is_same<socket_type, asio::ip::tcp::socket>::value)
         corrected_path = "http://" + host + ':' + std::to_string(port) + corrected_path;
