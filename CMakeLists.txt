@@ -57,10 +57,8 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     add_executable(ws_examples ws_examples.cpp)
     target_link_libraries(ws_examples simple-websocket-server)
-    if(OPENSSL_FOUND)
-        add_executable(wss_examples wss_examples.cpp)
-        target_link_libraries(wss_examples simple-websocket-server)
-    endif()
+    add_executable(wss_examples wss_examples.cpp)
+    target_link_libraries(wss_examples simple-websocket-server)
     
     set(BUILD_TESTING ON)
     
