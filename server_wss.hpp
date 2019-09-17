@@ -20,9 +20,16 @@ namespace SimpleWeb {
     bool set_session_id_context = false;
 
   public:
-    SocketServer(const std::string &cert_file, const std::string &private_key_file, const std::string &verify_file = std::string())
+    /**
+     * Constructs a server object.
+     *
+     * @param certification_file If non-empty, sends the given certification file to client.
+     * @param private_key_file   Specifies the file containing the private key for certification_file.
+     * @param verify_file        If non-empty, use this certificate authority file to perform verification of client's certificate and hostname according to RFC 2818.
+     */
+    SocketServer(const std::string &certification_file, const std::string &private_key_file, const std::string &verify_file = std::string())
         : SocketServerBase<WSS>(443), context(asio::ssl::context::tlsv12) {
-      context.use_certificate_chain_file(cert_file);
+      context.use_certificate_chain_file(certification_file);
       context.use_private_key_file(private_key_file, asio::ssl::context::pem);
 
       if(verify_file.size() > 0) {

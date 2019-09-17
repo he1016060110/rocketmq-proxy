@@ -15,12 +15,21 @@ namespace SimpleWeb {
   template <>
   class SocketClient<WSS> : public SocketClientBase<WSS> {
   public:
+    /**
+     * Constructs a client object.
+     *
+     * @param server_port_path   Server resource given by host[:port][/path]
+     * @param verify_certificate Set to true (default) to verify the server's certificate and hostname according to RFC 2818.
+     * @param certification_file If non-empty, sends the given certification file to server. Requires private_key_file.
+     * @param private_key_file   If non-empty, specifies the file containing the private key for certification_file. Requires certification_file.
+     * @param verify_file        If non-empty, use this certificate authority file to perform verification.
+     */
     SocketClient(const std::string &server_port_path, bool verify_certificate = true,
-                 const std::string &cert_file = std::string(), const std::string &private_key_file = std::string(),
+                 const std::string &certification_file = std::string(), const std::string &private_key_file = std::string(),
                  const std::string &verify_file = std::string())
         : SocketClientBase<WSS>::SocketClientBase(server_port_path, 443), context(asio::ssl::context::tlsv12) {
-      if(cert_file.size() > 0 && private_key_file.size() > 0) {
-        context.use_certificate_chain_file(cert_file);
+      if(certification_file.size() > 0 && private_key_file.size() > 0) {
+        context.use_certificate_chain_file(certification_file);
         context.use_private_key_file(private_key_file, asio::ssl::context::pem);
       }
 
@@ -32,7 +41,7 @@ namespace SimpleWeb {
       else
         context.set_default_verify_paths();
 
-      if(verify_file.size() > 0 || verify_certificate)
+      if(verify_certificate)
         context.set_verify_mode(asio::ssl::verify_peer);
       else
         context.set_verify_mode(asio::ssl::verify_none);
