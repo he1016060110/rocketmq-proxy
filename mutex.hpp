@@ -69,7 +69,7 @@
   THREAD_ANNOTATION_ATTRIBUTE__(no_thread_safety_analysis)
 
 namespace SimpleWeb {
-  /// Defines an annotated interface for mutexes.
+  /// Mutex class that is annotated for Clang Thread Safety Analysis.
   class CAPABILITY("mutex") Mutex {
     std::mutex mutex;
 
@@ -83,6 +83,7 @@ namespace SimpleWeb {
     }
   };
 
+  /// Scoped mutex guard class that is annotated for Clang Thread Safety Analysis.
   class SCOPED_CAPABILITY LockGuard {
     Mutex &mutex;
     bool locked = true;
