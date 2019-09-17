@@ -77,33 +77,6 @@ namespace SimpleWeb {
       std::string http_version, status_code;
       CaseInsensitiveMultimap header;
 
-      asio::ip::tcp::endpoint remote_endpoint() const noexcept {
-        try {
-          return socket->lowest_layer().remote_endpoint();
-        }
-        catch(...) {
-        }
-        return asio::ip::tcp::endpoint();
-      }
-
-      std::string remote_endpoint_address() const noexcept {
-        try {
-          return socket->lowest_layer().remote_endpoint().address().to_string();
-        }
-        catch(...) {
-        }
-        return std::string();
-      }
-
-      unsigned short remote_endpoint_port() const noexcept {
-        try {
-          return socket->lowest_layer().remote_endpoint().port();
-        }
-        catch(...) {
-        }
-        return 0;
-      }
-
     private:
       template <typename... Args>
       Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
