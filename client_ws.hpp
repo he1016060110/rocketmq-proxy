@@ -382,8 +382,8 @@ namespace SimpleWeb {
       if(!config.proxy_server.empty() && std::is_same<socket_type, asio::ip::tcp::socket>::value)
         corrected_path = "http://" + host + ':' + std::to_string(port) + corrected_path;
 
-      auto write_buffer = std::make_shared<asio::streambuf>();
-      std::ostream ostream(write_buffer.get());
+      auto streambuf = std::make_shared<asio::streambuf>();
+      std::ostream ostream(streambuf.get());
       ostream << "GET " << corrected_path << " HTTP/1.1\r\n";
       ostream << "Host: " << host;
       if(port != default_port)
@@ -410,7 +410,7 @@ namespace SimpleWeb {
       connection->in_message = std::shared_ptr<InMessage>(new InMessage());
 
       connection->set_timeout(config.timeout_request);
-      asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, nonce_base64](const error_code &ec, std::size_t /*bytes_transferred*/) {
+      asio::async_write(*connection->socket, *streambuf, [this, connection, streambuf, nonce_base64](const error_code &ec, std::size_t /*bytes_transferred*/) {
         connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)

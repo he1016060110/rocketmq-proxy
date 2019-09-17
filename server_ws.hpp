@@ -134,7 +134,7 @@ namespace SimpleWeb {
 
       std::unique_ptr<socket_type> socket; // Socket must be unique_ptr since asio::ssl::stream<asio::ip::tcp::socket> is not movable
 
-      asio::streambuf read_buffer;
+      asio::streambuf streambuf;
       std::shared_ptr<InMessage> fragmented_in_message;
 
       long timeout_idle;
@@ -517,14 +517,14 @@ namespace SimpleWeb {
 
     void read_handshake(const std::shared_ptr<Connection> &connection) {
       connection->set_timeout(config.timeout_request);
-      asio::async_read_until(*connection->socket, connection->read_buffer, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t /*bytes_transferred*/) {
+      asio::async_read_until(*connection->socket, connection->streambuf, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t /*bytes_transferred*/) {
         connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
         if(!ec) {
-          std::istream stream(&connection->read_buffer);
-          if(RequestMessage::parse(stream, connection->method, connection->path, connection->query_string, connection->http_version, connection->header))
+          std::istream istream(&connection->streambuf);
+          if(RequestMessage::parse(istream, connection->method, connection->path, connection->query_string, connection->http_version, connection->header))
             write_handshake(connection);
         }
       });
@@ -534,8 +534,8 @@ namespace SimpleWeb {
       for(auto &regex_endpoint : endpoint) {
         regex::smatch path_match;
         if(regex::regex_match(connection->path, path_match, regex_endpoint.first)) {
-          auto write_buffer = std::make_shared<asio::streambuf>();
-          std::ostream handshake(write_buffer.get());
+          auto streambuf = std::make_shared<asio::streambuf>();
+          std::ostream ostream(streambuf.get());
 
           StatusCode status_code = StatusCode::information_switching_protocols;
           auto key_it = connection->header.find("Sec-WebSocket-Key");
@@ -553,18 +553,18 @@ namespace SimpleWeb {
               status_code = regex_endpoint.second.on_handshake(connection, response_header);
 
             if(status_code == StatusCode::information_switching_protocols) {
-              handshake << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
+              ostream << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
               for(auto &header_field : response_header)
-                handshake << header_field.first << ": " << header_field.second << "\r\n";
-              handshake << "\r\n";
+                ostream << header_field.first << ": " << header_field.second << "\r\n";
+              ostream << "\r\n";
             }
           }
           if(status_code != StatusCode::information_switching_protocols)
-            handshake << "HTTP/1.1 " + SimpleWeb::status_code(status_code) + "\r\n\r\n";
+            ostream << "HTTP/1.1 " + SimpleWeb::status_code(status_code) + "\r\n\r\n";
 
           connection->path_match = std::move(path_match);
           connection->set_timeout(config.timeout_request);
-          asio::async_write(*connection->socket, *write_buffer, [this, connection, write_buffer, &regex_endpoint, status_code](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          asio::async_write(*connection->socket, *streambuf, [this, connection, streambuf, &regex_endpoint, status_code](const error_code &ec, std::size_t /*bytes_transferred*/) {
             connection->cancel_timeout();
             auto lock = connection->handler_runner->continue_lock();
             if(!lock)
@@ -584,7 +584,7 @@ namespace SimpleWeb {
     }
 
     void read_message(const std::shared_ptr<Connection> &connection, Endpoint &endpoint) const {
-      asio::async_read(*connection->socket, connection->read_buffer, asio::transfer_exactly(2), [this, connection, &endpoint](const error_code &ec, std::size_t bytes_transferred) {
+      asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(2), [this, connection, &endpoint](const error_code &ec, std::size_t bytes_transferred) {
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
@@ -593,10 +593,10 @@ namespace SimpleWeb {
             read_message(connection, endpoint);
             return;
           }
-          std::istream stream(&connection->read_buffer);
+          std::istream istream(&connection->streambuf);
 
           std::array<unsigned char, 2> first_bytes;
-          stream.read((char *)&first_bytes[0], 2);
+          istream.read((char *)&first_bytes[0], 2);
 
           unsigned char fin_rsv_opcode = first_bytes[0];
 
@@ -612,15 +612,15 @@ namespace SimpleWeb {
 
           if(length == 126) {
             // 2 next bytes is the size of content
-            asio::async_read(*connection->socket, connection->read_buffer, asio::transfer_exactly(2), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+            asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(2), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
               if(!ec) {
-                std::istream stream(&connection->read_buffer);
+                std::istream istream(&connection->streambuf);
 
                 std::array<unsigned char, 2> length_bytes;
-                stream.read((char *)&length_bytes[0], 2);
+                istream.read((char *)&length_bytes[0], 2);
 
                 std::size_t length = 0;
                 std::size_t num_bytes = 2;
@@ -635,15 +635,15 @@ namespace SimpleWeb {
           }
           else if(length == 127) {
             // 8 next bytes is the size of content
-            asio::async_read(*connection->socket, connection->read_buffer, asio::transfer_exactly(8), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+            asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(8), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
               if(!ec) {
-                std::istream stream(&connection->read_buffer);
+                std::istream istream(&connection->streambuf);
 
                 std::array<unsigned char, 8> length_bytes;
-                stream.read((char *)&length_bytes[0], 8);
+                istream.read((char *)&length_bytes[0], 8);
 
                 std::size_t length = 0;
                 std::size_t num_bytes = 8;
@@ -673,12 +673,12 @@ namespace SimpleWeb {
         connection_close(connection, endpoint, status, reason);
         return;
       }
-      asio::async_read(*connection->socket, connection->read_buffer, asio::transfer_exactly(4 + length), [this, connection, length, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+      asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(4 + length), [this, connection, length, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
         if(!ec) {
-          std::istream istream(&connection->read_buffer);
+          std::istream istream(&connection->streambuf);
 
           // Read mask
           std::array<unsigned char, 4> mask;

@@ -74,13 +74,13 @@ namespace SimpleWeb {
               connection->socket->lowest_layer().set_option(option, ec);
 
               if(!this->config.proxy_server.empty()) {
-                auto write_buffer = std::make_shared<asio::streambuf>();
-                std::ostream write_stream(write_buffer.get());
+                auto streambuf = std::make_shared<asio::streambuf>();
+                std::ostream ostream(streambuf.get());
                 auto host_port = this->host + ':' + std::to_string(this->port);
-                write_stream << "CONNECT " + host_port + " HTTP/1.1\r\n"
-                             << "Host: " << host_port << "\r\n\r\n";
+                ostream << "CONNECT " + host_port + " HTTP/1.1\r\n"
+                        << "Host: " << host_port << "\r\n\r\n";
                 connection->set_timeout(this->config.timeout_request);
-                asio::async_write(connection->socket->next_layer(), *write_buffer, [this, connection, write_buffer](const error_code &ec, std::size_t /*bytes_transferred*/) {
+                asio::async_write(connection->socket->next_layer(), *streambuf, [this, connection, streambuf](const error_code &ec, std::size_t /*bytes_transferred*/) {
                   connection->cancel_timeout();
                   auto lock = connection->handler_runner->continue_lock();
                   if(!lock)

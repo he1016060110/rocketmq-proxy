@@ -15,7 +15,7 @@ public:
   void parse_request_test() {
     std::shared_ptr<Connection> connection(new Connection(handler_runner, 0, *io_service));
 
-    ostream ss(&connection->read_buffer);
+    ostream ss(&connection->streambuf);
     ss << "GET /test/ HTTP/1.1\r\n";
     ss << "TestHeader: test\r\n";
     ss << "TestHeader2:test2\r\n";
@@ -23,7 +23,7 @@ public:
     ss << "TestHeader3:test3b\r\n";
     ss << "\r\n";
 
-    std::istream stream(&connection->read_buffer);
+    std::istream stream(&connection->streambuf);
     ASSERT(RequestMessage::parse(stream, connection->method, connection->path, connection->query_string, connection->http_version, connection->header));
 
     ASSERT(connection->method == "GET");
