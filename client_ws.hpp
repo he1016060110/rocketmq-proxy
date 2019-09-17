@@ -295,13 +295,17 @@ namespace SimpleWeb {
     std::function<void(std::shared_ptr<Connection>)> on_pong;
 
     void start() {
-      if(!io_service) {
-        io_service = std::make_shared<io_context>();
-        internal_io_service = true;
-      }
+      {
+        std::lock_guard<std::mutex> lock(start_stop_mutex);
 
-      if(io_service->stopped())
-        restart(*io_service);
+        if(!io_service) {
+          io_service = std::make_shared<io_context>();
+          internal_io_service = true;
+        }
+
+        if(io_service->stopped())
+          restart(*io_service);
+      }
 
       connect();
 
@@ -310,6 +314,8 @@ namespace SimpleWeb {
     }
 
     void stop() noexcept {
+      std::lock_guard<std::mutex> lock(start_stop_mutex);
+
       {
         LockGuard lock(connection_mutex);
         if(connection)
@@ -329,6 +335,8 @@ namespace SimpleWeb {
     std::shared_ptr<io_context> io_service;
 
   protected:
+    std::mutex start_stop_mutex;
+
     bool internal_io_service = false;
 
     std::string host;

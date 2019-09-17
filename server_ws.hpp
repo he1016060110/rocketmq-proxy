@@ -376,6 +376,8 @@ namespace SimpleWeb {
     /// Returns assigned port. If io_service is not set, an internal io_service is created instead.
     /// Call before accept_and_run().
     unsigned short bind() {
+      std::lock_guard<std::mutex> lock(start_stop_mutex);
+
       asio::ip::tcp::endpoint endpoint;
       if(config.address.size() > 0)
         endpoint = asio::ip::tcp::endpoint(make_address(config.address), config.port);
@@ -435,6 +437,8 @@ namespace SimpleWeb {
 
     /// Stop accepting new connections, and close current connections
     void stop() noexcept {
+      std::lock_guard<std::mutex> lock(start_stop_mutex);
+
       if(acceptor) {
         error_code ec;
         acceptor->close(ec);
@@ -497,6 +501,8 @@ namespace SimpleWeb {
     std::shared_ptr<io_context> io_service;
 
   protected:
+    std::mutex start_stop_mutex;
+
     bool internal_io_service = false;
 
     std::unique_ptr<asio::ip::tcp::acceptor> acceptor;
