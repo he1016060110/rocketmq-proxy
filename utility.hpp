@@ -348,7 +348,7 @@ namespace SimpleWeb {
 
       auto time = std::chrono::system_clock::to_time_t(time_point);
       tm tm;
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
       if(gmtime_s(&tm, &time) != 0)
         return {};
       auto gmtime = &tm;
