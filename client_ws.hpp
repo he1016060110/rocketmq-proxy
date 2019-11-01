@@ -31,16 +31,22 @@ namespace SimpleWeb {
       }
 
       /// Convenience function to return std::string. The stream buffer is consumed.
-      std::string string() noexcept {
+      /// Successive calls will return the same string.
+      const std::string &string() noexcept {
+        if(cached_string)
+          return *cached_string;
+
+        cached_string = std::unique_ptr<std::string>(new std::string());
+
         try {
-          std::string str;
           auto size = streambuf.size();
-          str.resize(size);
-          read(&str[0], static_cast<std::streamsize>(size));
-          return str;
+          cached_string->resize(size);
+          read(&(*cached_string)[0], static_cast<std::streamsize>(size));
+          return *cached_string;
         }
         catch(...) {
-          return std::string();
+          cached_string->clear();
+          return *cached_string;
         }
       }
 
@@ -49,6 +55,7 @@ namespace SimpleWeb {
       InMessage(unsigned char fin_rsv_opcode, std::size_t length) noexcept : std::istream(&streambuf), fin_rsv_opcode(fin_rsv_opcode), length(length) {}
       std::size_t length;
       asio::streambuf streambuf;
+      std::unique_ptr<std::string> cached_string;
     };
 
     /// The buffer is consumed during send operations.
