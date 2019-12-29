@@ -197,7 +197,7 @@ namespace SimpleWeb {
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
-      void send(const std::shared_ptr<OutMessage> &out_message, const std::function<void(const error_code &)> &callback = nullptr, unsigned char fin_rsv_opcode = 129) {
+      void send(const std::shared_ptr<OutMessage> &out_message, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
         cancel_timeout();
         set_timeout();
 
@@ -239,7 +239,7 @@ namespace SimpleWeb {
           out_header_and_message->put(out_message->get() ^ mask[c % 4]);
 
         LockGuard lock(send_queue_mutex);
-        send_queue.emplace_back(out_header_and_message, callback);
+        send_queue.emplace_back(std::move(out_header_and_message), std::move(callback));
         if(send_queue.size() == 1)
           send_from_queue();
       }
@@ -247,13 +247,13 @@ namespace SimpleWeb {
       /// Convenience function for sending a string.
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
-      void send(string_view out_message_str, const std::function<void(const error_code &)> &callback = nullptr, unsigned char fin_rsv_opcode = 129) {
+      void send(string_view out_message_str, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
         auto out_message = std::make_shared<OutMessage>();
         out_message->write(out_message_str.data(), static_cast<std::streamsize>(out_message_str.size()));
-        send(out_message, callback, fin_rsv_opcode);
+        send(out_message, std::move(callback), fin_rsv_opcode);
       }
 
-      void send_close(int status, const std::string &reason = "", const std::function<void(const error_code &)> &callback = nullptr) {
+      void send_close(int status, const std::string &reason = "", std::function<void(const error_code &)> callback = nullptr) {
         // Send close only once (in case close is initiated by client)
         if(closed)
           return;
@@ -267,7 +267,7 @@ namespace SimpleWeb {
         *out_message << reason;
 
         // fin_rsv_opcode=136: message close
-        send(out_message, callback, 136);
+        send(out_message, std::move(callback), 136);
       }
     };
 
