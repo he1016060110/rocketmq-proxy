@@ -420,7 +420,7 @@ namespace SimpleWeb {
           restart(*io_service);
 
         if(callback)
-          io_service->post(std::move(callback));
+          post(*io_service, std::move(callback));
 
         // If thread_pool_size>1, start m_io_service.run() in (thread_pool_size-1) threads for thread-pooling
         threads.clear();
@@ -439,7 +439,7 @@ namespace SimpleWeb {
           t.join();
       }
       else if(callback)
-        io_service->post(std::move(callback));
+        post(*io_service, std::move(callback));
     }
 
     /// Start the server by calling bind() and accept_and_run().

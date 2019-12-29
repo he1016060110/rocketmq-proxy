@@ -319,7 +319,7 @@ namespace SimpleWeb {
       connect();
 
       if(callback)
-        io_service->post(std::move(callback));
+        post(*io_service, std::move(callback));
 
       if(internal_io_service)
         io_service->run();

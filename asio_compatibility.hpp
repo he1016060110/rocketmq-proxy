@@ -32,6 +32,10 @@ namespace SimpleWeb {
   using resolver_results = asio::ip::tcp::resolver::results_type;
   using async_connect_endpoint = asio::ip::tcp::endpoint;
 
+  template <typename handler_type>
+  inline void post(io_context &context, handler_type &&handler) {
+    asio::post(context, std::forward<handler_type>(handler));
+  }
   inline void restart(io_context &context) noexcept {
     context.restart();
   }
@@ -51,6 +55,10 @@ namespace SimpleWeb {
   using resolver_results = asio::ip::tcp::resolver::iterator;
   using async_connect_endpoint = asio::ip::tcp::resolver::iterator;
 
+  template <typename handler_type>
+  inline void post(io_context &context, handler_type &&handler) {
+    context.post(std::forward<handler_type>(handler));
+  }
   inline void restart(io_context &context) noexcept {
     context.reset();
   }
