@@ -250,7 +250,7 @@ namespace SimpleWeb {
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
-      void send(const std::shared_ptr<OutMessage> &out_message, const std::function<void(const error_code &)> &callback = nullptr, unsigned char fin_rsv_opcode = 129) {
+      void send(std::shared_ptr<OutMessage> out_message, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
         cancel_timeout();
         set_timeout();
 
@@ -278,7 +278,7 @@ namespace SimpleWeb {
           out_header->put(static_cast<char>(length));
 
         LockGuard lock(send_queue_mutex);
-        send_queue.emplace_back(out_header, out_message, callback);
+        send_queue.emplace_back(std::move(out_header), std::move(out_message), std::move(callback));
         if(send_queue.size() == 1)
           send_from_queue();
       }
@@ -286,13 +286,13 @@ namespace SimpleWeb {
       /// Convenience function for sending a string.
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
-      void send(string_view out_message_str, const std::function<void(const error_code &)> &callback = nullptr, unsigned char fin_rsv_opcode = 129) {
+      void send(string_view out_message_str, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
         auto out_message = std::make_shared<OutMessage>();
         out_message->write(out_message_str.data(), static_cast<std::streamsize>(out_message_str.size()));
-        send(out_message, callback, fin_rsv_opcode);
+        send(out_message, std::move(callback), fin_rsv_opcode);
       }
 
-      void send_close(int status, const std::string &reason = "", const std::function<void(const error_code &)> &callback = nullptr) {
+      void send_close(int status, const std::string &reason = "", std::function<void(const error_code &)> callback = nullptr) {
         // Send close only once (in case close is initiated by server)
         if(closed)
           return;
@@ -306,7 +306,7 @@ namespace SimpleWeb {
         *send_stream << reason;
 
         // fin_rsv_opcode=136: message close
-        send(send_stream, callback, 136);
+        send(std::move(send_stream), std::move(callback), 136);
       }
     };
 
@@ -410,13 +410,17 @@ namespace SimpleWeb {
     /// If you know the server port in advance, use start() instead.
     /// Accept requests, and if io_service was not set before calling bind(), run the internal io_service instead.
     /// Call after bind().
-    void accept_and_run() {
+    /// The callback parameter is called after the server is accepting connections.
+    void accept_and_run(std::function<void()> callback = nullptr) {
       acceptor->listen();
       accept();
 
       if(internal_io_service) {
         if(io_service->stopped())
           restart(*io_service);
+
+        if(callback)
+          io_service->post(std::move(callback));
 
         // If thread_pool_size>1, start m_io_service.run() in (thread_pool_size-1) threads for thread-pooling
         threads.clear();
@@ -434,12 +438,15 @@ namespace SimpleWeb {
         for(auto &t : threads)
           t.join();
       }
+      else if(callback)
+        io_service->post(std::move(callback));
     }
 
-    /// Start the server by calling bind() and accept_and_run()
-    void start() {
+    /// Start the server by calling bind() and accept_and_run().
+    /// The callback parameter is called after the server is accepting connections.
+    void start(std::function<void()> callback = nullptr) {
       bind();
-      accept_and_run();
+      accept_and_run(std::move(callback));
     }
 
     /// Stop accepting new connections, and close current connections
