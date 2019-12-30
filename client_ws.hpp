@@ -314,12 +314,12 @@ namespace SimpleWeb {
 
         if(io_service->stopped())
           restart(*io_service);
+
+        connect();
+
+        if(callback)
+          post(*io_service, std::move(callback));
       }
-
-      connect();
-
-      if(callback)
-        post(*io_service, std::move(callback));
 
       if(internal_io_service)
         io_service->run();
