@@ -94,16 +94,17 @@ int main() {
       a_connection->send(out_message);
   };
 
-  thread server_thread([&server]() {
-    // Start WSS-server
-    server.start();
+  // Start server and receive assigned port when server is listening for requests
+  promise<unsigned short> server_port;
+  thread server_thread([&server, &server_port]() {
+    // Start server
+    server.start([&server_port](unsigned short port) {
+      server_port.set_value(port);
+    });
   });
-
-  // Wait for server to start so that the client can connect
-  this_thread::sleep_for(chrono::seconds(1));
+  cout << "Server listening on port " << server_port.get_future().get() << endl << endl;
 
   // Example 4: Client communication with server
-  // Second Client() parameter set to false: no certificate verification
   // Possible output:
   //   Server: Opened connection 0x7fcf21600380
   //   Client: Opened connection
@@ -114,7 +115,7 @@ int main() {
   //   Client: Sending close connection
   //   Server: Closed connection 0x7fcf21600380 with status code 1000
   //   Client: Closed connection with status code 1000
-  WssClient client("localhost:8080/echo", false);
+  WssClient client("localhost:8080/echo", false); // Second Client() parameter set to false: no certificate verification
   client.on_message = [](shared_ptr<WssClient::Connection> connection, shared_ptr<WssClient::InMessage> in_message) {
     cout << "Client: Message received: \"" << in_message->string() << "\"" << endl;
 
