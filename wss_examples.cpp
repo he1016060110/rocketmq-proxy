@@ -1,5 +1,6 @@
 #include "client_wss.hpp"
 #include "server_wss.hpp"
+#include <future>
 
 using namespace std;
 
