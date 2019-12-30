@@ -302,7 +302,8 @@ namespace SimpleWeb {
     std::function<void(std::shared_ptr<Connection>)> on_pong;
 
     /// Start the client.
-    /// The callback parameter is called after the server is accepting connections.
+    /// If io_service is not set, an internal io_service is created instead.
+    /// The callback parameter is called while the client is connecting to the server.
     void start(std::function<void()> callback = nullptr) {
       {
         std::lock_guard<std::mutex> lock(start_stop_mutex);
