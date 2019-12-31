@@ -158,7 +158,9 @@ namespace SimpleWeb {
 
       void send_from_queue() REQUIRES(send_queue_mutex) {
         auto self = this->shared_from_this();
+        set_timeout();
         asio::async_write(*self->socket, send_queue.begin()->out_message->streambuf, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          self->set_timeout(); // Set timeout for next send
           auto lock = self->handler_runner->continue_lock();
           if(!lock)
             return;
@@ -198,9 +200,6 @@ namespace SimpleWeb {
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
       void send(const std::shared_ptr<OutMessage> &out_message, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
-        cancel_timeout();
-        set_timeout();
-
         // Create mask
         std::array<unsigned char, 4> mask;
         std::uniform_int_distribution<unsigned short> dist(0, 255);
@@ -471,7 +470,9 @@ namespace SimpleWeb {
     }
 
     void read_message(const std::shared_ptr<Connection> &connection, std::size_t num_additional_bytes) {
+      connection->set_timeout();
       asio::async_read(*connection->socket, connection->in_message->streambuf, asio::transfer_exactly(num_additional_bytes > 2 ? 0 : 2 - num_additional_bytes), [this, connection](const error_code &ec, std::size_t bytes_transferred) {
+        connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
@@ -499,7 +500,9 @@ namespace SimpleWeb {
 
           if(length == 126) {
             // 2 next bytes is the size of content
+            connection->set_timeout();
             asio::async_read(*connection->socket, connection->in_message->streambuf, asio::transfer_exactly(num_additional_bytes > 2 ? 0 : 2 - num_additional_bytes), [this, connection](const error_code &ec, std::size_t bytes_transferred) {
+              connection->cancel_timeout();
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
@@ -523,7 +526,9 @@ namespace SimpleWeb {
           }
           else if(length == 127) {
             // 8 next bytes is the size of content
+            connection->set_timeout();
             asio::async_read(*connection->socket, connection->in_message->streambuf, asio::transfer_exactly(num_additional_bytes > 8 ? 0 : 8 - num_additional_bytes), [this, connection](const error_code &ec, std::size_t bytes_transferred) {
+              connection->cancel_timeout();
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
@@ -564,7 +569,9 @@ namespace SimpleWeb {
         connection_close(connection, status, reason);
         return;
       }
+      connection->set_timeout();
       asio::async_read(*connection->socket, connection->in_message->streambuf, asio::transfer_exactly(num_additional_bytes > connection->in_message->length ? 0 : connection->in_message->length - num_additional_bytes), [this, connection](const error_code &ec, std::size_t bytes_transferred) {
+        connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
@@ -583,9 +590,6 @@ namespace SimpleWeb {
 
           // If connection close
           if((connection->in_message->fin_rsv_opcode & 0x0f) == 8) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             int status = 0;
             if(connection->in_message->length >= 2) {
               unsigned char byte1 = connection->in_message->get();
@@ -599,9 +603,6 @@ namespace SimpleWeb {
           }
           // If ping
           else if((connection->in_message->fin_rsv_opcode & 0x0f) == 9) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             // Send pong
             auto out_message = std::make_shared<OutMessage>();
             *out_message << connection->in_message->string();
@@ -616,9 +617,6 @@ namespace SimpleWeb {
           }
           // If pong
           else if((connection->in_message->fin_rsv_opcode & 0x0f) == 10) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             if(this->on_pong)
               this->on_pong(connection);
 
@@ -643,9 +641,6 @@ namespace SimpleWeb {
             this->read_message(connection, num_additional_bytes);
           }
           else {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             if(this->on_message) {
               if(connection->fragmented_in_message) {
                 connection->fragmented_in_message->length += connection->in_message->length;
@@ -671,25 +666,16 @@ namespace SimpleWeb {
     }
 
     void connection_open(const std::shared_ptr<Connection> &connection) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       if(on_open)
         on_open(connection);
     }
 
     void connection_close(const std::shared_ptr<Connection> &connection, int status, const std::string &reason) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       if(on_close)
         on_close(connection, status, reason);
     }
 
     void connection_error(const std::shared_ptr<Connection> &connection, const error_code &ec) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       if(on_error)
         on_error(connection, ec);
     }

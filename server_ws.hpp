@@ -156,11 +156,8 @@ namespace SimpleWeb {
       }
 
       void set_timeout(long seconds = -1) noexcept {
-        bool use_timeout_idle = false;
-        if(seconds == -1) {
-          use_timeout_idle = true;
+        if(seconds == -1)
           seconds = timeout_idle;
-        }
 
         LockGuard lock(timer_mutex);
 
@@ -171,14 +168,10 @@ namespace SimpleWeb {
 
         timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(get_socket_executor(*socket), std::chrono::seconds(seconds)));
         std::weak_ptr<Connection> connection_weak(this->shared_from_this()); // To avoid keeping Connection instance alive longer than needed
-        timer->async_wait([connection_weak, use_timeout_idle](const error_code &ec) {
+        timer->async_wait([connection_weak](const error_code &ec) {
           if(!ec) {
-            if(auto connection = connection_weak.lock()) {
-              if(use_timeout_idle)
-                connection->send_close(1000, "idle timeout"); // 1000=normal closure
-              else
-                connection->close();
-            }
+            if(auto connection = connection_weak.lock())
+              connection->close(); // Servers are not required to send close frames
           }
         });
       }
@@ -211,7 +204,9 @@ namespace SimpleWeb {
       void send_from_queue() REQUIRES(send_queue_mutex) {
         std::array<asio::const_buffer, 2> buffers{send_queue.begin()->out_header->streambuf.data(), send_queue.begin()->out_message->streambuf.data()};
         auto self = this->shared_from_this();
+        set_timeout();
         asio::async_write(*socket, buffers, [self](const error_code &ec, std::size_t /*bytes_transferred*/) {
+          self->set_timeout(); // Set timeout for next send
           auto lock = self->handler_runner->continue_lock();
           if(!lock)
             return;
@@ -251,9 +246,6 @@ namespace SimpleWeb {
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
       /// See http://tools.ietf.org/html/rfc6455#section-5.2 for more information.
       void send(std::shared_ptr<OutMessage> out_message, std::function<void(const error_code &)> callback = nullptr, unsigned char fin_rsv_opcode = 129) {
-        cancel_timeout();
-        set_timeout();
-
         std::size_t length = out_message->size();
 
         auto out_header = std::make_shared<OutMessage>(10); // Header is at most 10 bytes
@@ -599,7 +591,9 @@ namespace SimpleWeb {
     }
 
     void read_message(const std::shared_ptr<Connection> &connection, Endpoint &endpoint) const {
+      connection->set_timeout();
       asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(2), [this, connection, &endpoint](const error_code &ec, std::size_t bytes_transferred) {
+        connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
@@ -627,7 +621,9 @@ namespace SimpleWeb {
 
           if(length == 126) {
             // 2 next bytes is the size of content
+            connection->set_timeout();
             asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(2), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+              connection->cancel_timeout();
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
@@ -650,7 +646,9 @@ namespace SimpleWeb {
           }
           else if(length == 127) {
             // 8 next bytes is the size of content
+            connection->set_timeout();
             asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(8), [this, connection, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+              connection->cancel_timeout();
               auto lock = connection->handler_runner->continue_lock();
               if(!lock)
                 return;
@@ -688,7 +686,9 @@ namespace SimpleWeb {
         connection_close(connection, endpoint, status, reason);
         return;
       }
+      connection->set_timeout();
       asio::async_read(*connection->socket, connection->streambuf, asio::transfer_exactly(4 + length), [this, connection, length, &endpoint, fin_rsv_opcode](const error_code &ec, std::size_t /*bytes_transferred*/) {
+        connection->cancel_timeout();
         auto lock = connection->handler_runner->continue_lock();
         if(!lock)
           return;
@@ -719,9 +719,6 @@ namespace SimpleWeb {
 
           // If connection close
           if((fin_rsv_opcode & 0x0f) == 8) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             int status = 0;
             if(length >= 2) {
               unsigned char byte1 = in_message->get();
@@ -735,9 +732,6 @@ namespace SimpleWeb {
           }
           // If ping
           else if((fin_rsv_opcode & 0x0f) == 9) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             // Send pong
             auto out_message = std::make_shared<OutMessage>();
             *out_message << in_message->string();
@@ -751,9 +745,6 @@ namespace SimpleWeb {
           }
           // If pong
           else if((fin_rsv_opcode & 0x0f) == 10) {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             if(endpoint.on_pong)
               endpoint.on_pong(connection);
 
@@ -766,9 +757,6 @@ namespace SimpleWeb {
             this->read_message(connection, endpoint);
           }
           else {
-            connection->cancel_timeout();
-            connection->set_timeout();
-
             if(endpoint.on_message)
               endpoint.on_message(connection, in_message);
 
@@ -784,9 +772,6 @@ namespace SimpleWeb {
     }
 
     void connection_open(const std::shared_ptr<Connection> &connection, Endpoint &endpoint) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       {
         LockGuard lock(endpoint.connections_mutex);
         endpoint.connections.insert(connection);
@@ -797,9 +782,6 @@ namespace SimpleWeb {
     }
 
     void connection_close(const std::shared_ptr<Connection> &connection, Endpoint &endpoint, int status, const std::string &reason) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       {
         LockGuard lock(endpoint.connections_mutex);
         endpoint.connections.erase(connection);
@@ -810,9 +792,6 @@ namespace SimpleWeb {
     }
 
     void connection_error(const std::shared_ptr<Connection> &connection, Endpoint &endpoint, const error_code &ec) const {
-      connection->cancel_timeout();
-      connection->set_timeout();
-
       {
         LockGuard lock(endpoint.connections_mutex);
         endpoint.connections.erase(connection);

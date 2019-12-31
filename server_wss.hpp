@@ -70,10 +70,10 @@ namespace SimpleWeb {
 
           connection->set_timeout(config.timeout_request);
           connection->socket->async_handshake(asio::ssl::stream_base::server, [this, connection](const error_code &ec) {
+            connection->cancel_timeout();
             auto lock = connection->handler_runner->continue_lock();
             if(!lock)
               return;
-            connection->cancel_timeout();
             if(!ec)
               read_handshake(connection);
           });
