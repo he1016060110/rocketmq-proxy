@@ -100,6 +100,8 @@ namespace SimpleWeb {
       Mutex timer_mutex;
       std::unique_ptr<asio::steady_timer> timer GUARDED_BY(timer_mutex);
 
+      std::atomic<bool> closed;
+
       void close() noexcept {
         error_code ec;
         socket->lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
@@ -193,8 +195,6 @@ namespace SimpleWeb {
           }
         });
       }
-
-      std::atomic<bool> closed;
 
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.

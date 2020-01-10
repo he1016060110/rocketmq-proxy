@@ -95,21 +95,14 @@ namespace SimpleWeb {
       friend class SocketServer<socket_type>;
 
     public:
-      Connection(std::unique_ptr<socket_type> &&socket_) noexcept : socket(std::move(socket_)), timeout_idle(0), closed(false) {}
-
       std::string method, path, query_string, http_version;
 
       CaseInsensitiveMultimap header;
 
       regex::smatch path_match;
 
-      asio::ip::tcp::endpoint remote_endpoint() const noexcept {
-        try {
-          return socket->lowest_layer().remote_endpoint();
-        }
-        catch(...) {
-        }
-        return asio::ip::tcp::endpoint();
+      const asio::ip::tcp::endpoint &remote_endpoint() const noexcept {
+        return endpoint;
       }
 
       /// Deprecated, please use remote_endpoint().address().to_string() instead.
@@ -148,6 +141,10 @@ namespace SimpleWeb {
 
       Mutex timer_mutex;
       std::unique_ptr<asio::steady_timer> timer GUARDED_BY(timer_mutex);
+
+      std::atomic<bool> closed;
+
+      asio::ip::tcp::endpoint endpoint; // The endpoint is read in Server::write_handshake and must be stored so that it can be read reliably in all handlers, including on_error
 
       void close() noexcept {
         error_code ec;
@@ -239,8 +236,6 @@ namespace SimpleWeb {
           }
         });
       }
-
-      std::atomic<bool> closed;
 
     public:
       /// fin_rsv_opcode: 129=one fragment, text, 130=one fragment, binary, 136=close connection.
@@ -578,6 +573,13 @@ namespace SimpleWeb {
               return;
             if(status_code != StatusCode::information_switching_protocols)
               return;
+
+            try {
+              connection->endpoint = connection->socket->lowest_layer().remote_endpoint();
+            }
+            catch(...) {
+            }
+
             if(!ec) {
               connection_open(connection, regex_endpoint.second);
               read_message(connection, regex_endpoint.second);
