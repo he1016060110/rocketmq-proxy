@@ -95,6 +95,8 @@ namespace SimpleWeb {
       friend class SocketServer<socket_type>;
 
     public:
+      Connection(std::unique_ptr<socket_type> &&socket_) noexcept : socket(std::move(socket_)), timeout_idle(0), closed(false) {}
+
       std::string method, path, query_string, http_version;
 
       CaseInsensitiveMultimap header;
@@ -126,6 +128,7 @@ namespace SimpleWeb {
       }
 
     private:
+      /// Used to call Server::upgrade.
       template <typename... Args>
       Connection(std::shared_ptr<ScopeRunner> handler_runner_, long timeout_idle, Args &&... args) noexcept
           : handler_runner(std::move(handler_runner_)), socket(new socket_type(std::forward<Args>(args)...)), timeout_idle(timeout_idle), closed(false) {}
