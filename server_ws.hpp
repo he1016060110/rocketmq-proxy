@@ -53,7 +53,6 @@ namespace SimpleWeb {
       InMessage(unsigned char fin_rsv_opcode, std::size_t length) noexcept : std::istream(&streambuf), fin_rsv_opcode(fin_rsv_opcode), length(length) {}
       std::size_t length;
       asio::streambuf streambuf;
-      std::unique_ptr<std::string> cached_string;
     };
 
     /// The buffer is not consumed during send operations.
