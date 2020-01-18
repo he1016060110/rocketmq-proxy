@@ -566,9 +566,12 @@ namespace SimpleWeb {
           if(num_additional_bytes > 0) { // Extract bytes that are not extra bytes in buffer (only happen when several messages are sent in upgrade response)
             next_in_message = connection->in_message;
             connection->in_message = std::shared_ptr<InMessage>(new InMessage(next_in_message->fin_rsv_opcode, next_in_message->length));
-            std::ostream ostream(&connection->in_message->streambuf);
-            for(std::size_t c = 0; c < next_in_message->length; ++c)
-              ostream.put(next_in_message->get());
+
+            // Move leftover next_in_message to connection->in_message
+            auto &source = next_in_message->streambuf;
+            auto &target = connection->in_message->streambuf;
+            target.commit(asio::buffer_copy(target.prepare(next_in_message->length), source.data(), next_in_message->length));
+            source.consume(next_in_message->length);
           }
           else
             next_in_message = std::shared_ptr<InMessage>(new InMessage());
@@ -617,8 +620,11 @@ namespace SimpleWeb {
             }
             else {
               connection->fragmented_in_message->length += connection->in_message->length;
-              std::ostream ostream(&connection->fragmented_in_message->streambuf);
-              ostream << connection->in_message->rdbuf();
+              // Move connection->in_message to connection->fragmented_in_message
+              auto &source = connection->in_message->streambuf;
+              auto &target = connection->fragmented_in_message->streambuf;
+              target.commit(asio::buffer_copy(target.prepare(source.size()), source.data()));
+              source.consume(source.size());
             }
 
             // Next message
@@ -629,8 +635,11 @@ namespace SimpleWeb {
             if(this->on_message) {
               if(connection->fragmented_in_message) {
                 connection->fragmented_in_message->length += connection->in_message->length;
-                std::ostream ostream(&connection->fragmented_in_message->streambuf);
-                ostream << connection->in_message->rdbuf();
+                // Move connection->in_message to connection->fragmented_in_message
+                auto &source = connection->in_message->streambuf;
+                auto &target = connection->fragmented_in_message->streambuf;
+                target.commit(asio::buffer_copy(target.prepare(source.size()), source.data()));
+                source.consume(source.size());
 
                 this->on_message(connection, connection->fragmented_in_message);
               }
