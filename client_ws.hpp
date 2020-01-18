@@ -30,24 +30,9 @@ namespace SimpleWeb {
         return length;
       }
 
-      /// Convenience function to return std::string. The stream buffer is consumed.
-      /// Successive calls will return the same string.
-      const std::string &string() noexcept {
-        if(cached_string)
-          return *cached_string;
-
-        cached_string = std::unique_ptr<std::string>(new std::string());
-
-        try {
-          auto size = streambuf.size();
-          cached_string->resize(size);
-          read(&(*cached_string)[0], static_cast<std::streamsize>(size));
-          return *cached_string;
-        }
-        catch(...) {
-          cached_string->clear();
-          return *cached_string;
-        }
+      /// Convenience function to return std::string.
+      std::string string() noexcept {
+        return std::string(asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()));
       }
 
     private:
