@@ -19,6 +19,7 @@ int main() {
   echo.on_message = [&server_callback_count](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
     auto in_message_str = in_message->string();
     ASSERT(in_message_str == "Hello");
+    ASSERT(in_message->string() == "Hello");
 
     ++server_callback_count;
     connection->send(in_message_str, [](const SimpleWeb::error_code &ec) {
@@ -89,6 +90,7 @@ int main() {
     atomic<bool> closed(false);
 
     client.on_message = [&](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+      ASSERT(in_message->string() == "Hello");
       ASSERT(in_message->string() == "Hello");
 
       ++client_callback_count;
