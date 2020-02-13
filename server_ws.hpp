@@ -458,7 +458,8 @@ namespace SimpleWeb {
       std::unordered_set<std::shared_ptr<Connection>> all_connections;
       for(auto &e : endpoint) {
         LockGuard lock(e.second.connections_mutex);
-        all_connections.insert(e.second.connections.begin(), e.second.connections.end());
+        if(!e.second.connections.empty())
+          all_connections.insert(e.second.connections.begin(), e.second.connections.end());
       }
       return all_connections;
     }
