@@ -13,6 +13,7 @@ int main() {
     int count = 0;
     client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
+        cout << in_message->string() << "\n";
         if (count >= 10000) {
             connection->send_close(1000);
             cout << "Client: Sending close connection" << endl;

@@ -12,9 +12,24 @@ using namespace rocketmq;
 SendCallback* g_callback = NULL;
 
 class MySendCallback : public SendCallback {
+    shared_ptr<WsServer::Connection> conn;
     virtual void onSuccess(SendResult& sendResult) {
+        this->conn->send(sendResult.getMsgId(), [](const SimpleWeb::error_code &ec) {
+            if(ec) {
+                cout << "Server: Error sending message. " <<
+                     // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
+                     "Error: " << ec << ", error message: " << ec.message() << endl;
+            }
+        });
     }
     virtual void onException(MQException& e) {
+        this->conn->send("error!");
+    }
+
+public:
+    void setConn(shared_ptr<WsServer::Connection> &con)
+    {
+        this->conn = con;
     }
 };
 
@@ -46,15 +61,8 @@ int main() {
                                 "*",          // tag
                                 "test message!");  // body
         MySendCallback * calllback = new MySendCallback();
+        calllback->setConn(connection);
         producer->send(msg, calllback);
-
-        connection->send(out_message, [](const SimpleWeb::error_code &ec) {
-            if(ec) {
-                cout << "Server: Error sending message. " <<
-                     // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
-                     "Error: " << ec << ", error message: " << ec.message() << endl;
-            }
-        });
     };
 
     echo.on_open = [](shared_ptr<WsServer::Connection> connection) {
