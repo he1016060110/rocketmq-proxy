@@ -22,12 +22,6 @@ int main() {
 
     echo.on_message = [](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
         auto out_message = in_message->string();
-
-        cout << "Server: Message received: \"" << out_message << "\" from " << connection.get() << endl;
-
-        cout << "Server: Sending message \"" << out_message << "\" to " << connection.get() << endl;
-
-        // connection->send is an asynchronous function
         connection->send(out_message, [](const SimpleWeb::error_code &ec) {
             if(ec) {
                 cout << "Server: Error sending message. " <<
@@ -35,11 +29,6 @@ int main() {
                      "Error: " << ec << ", error message: " << ec.message() << endl;
             }
         });
-
-        // Alternatively use streams:
-        // auto out_message = make_shared<WsServer::OutMessage>();
-        // *out_message << in_message->string();
-        // connection->send(out_message);
     };
 
     echo.on_open = [](shared_ptr<WsServer::Connection> connection) {

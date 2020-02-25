@@ -9,20 +9,22 @@ using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
 int main() {
     WsClient client("localhost:8080/echo");
-    client.on_message = [](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
-        cout << "Client: Message received: \"" << in_message->string() << "\"" << endl;
-
-        cout << "Client: Sending close connection" << endl;
-        connection->send_close(1000);
+    int count = 0;
+    client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+        count++;
+        if (count >= 10000) {
+            connection->send_close(1000);
+            cout << "Client: Sending close connection" << endl;
+        }
     };
 
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
         cout << "Client: Opened connection" << endl;
-
         string out_message("Hello");
+        for (int i =0 ; i< 10000; i++) {
+            connection->send(out_message);
+        }
         cout << "Client: Sending message: \"" << out_message << "\"" << endl;
-
-        connection->send(out_message);
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
