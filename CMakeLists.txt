@@ -59,6 +59,11 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(ProxyClient simple-websocket-server)
     add_executable(ProxyServer ProxyServer.cpp)
     target_link_libraries(ProxyServer simple-websocket-server)
+
+    target_link_libraries(ProxyServer /rocketmq-client-cpp/bin/librocketmq.so)
+    target_include_directories(ProxyServer PRIVATE ${Boost_INCLUDE_DIR})
+    target_include_directories(ProxyServer PRIVATE include)
+
     set(BUILD_TESTING ON)
 
     install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp

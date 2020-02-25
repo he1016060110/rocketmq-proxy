@@ -1,16 +1,36 @@
 #include "client_ws.hpp"
 #include "server_ws.hpp"
 #include <future>
+#include "common.h"
 
 using namespace std;
-
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
+
+using namespace rocketmq;
+
+SendCallback* g_callback = NULL;
+
+class MySendCallback : public SendCallback {
+    virtual void onSuccess(SendResult& sendResult) {
+    }
+    virtual void onException(MQException& e) {
+    }
+};
+
 
 int main() {
     // WebSocket (WS)-server at port 8080 using 1 thread
     WsServer server;
     server.config.port = 8080;
+
+    DefaultMQProducer * producer = new DefaultMQProducer("AsyncProducer");
+    producer->setNamesrvAddr("namesrv:9876");
+    producer->setInstanceName("AsyncProducer");
+    producer->setSendMsgTimeout(500);
+    producer->setTcpTransportTryLockTimeout(1000);
+    producer->setTcpTransportConnectTimeout(400);
+    producer->start();
 
     // Example 1: echo WebSocket endpoint
     // Added debug messages for example use of the callbacks
@@ -20,8 +40,14 @@ int main() {
     //   ws.send("test");
     auto &echo = server.endpoint["^/echo/?$"];
 
-    echo.on_message = [](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
+    echo.on_message = [&producer](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
         auto out_message = in_message->string();
+        rocketmq::MQMessage msg("TestTopicAsync",  // topic
+                                "*",          // tag
+                                "test message!");  // body
+        MySendCallback * calllback = new MySendCallback();
+        producer->send(msg, calllback);
+
         connection->send(out_message, [](const SimpleWeb::error_code &ec) {
             if(ec) {
                 cout << "Server: Error sending message. " <<
