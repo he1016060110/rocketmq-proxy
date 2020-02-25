@@ -54,9 +54,9 @@ class WorkerPool
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<DefaultMQPushConsumer> > consumers;
 public:
-    shared_ptr<DefaultMQProducer> getProducer(const string &name)
+    shared_ptr<DefaultMQProducer> getProducer(const string &topic)
     {
-        auto iter = producers.find(name);
+        auto iter = producers.find(topic);
         if(iter != producers.end())
             return iter->second;
         else {
@@ -67,33 +67,38 @@ public:
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
             producer->start();
-            producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (name, producer));
+            producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (topic, producer));
 
             return producer;
         }
     }
     shared_ptr<DefaultMQPushConsumer>  getConsumer(const string &topic, shared_ptr<WsServer::Connection> &con)
     {
-        shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer("AsyncConsumer"));
-        consumer->setNamesrvAddr("namesrv:9876");
-        consumer->setGroupName("AsyncConsumer");
-        consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
-        consumer->setInstanceName("AsyncConsumer");
-        consumer->subscribe(topic, "*");
-        consumer->setConsumeThreadCount(15);
-        consumer->setTcpTransportTryLockTimeout(1000);
-        consumer->setTcpTransportConnectTimeout(400);
-        ConsumerMsgListener listener;
-        listener.setConn(con);
-        consumer->registerMessageListener(&listener);
-        try {
-            consumer->start();
-        } catch (MQClientException& e) {
-            cout << e << endl;
-        }
-        consumers.insert(pair<string, shared_ptr<DefaultMQPushConsumer>> (topic, consumer));
+        auto iter = consumers.find(topic);
+        if(iter != consumers.end())
+            return iter->second;
+        else {
+            shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer("AsyncConsumer"));
+            consumer->setNamesrvAddr("namesrv:9876");
+            consumer->setGroupName("AsyncConsumer");
+            consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
+            consumer->setInstanceName("AsyncConsumer");
+            consumer->subscribe(topic, "*");
+            consumer->setConsumeThreadCount(15);
+            consumer->setTcpTransportTryLockTimeout(1000);
+            consumer->setTcpTransportConnectTimeout(400);
+            ConsumerMsgListener listener;
+            listener.setConn(con);
+            consumer->registerMessageListener(&listener);
+            try {
+                consumer->start();
+            } catch (MQClientException &e) {
+                cout << e << endl;
+            }
+            consumers.insert(pair<string, shared_ptr<DefaultMQPushConsumer>>(topic, consumer));
 
-        return consumer;
+            return consumer;
+        }
     }
 };
 
