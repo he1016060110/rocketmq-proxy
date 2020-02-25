@@ -1,6 +1,9 @@
 #include "server_ws.hpp"
 #include <future>
 #include "common.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
@@ -58,10 +61,15 @@ int main() {
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
 
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
-        auto name = in_message->string();
-        rocketmq::MQMessage msg(name,  // topic
-                                "*",          // tag
-                                "test message!");  // body
+        string json = in_message->string();
+        std::istringstream jsonStream;
+        jsonStream.str(json);
+        boost::property_tree::ptree jsonItem;
+        boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+        string name = jsonItem.get<string>("topic");
+        string tag = jsonItem.get<string>("tag");
+        string body = jsonItem.get<string>("body");
+        rocketmq::MQMessage msg(name, tag, body);
         ProducerCallback * calllback = new ProducerCallback();
         calllback->setConn(connection);
         auto producer = wp.getProducer(name);
@@ -72,7 +80,6 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    // See RFC 6455 7.4.1. for status codes
     producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status, const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
@@ -86,26 +93,6 @@ int main() {
     producerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
-    };
-
-    auto &producerEndpoint_thrice = server.endpoint["^/producerEndpoint_thrice/?$"];
-    producerEndpoint_thrice.on_message = [](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
-        auto out_message = make_shared<string>(in_message->string());
-
-        connection->send(*out_message, [connection, out_message](const SimpleWeb::error_code &ec) {
-            if(!ec)
-                connection->send(*out_message); // Sent after the first send operation is finished
-        });
-        connection->send(*out_message); // Most likely queued. Sent after the first send operation is finished.
-    };
-
-    auto &producerEndpoint_all = server.endpoint["^/producerEndpoint_all/?$"];
-    producerEndpoint_all.on_message = [&server](shared_ptr<WsServer::Connection> /*connection*/, shared_ptr<WsServer::InMessage> in_message) {
-        auto out_message = in_message->string();
-
-        // producerEndpoint_all.get_connections() can also be used to solely receive connections on this endpoint
-        for(auto &a_connection : server.get_connections())
-            a_connection->send(out_message);
     };
 
     promise<unsigned short> server_port;
