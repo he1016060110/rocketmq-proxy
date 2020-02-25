@@ -1,5 +1,4 @@
 #include "client_ws.hpp"
-#include "server_ws.hpp"
 #include <future>
 #include <boost/timer.hpp>
 
