@@ -59,6 +59,7 @@ int main() {
     server.config.port = 8080;
     WorkerPool wp;
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
+    auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
 
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
@@ -94,6 +95,30 @@ int main() {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
+
+    consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
+        cout << in_message->string() << "\n";
+    };
+
+    consumerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
+        cout << "Server: Opened connection " << connection.get() << endl;
+    };
+
+    consumerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status, const string & /*reason*/) {
+        cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
+    };
+
+    // Can modify handshake response headers here if needed
+    consumerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/, SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+        return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
+    };
+
+    // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
+    consumerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
+        cout << "Server: Error in connection " << connection.get() << ". "
+             << "Error: " << ec << ", error message: " << ec.message() << endl;
+    };
+
 
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {

@@ -23,7 +23,6 @@ int main() {
         string out_message("Hello");
 
         string json= "{ \
-            \"type\": 0, \
             \"topic\": \"TestTopicProxy\", \
             \"tag\": \"*\", \
             \"body\": \"this this the TestTopicProxy!\" \

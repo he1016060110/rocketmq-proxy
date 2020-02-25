@@ -55,8 +55,11 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 
 # If Simple-WebSocket-Server is not a sub-project:
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_executable(ProxyClient ProxyClient.cpp)
-    target_link_libraries(ProxyClient simple-websocket-server)
+    add_executable(ProxyProducerClient ProxyProducerClient.cpp)
+    target_link_libraries(ProxyProducerClient simple-websocket-server)
+    add_executable(ProxyConsumerClient ProxyConsumerClient.cpp)
+    target_link_libraries(ProxyConsumerClient simple-websocket-server)
+
     add_executable(ProxyServer ProxyServer.cpp)
     target_link_libraries(ProxyServer simple-websocket-server)
 
