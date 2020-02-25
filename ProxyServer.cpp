@@ -14,7 +14,6 @@ class ProducerCallback : public SendCallback {
         this->conn->send(sendResult.getMsgId(), [](const SimpleWeb::error_code &ec) {
             if(ec) {
                 cout << "Server: Error sending message. " <<
-                     // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
                      "Error: " << ec << ", error message: " << ec.message() << endl;
             }
         });
@@ -55,7 +54,6 @@ public:
 };
 
 int main() {
-    // WebSocket (WS)-server at port 8080 using 1 thread
     WsServer server;
     server.config.port = 8080;
     WorkerPool wp;
@@ -92,13 +90,6 @@ int main() {
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
 
-    // Example 2: producerEndpoint thrice
-    // Demonstrating queuing of messages by sending a received message three times back to the client.
-    // Concurrent send operations are automatically queued by the library.
-    // Test with the following JavaScript:
-    //   var ws=new WebSocket("ws://localhost:8080/producerEndpoint_thrice");
-    //   ws.onmessage=function(evt){console.log(evt.data);};
-    //   ws.send("test");
     auto &producerEndpoint_thrice = server.endpoint["^/producerEndpoint_thrice/?$"];
     producerEndpoint_thrice.on_message = [](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
         auto out_message = make_shared<string>(in_message->string());
@@ -110,12 +101,6 @@ int main() {
         connection->send(*out_message); // Most likely queued. Sent after the first send operation is finished.
     };
 
-    // Example 3: producerEndpoint to all WebSocket endpoints
-    // Sending received messages to all connected clients
-    // Test with the following JavaScript on more than one browser windows:
-    //   var ws=new WebSocket("ws://localhost:8080/producerEndpoint_all");
-    //   ws.onmessage=function(evt){console.log(evt.data);};
-    //   ws.send("test");
     auto &producerEndpoint_all = server.endpoint["^/producerEndpoint_all/?$"];
     producerEndpoint_all.on_message = [&server](shared_ptr<WsServer::Connection> /*connection*/, shared_ptr<WsServer::InMessage> in_message) {
         auto out_message = in_message->string();
@@ -125,7 +110,6 @@ int main() {
             a_connection->send(out_message);
     };
 
-    // Start server and receive assigned port when server is listening for requests
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {
         // Start server

@@ -35,7 +35,6 @@ int main() {
         cout << "Client: Closed connection with status code " << status << endl;
     };
 
-    // See http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference.html, Error Codes for error code meanings
     client.on_error = [](shared_ptr<WsClient::Connection> /*connection*/, const SimpleWeb::error_code &ec) {
         cout << "Client: Error: " << ec << ", error message: " << ec.message() << endl;
     };
