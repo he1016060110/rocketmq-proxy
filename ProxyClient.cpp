@@ -1,6 +1,7 @@
 #include "client_ws.hpp"
 #include "server_ws.hpp"
 #include <future>
+#include <boost/timer.hpp>
 
 using namespace std;
 
@@ -21,9 +22,11 @@ int main() {
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
         cout << "Client: Opened connection" << endl;
         string out_message("Hello");
+        boost::timer t;
         for (int i =0 ; i< 10000; i++) {
             connection->send(out_message);
         }
+        std::cout << "time cost: " << t.elapsed() << "\n" << std::endl;
         cout << "Client: Sending message: \"" << out_message << "\"" << endl;
     };
 
