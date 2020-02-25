@@ -30,9 +30,29 @@ public:
     }
 };
 
+class ConsumerMsgListener : public MessageListenerConcurrently {
+    shared_ptr<WsServer::Connection> conn;
+public:
+    ConsumerMsgListener() {}
+    virtual ~ConsumerMsgListener() {}
+
+    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt>& msgs) {
+        for (size_t i = 0; i < msgs.size(); ++i) {
+            conn->send(msgs[i].getMsgId());
+        }
+
+        return CONSUME_SUCCESS;
+    }
+    void setConn(shared_ptr<WsServer::Connection> &con)
+    {
+        this->conn = con;
+    }
+};
+
 class WorkerPool
 {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
+    std::map<string, shared_ptr<DefaultMQPushConsumer> > consumers;
 public:
     shared_ptr<DefaultMQProducer> getProducer(const string &name)
     {
@@ -51,6 +71,29 @@ public:
 
             return producer;
         }
+    }
+    shared_ptr<DefaultMQPushConsumer>  getConsumer(const string &topic, shared_ptr<WsServer::Connection> &con)
+    {
+        shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer("AsyncConsumer"));
+        consumer->setNamesrvAddr("namesrv:9876");
+        consumer->setGroupName("AsyncConsumer");
+        consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
+        consumer->setInstanceName("AsyncConsumer");
+        consumer->subscribe(topic, "*");
+        consumer->setConsumeThreadCount(15);
+        consumer->setTcpTransportTryLockTimeout(1000);
+        consumer->setTcpTransportConnectTimeout(400);
+        ConsumerMsgListener listener;
+        listener.setConn(con);
+        consumer->registerMessageListener(&listener);
+        try {
+            consumer->start();
+        } catch (MQClientException& e) {
+            cout << e << endl;
+        }
+        consumers.insert(pair<string, shared_ptr<DefaultMQPushConsumer>> (topic, consumer));
+
+        return consumer;
     }
 };
 
@@ -98,8 +141,14 @@ int main() {
 
     //consumer proxy
     consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
-        cout << in_message->string() << "\n";
-        connection->send(in_message->string());
+        string json = in_message->string();
+        std::istringstream jsonStream;
+        jsonStream.str(json);
+        boost::property_tree::ptree jsonItem;
+        boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+        string topic = jsonItem.get<string>("topic");
+        //todo 需要区分connection，这里会有多进程消费的情况
+        auto consumer = wp.getConsumer(topic, connection);
     };
 
     consumerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
