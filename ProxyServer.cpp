@@ -6,10 +6,7 @@
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
-
 using namespace rocketmq;
-
-SendCallback* g_callback = NULL;
 
 class ProducerCallback : public SendCallback {
     shared_ptr<WsServer::Connection> conn;
@@ -33,30 +30,45 @@ public:
     }
 };
 
+class WorkerPool
+{
+    std::map<string, shared_ptr<DefaultMQProducer> > producers;
+public:
+    shared_ptr<DefaultMQProducer> getProducer(const string &name)
+    {
+        auto iter = producers.find(name);
+        if(iter != producers.end())
+            return iter->second;
+        else {
+            shared_ptr<DefaultMQProducer> producer (new DefaultMQProducer("AsyncProducer"));
+            producer->setNamesrvAddr("namesrv:9876");
+            producer->setInstanceName("AsyncProducer");
+            producer->setSendMsgTimeout(500);
+            producer->setTcpTransportTryLockTimeout(1000);
+            producer->setTcpTransportConnectTimeout(400);
+            producer->start();
+            producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (name, producer));
+
+            return producer;
+        }
+    }
+};
 
 int main() {
     // WebSocket (WS)-server at port 8080 using 1 thread
     WsServer server;
     server.config.port = 8080;
-
-    DefaultMQProducer * producer = new DefaultMQProducer("AsyncProducer");
-
-    producer->setNamesrvAddr("namesrv:9876");
-    producer->setInstanceName("AsyncProducer");
-    producer->setSendMsgTimeout(500);
-    producer->setTcpTransportTryLockTimeout(1000);
-    producer->setTcpTransportConnectTimeout(400);
-    producer->start();
-    
+    WorkerPool wp;
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
 
-    producerEndpoint.on_message = [&producer](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
-        auto out_message = in_message->string();
-        rocketmq::MQMessage msg("TestTopicAsync",  // topic
+    producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
+        auto name = in_message->string();
+        rocketmq::MQMessage msg(name,  // topic
                                 "*",          // tag
                                 "test message!");  // body
         ProducerCallback * calllback = new ProducerCallback();
         calllback->setConn(connection);
+        auto producer = wp.getProducer(name);
         producer->send(msg, calllback);
     };
 
