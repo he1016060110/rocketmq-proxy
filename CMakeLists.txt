@@ -55,14 +55,14 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 
 # If Simple-WebSocket-Server is not a sub-project:
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_executable(ws_examples ws_examples.cpp)
-    target_link_libraries(ws_examples simple-websocket-server)
-    add_executable(wss_examples wss_examples.cpp)
-    target_link_libraries(wss_examples simple-websocket-server)
-    
+    add_executable(ProxyClient ProxyClient.cpp)
+    target_link_libraries(ProxyClient simple-websocket-server)
+    add_executable(ProxyServer ProxyServer.cpp)
+    target_link_libraries(ProxyServer simple-websocket-server)
     set(BUILD_TESTING ON)
-    
-    install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp utility.hpp status_code.hpp mutex.hpp DESTINATION include/simple-websocket-server)
+
+    install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp
+            utility.hpp status_code.hpp mutex.hpp DESTINATION include/simple-websocket-server)
 endif()
 
 if(BUILD_TESTING)
