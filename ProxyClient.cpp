@@ -4,7 +4,6 @@
 
 using namespace std;
 
-using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
 int main() {
