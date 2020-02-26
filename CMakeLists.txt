@@ -5,6 +5,28 @@ project (Simple-WebSocket-Server)
 option(USE_STANDALONE_ASIO "set ON to use standalone Asio instead of Boost.Asio" OFF)
 option(BUILD_TESTING "set ON to build library tests" OFF)
 
+set(C_FLAGS
+        -g
+        -Wall
+        -Wno-deprecated
+        -fPIC
+        -fno-strict-aliasing
+        )
+set(CXX_FLAGS
+        -g
+        -Wall
+        -Wno-deprecated
+        -fPIC
+        -fno-strict-aliasing
+        -std=c++11
+        )
+
+string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
+string(REPLACE ";" " " CMAKE_C_FLAGS "${C_FLAGS}")
+
+set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
 if(NOT MSVC)
     add_compile_options(-std=c++11 -Wall -Wextra -Wsign-conversion)
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
