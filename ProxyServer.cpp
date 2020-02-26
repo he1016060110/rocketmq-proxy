@@ -43,7 +43,7 @@ public:
 
         return CONSUME_SUCCESS;
     }
-    void setConn(shared_ptr<WsServer::Connection> &con)
+    void setConn(shared_ptr<WsServer::Connection> con)
     {
         this->conn = con;
     }
@@ -87,9 +87,9 @@ public:
             consumer->setConsumeThreadCount(15);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
-            ConsumerMsgListener listener;
-            listener.setConn(con);
-            consumer->registerMessageListener(&listener);
+            ConsumerMsgListener * listener = new ConsumerMsgListener();
+            listener->setConn(con);
+            consumer->registerMessageListener(listener);
             try {
                 consumer->start();
             } catch (MQClientException &e) {
