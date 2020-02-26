@@ -40,7 +40,6 @@ public:
         for (size_t i = 0; i < msgs.size(); ++i) {
             conn->send(msgs[i].getMsgId());
         }
-
         return CONSUME_SUCCESS;
     }
     void setConn(shared_ptr<WsServer::Connection> con)

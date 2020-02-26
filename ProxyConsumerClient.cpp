@@ -16,17 +16,10 @@ int main() {
 
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
         cout << "Client: Opened connection" << endl;
-        string out_message("Hello");
-
         string json= "{ \
             \"topic\": \"TestTopicProxy\" \
         }";
-
-        boost::timer t;
-        for (int i =0 ; i< 10; i++) {
-            connection->send(json);
-        }
-        std::cout << "time cost: " << t.elapsed() << "\n" << std::endl;
+        connection->send(json);
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
