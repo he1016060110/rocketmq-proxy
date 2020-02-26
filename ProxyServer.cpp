@@ -1,6 +1,8 @@
 #include "server_ws.hpp"
 #include <future>
-#include "common.h"
+#include "DefaultMQProducer.h"
+#include "DefaultMQPullConsumer.h"
+#include "DefaultMQPushConsumer.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -20,7 +22,7 @@ class ProducerCallback : public SendCallback {
         });
     }
     virtual void onException(MQException& e) {
-        this->conn->send("error!");
+        this->conn->send(e.what());
     }
 
 public:
