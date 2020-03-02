@@ -43,6 +43,6 @@ typedef struct _CPullResult_ {
 } CPullResult;
 
 #ifdef __cplusplus
-};
+}
 #endif
 #endif  //__C_PULL_RESULT_H__

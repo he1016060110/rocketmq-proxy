@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-project (Simple-WebSocket-Server)
+project (rocketmq-proxy)
 
 option(USE_STANDALONE_ASIO "set ON to use standalone Asio instead of Boost.Asio" OFF)
 option(BUILD_TESTING "set ON to build library tests" OFF)
@@ -77,17 +77,17 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 
 # If Simple-WebSocket-Server is not a sub-project:
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_executable(ProxyProducerClient ProxyProducerClient.cpp)
-    target_link_libraries(ProxyProducerClient simple-websocket-server)
-    add_executable(ProxyConsumerClient ProxyConsumerClient.cpp)
-    target_link_libraries(ProxyConsumerClient simple-websocket-server)
+    add_executable(ProducerClient ProducerClient.cpp)
+    target_link_libraries(ProducerClient simple-websocket-server)
+    add_executable(ConsumerClient ConsumerClient.cpp)
+    target_link_libraries(ConsumerClient simple-websocket-server)
 
-    add_executable(ProxyServer ProxyServer.cpp)
-    target_link_libraries(ProxyServer simple-websocket-server)
+    add_executable(Server Server.cpp)
+    target_link_libraries(Server simple-websocket-server)
 
-    target_link_libraries(ProxyServer /rocketmq-client-cpp/bin/librocketmq.so)
-    target_include_directories(ProxyServer PRIVATE ${Boost_INCLUDE_DIR})
-    target_include_directories(ProxyServer PRIVATE include)
+    target_link_libraries(Server /rocketmq-client-cpp/bin/librocketmq.so)
+    target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
+    target_include_directories(Server PRIVATE include)
 
     set(BUILD_TESTING ON)
 

@@ -18,25 +18,24 @@
 #ifndef __DEFAULTMQPRODUCER_H__
 #define __DEFAULTMQPRODUCER_H__
 
+#include "AsyncCallback.h"
+#include "MQClient.h"
 #include "MQMessageQueue.h"
-#include "MQProducer.h"
+#include "MQSelector.h"
 #include "RocketMQClient.h"
 #include "SendResult.h"
-#include "BatchMessage.h"
+#include "SessionCredentials.h"
 
 namespace rocketmq {
-//<!***************************************************************************
-class ROCKETMQCLIENT_API DefaultMQProducer : public MQProducer {
+class DefaultMQProducerImpl;
+class ROCKETMQCLIENT_API DefaultMQProducer {
  public:
   DefaultMQProducer(const std::string& groupname);
   virtual ~DefaultMQProducer();
 
-  //<!begin mqadmin;
   virtual void start();
   virtual void shutdown();
-  //<!end mqadmin;
 
-  //<! begin MQProducer;
   virtual SendResult send(MQMessage& msg, bool bSelectActiveBroker = false);
   virtual SendResult send(MQMessage& msg, const MQMessageQueue& mq);
   virtual SendResult send(MQMessage& msg, MessageQueueSelector* selector, void* arg);
@@ -53,65 +52,92 @@ class ROCKETMQCLIENT_API DefaultMQProducer : public MQProducer {
   virtual void sendOneway(MQMessage& msg, bool bSelectActiveBroker = false);
   virtual void sendOneway(MQMessage& msg, const MQMessageQueue& mq);
   virtual void sendOneway(MQMessage& msg, MessageQueueSelector* selector, void* arg);
-  //<! end MQProducer;
 
-  // set and get timeout of per msg
+  const std::string& getNamesrvAddr() const;
+  void setNamesrvAddr(const std::string& namesrvAddr);
+
+  void setSessionCredentials(const std::string& accessKey,
+                             const std::string& secretKey,
+                             const std::string& accessChannel);
+  const SessionCredentials& getSessionCredentials() const;
+
+  const std::string& getNamesrvDomain() const;
+  void setNamesrvDomain(const std::string& namesrvDomain);
+
+  const std::string& getNameSpace() const;
+  void setNameSpace(const std::string& nameSpace);
+
+  const std::string& getGroupName() const;
+  void setGroupName(const std::string& groupname);
+
+  const std::string& getInstanceName() const;
+  void setInstanceName(const std::string& instanceName);
+
+  /**
+   * Log configuration interface, default LOG_LEVEL is LOG_LEVEL_INFO, default
+   * log file num is 3, each log size is 100M
+   **/
+  void setLogLevel(elogLevel inputLevel);
+  elogLevel getLogLevel();
+  void setLogPath(const std::string& logPath);
+  void setLogFileSizeAndNum(int fileNum, long perFileSize);  // perFileSize is MB unit
+
   int getSendMsgTimeout() const;
   void setSendMsgTimeout(int sendMsgTimeout);
 
   /*
-  *  if msgBody size is large than m_compressMsgBodyOverHowmuch
-      rocketmq cpp will compress msgBody according to compressLevel
-  */
+   *  If msgBody size is large than compressMsgBodyOverHowmuch
+   *  rocketmq cpp will compress msgBody according to compressLevel
+   */
   int getCompressMsgBodyOverHowmuch() const;
   void setCompressMsgBodyOverHowmuch(int compressMsgBodyOverHowmuch);
   int getCompressLevel() const;
   void setCompressLevel(int compressLevel);
 
-  // if msgbody size larger than maxMsgBodySize, exception will be throwed
   int getMaxMessageSize() const;
   void setMaxMessageSize(int maxMessageSize);
 
-  // set msg max retry times, default retry times is 5
   int getRetryTimes() const;
   void setRetryTimes(int times);
 
   int getRetryTimes4Async() const;
   void setRetryTimes4Async(int times);
 
- protected:
-  SendResult sendAutoRetrySelectImpl(MQMessage& msg,
-                                     MessageQueueSelector* pSelector,
-                                     void* pArg,
-                                     int communicationMode,
-                                     SendCallback* pSendCallback,
-                                     int retryTimes,
-                                     bool bActiveBroker = false);
-  SendResult sendSelectImpl(MQMessage& msg,
-                            MessageQueueSelector* pSelector,
-                            void* pArg,
-                            int communicationMode,
-                            SendCallback* sendCallback);
-  SendResult sendDefaultImpl(MQMessage& msg,
-                             int communicationMode,
-                             SendCallback* pSendCallback,
-                             bool bActiveBroker = false);
-  SendResult sendKernelImpl(MQMessage& msg,
-                            const MQMessageQueue& mq,
-                            int communicationMode,
-                            SendCallback* pSendCallback);
-  bool tryToCompressMessage(MQMessage& msg);
-  BatchMessage buildBatchMessage(std::vector<MQMessage>& msgs);
+  /** Set TcpTransport pull thread num, which dermine the num of threads to
+   *  distribute network data,
+   *  1. its default value is CPU num, it must be setted before producer/consumer
+   *     start, minimum value is CPU num;
+   *  2. this pullThread num must be tested on your environment to find the best
+   *     value for RT of sendMsg or delay time of consume msg before you change it;
+   *  3. producer and consumer need different pullThread num, if set this num,
+   *     producer and consumer must set different instanceName.
+   **/
+  void setTcpTransportPullThreadNum(int num);
+  const int getTcpTransportPullThreadNum() const;
+
+  /** Timeout of tcp connect, it is same meaning for both producer and consumer;
+   *    1. default value is 3000ms
+   *    2. input parameter could only be milliSecond, suggestion value is
+   *       1000-3000ms;
+   **/
+  void setTcpTransportConnectTimeout(uint64_t timeout);  // ms
+  const uint64_t getTcpTransportConnectTimeout() const;
+
+  /** Timeout of tryLock tcpTransport before sendMsg/pullMsg, if timeout,
+   *  returns NULL
+   *    1. paremeter unit is ms, default value is 3000ms, the minimun value is 1000ms
+   *       suggestion value is 3000ms;
+   *    2. if configured with value smaller than 1000ms, the tryLockTimeout value
+   *       will be setted to 1000ms
+   **/
+  void setTcpTransportTryLockTimeout(uint64_t timeout);  // ms
+  const uint64_t getTcpTransportTryLockTimeout() const;
+
+  void setUnitName(std::string unitName);
+  const std::string& getUnitName() const;
 
  private:
-  int m_sendMsgTimeout;
-  int m_compressMsgBodyOverHowmuch;
-  int m_maxMessageSize;  //<! default:128K;
-  // bool m_retryAnotherBrokerWhenNotStoreOK;
-  int m_compressLevel;
-  int m_retryTimes;
-  int m_retryTimes4Async;
+  DefaultMQProducerImpl* impl;
 };
-//<!***************************************************************************
-}  //<!end namespace;
+}  // namespace rocketmq
 #endif
