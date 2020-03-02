@@ -11,8 +11,9 @@ using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using namespace rocketmq;
 
-class ProducerCallback : public SendCallback {
+class ProducerCallback : public AutoDeleteSendCallBack {
     shared_ptr<WsServer::Connection> conn;
+    virtual ~ProducerCallback() {}
     virtual void onSuccess(SendResult& sendResult) {
         this->conn->send(sendResult.getMsgId(), [](const SimpleWeb::error_code &ec) {
             if(ec) {

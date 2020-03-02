@@ -11,10 +11,9 @@ int main() {
     int count = 0;
     client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
-        cout << in_message->string() << "\n";
         if (count >= 10) {
-            connection->send_close(1000);
-            cout << "Client: Sending close connection" << endl;
+            //connection->send_close(1000);
+            //cout << "Client: Sending close connection" << endl;
         }
     };
 
@@ -27,9 +26,9 @@ int main() {
             \"tag\": \"*\", \
             \"body\": \"this this the TestTopicProxy!\" \
         }";
-
         boost::timer t;
-        for (int i =0 ; i< 10; i++) {
+
+        for (int i =0 ; i< 10000; i++) {
             connection->send(json);
         }
         std::cout << "time cost: " << t.elapsed() << "\n" << std::endl;

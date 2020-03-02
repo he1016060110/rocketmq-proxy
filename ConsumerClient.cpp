@@ -8,9 +8,7 @@ using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
 int main() {
     WsClient client("localhost:8080/consumerEndpoint");
-    int count = 0;
-    client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
-        count++;
+    client.on_message = [](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         cout << in_message->string() << "\n";
     };
 
@@ -19,7 +17,10 @@ int main() {
         string json= "{ \
             \"topic\": \"TestTopicProxy\" \
         }";
-        connection->send(json);
+        int count = 0;
+        while(count ++ < 10000) {
+            connection->send(json);
+        }
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
