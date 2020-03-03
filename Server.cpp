@@ -35,8 +35,17 @@ public:
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
-    map<string, std::mutex * > msgMutexMap;
-    map<string, std::condition_variable *> conditionVariableMap;
+    map<string, std::mutex * > * msgMutexMap;
+    map<string, std::condition_variable *> *conditionVariableMap;
+    map<shared_ptr<WsServer::Connection>, map<string, int>> *pool;
+    void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> * pool_,
+                      map<string, std::mutex * > * msgMutexMap_,
+                      map<string, std::condition_variable *> *conditionVariableMap_)
+    {
+        pool = pool_;
+        msgMutexMap = msgMutexMap_;
+        conditionVariableMap = conditionVariableMap_;
+    }
     ProxyPushConsumer(const std::string& groupname) : DefaultMQPushConsumer(groupname) {
     }
 };
@@ -53,13 +62,17 @@ public:
             conn->send(msgs[i].getMsgId());
             auto mtx = new std::mutex;
             auto consumed = new std::condition_variable;
-            consumer->msgMutexMap.insert(pair<string, std::mutex *>(msgs[i].getMsgId(), mtx));
-            consumer->conditionVariableMap.insert(pair<string, std::condition_variable *>(msgs[i].getMsgId(), consumed));
+            consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[i].getMsgId(), mtx));
+            consumer->conditionVariableMap->insert(pair<string, std::condition_variable *>(msgs[i].getMsgId(), consumed));
+            map<string, int> temp;
+            temp.insert(make_pair(msgs[i].getMsgId(), 1));
+            consumer->pool->insert(make_pair(conn, temp));
             std::unique_lock<std::mutex> lck(*mtx);
             consumed->wait(lck);
             //lock被唤醒，删除lock，避免内存泄漏
-            consumer->msgMutexMap.erase(msgs[i].getMsgId());
-            consumer->conditionVariableMap.erase(msgs[i].getMsgId());
+            consumer->msgMutexMap->erase(msgs[i].getMsgId());
+            consumer->conditionVariableMap->erase(msgs[i].getMsgId());
+            consumer->pool->erase(conn);
             delete mtx;
             delete consumed;
         }
@@ -76,7 +89,11 @@ class WorkerPool
 {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
+    map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
+    map<string, std::mutex * > msgMutexMap;
+    map<string, std::condition_variable *> conditionVariableMap;
+    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p): pool(p) {}
     shared_ptr<DefaultMQProducer> getProducer(const string &topic)
     {
         auto iter = producers.find(topic);
@@ -95,8 +112,7 @@ public:
             return producer;
         }
     }
-    shared_ptr<ProxyPushConsumer>  getConsumer(const string &topic, const string &group,
-            shared_ptr<WsServer::Connection> &con)
+    shared_ptr<ProxyPushConsumer>  getConsumer(const string &topic, const string &group)
     {
         auto iter = consumers.find(topic);
         if(iter != consumers.end())
@@ -110,6 +126,7 @@ public:
             consumer->setConsumeThreadCount(2);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
+            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap);
             ConsumerMsgListener * listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
@@ -128,7 +145,8 @@ public:
 int main() {
     WsServer server;
     server.config.port = 8080;
-    WorkerPool wp;
+    map<shared_ptr<WsServer::Connection>, map<string, int>> msgPool;
+    WorkerPool wp(msgPool);
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
 
@@ -183,15 +201,15 @@ int main() {
             int type = jsonItem.get<int>("type");
             if (type == 1) {
                 //消费消息
-                auto consumer = wp.getConsumer(topic, topic, connection);
+                auto consumer = wp.getConsumer(topic, topic);
                 consumer->queue.push(connection);
             } else if (type == 2) {
                 //ack消息
                 string msgId = jsonItem.get<string>("msgId");
-                auto consumer = wp.getConsumer(topic, topic, connection);
-                auto iter1 = consumer->msgMutexMap.find(msgId);
-                auto iter2 = consumer->conditionVariableMap.find(msgId);
-                if(iter1 != consumer->msgMutexMap.end() && iter2 != consumer->conditionVariableMap.end()) {
+                auto consumer = wp.getConsumer(topic, topic);
+                auto iter1 = consumer->msgMutexMap->find(msgId);
+                auto iter2 = consumer->conditionVariableMap->find(msgId);
+                if(iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
                     auto mtx = iter1->second;
                     auto consumed = iter2->second;
                     std::unique_lock<std::mutex> lck(*mtx);
@@ -209,8 +227,24 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    consumerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
+    consumerEndpoint.on_close = [&msgPool, &wp](shared_ptr<WsServer::Connection> connection, int status,
             const string & /*reason*/) {
+        auto iter = msgPool.find(connection);
+        if (iter != msgPool.end()) {
+            auto msgMap = iter->second;
+            auto iter1 = msgMap.begin();
+            while(iter1 != msgMap.end()) {
+                auto iter2 = wp.msgMutexMap.find(iter1->first);
+                auto iter3 = wp.conditionVariableMap.find(iter1->first);
+                if(iter2 != wp.msgMutexMap.end() && iter3 != wp.conditionVariableMap.end()) {
+                    auto mtx = iter2->second;
+                    auto consumed = iter3->second;
+                    std::unique_lock<std::mutex> lck(*mtx);
+                    consumed->notify_one();
+                }
+                iter1++;
+            }
+        }
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
