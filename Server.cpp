@@ -1,11 +1,10 @@
 #include "server_ws.hpp"
 #include <future>
 #include "DefaultMQProducer.h"
-#include "DefaultMQPullConsumer.h"
 #include "DefaultMQPushConsumer.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
+#include "QueueTS.hpp"
 
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
@@ -33,28 +32,36 @@ public:
     }
 };
 
+class ProxyPushConsumer : public DefaultMQPushConsumer {
+public:
+    QueueTS<shared_ptr<WsServer::Connection>> queue;
+    ProxyPushConsumer(const std::string& groupname) : DefaultMQPushConsumer(groupname) {
+    }
+};
+
 class ConsumerMsgListener : public MessageListenerConcurrently {
-    shared_ptr<WsServer::Connection> conn;
+    shared_ptr<ProxyPushConsumer> consumer;
 public:
     ConsumerMsgListener() {}
     virtual ~ConsumerMsgListener() {}
 
     virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt>& msgs) {
         for (size_t i = 0; i < msgs.size(); ++i) {
+            auto conn = consumer->queue.wait_and_pop();
             conn->send(msgs[i].getMsgId());
         }
         return CONSUME_SUCCESS;
     }
-    void setConn(shared_ptr<WsServer::Connection> con)
+    void setConsumer(shared_ptr<ProxyPushConsumer>  con)
     {
-        this->conn = con;
+        this->consumer = con;
     }
 };
 
 class WorkerPool
 {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
-    std::map<string, shared_ptr<DefaultMQPushConsumer> > consumers;
+    std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
 public:
     shared_ptr<DefaultMQProducer> getProducer(const string &topic)
     {
@@ -74,14 +81,14 @@ public:
             return producer;
         }
     }
-    shared_ptr<DefaultMQPushConsumer>  getConsumer(const string &topic, const string &group,
+    shared_ptr<ProxyPushConsumer>  getConsumer(const string &topic, const string &group,
             shared_ptr<WsServer::Connection> &con)
     {
         auto iter = consumers.find(topic);
         if(iter != consumers.end())
             return iter->second;
         else {
-            shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer(group));
+            shared_ptr<ProxyPushConsumer> consumer(new ProxyPushConsumer(group));
             consumer->setNamesrvAddr("namesrv:9876");
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
             consumer->setInstanceName(group);
@@ -90,14 +97,14 @@ public:
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             ConsumerMsgListener * listener = new ConsumerMsgListener();
-            listener->setConn(con);
+            listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
             try {
                 consumer->start();
             } catch (MQClientException &e) {
                 cout << e << endl;
             }
-            consumers.insert(pair<string, shared_ptr<DefaultMQPushConsumer>>(topic, consumer));
+            consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(topic, consumer));
 
             return consumer;
         }
@@ -154,8 +161,8 @@ int main() {
         boost::property_tree::ptree jsonItem;
         boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
         string topic = jsonItem.get<string>("topic");
-        //todo 需要区分connection，这里会有多进程消费的情况
         auto consumer = wp.getConsumer(topic, topic, connection);
+        consumer->queue.push(connection);
     };
 
     consumerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
