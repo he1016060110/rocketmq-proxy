@@ -62,9 +62,9 @@ public:
         if(iter != producers.end())
             return iter->second;
         else {
-            shared_ptr<DefaultMQProducer> producer (new DefaultMQProducer("AsyncProducer"));
+            shared_ptr<DefaultMQProducer> producer (new DefaultMQProducer(topic));
             producer->setNamesrvAddr("namesrv:9876");
-            producer->setInstanceName("AsyncProducer");
+            producer->setInstanceName(topic);
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
@@ -74,17 +74,17 @@ public:
             return producer;
         }
     }
-    shared_ptr<DefaultMQPushConsumer>  getConsumer(const string &topic, shared_ptr<WsServer::Connection> &con)
+    shared_ptr<DefaultMQPushConsumer>  getConsumer(const string &topic, const string &group,
+            shared_ptr<WsServer::Connection> &con)
     {
         auto iter = consumers.find(topic);
         if(iter != consumers.end())
             return iter->second;
         else {
-            shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer("AsyncConsumer"));
+            shared_ptr<DefaultMQPushConsumer> consumer(new DefaultMQPushConsumer(group));
             consumer->setNamesrvAddr("namesrv:9876");
-            consumer->setGroupName("AsyncConsumer");
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
-            consumer->setInstanceName("AsyncConsumer");
+            consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
             consumer->setConsumeThreadCount(15);
             consumer->setTcpTransportTryLockTimeout(1000);
@@ -155,7 +155,7 @@ int main() {
         boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
         string topic = jsonItem.get<string>("topic");
         //todo 需要区分connection，这里会有多进程消费的情况
-        auto consumer = wp.getConsumer(topic, connection);
+        auto consumer = wp.getConsumer(topic, topic, connection);
     };
 
     consumerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
