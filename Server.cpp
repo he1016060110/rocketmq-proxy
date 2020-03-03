@@ -178,26 +178,30 @@ int main() {
         jsonStream.str(json);
         boost::property_tree::ptree jsonItem;
         boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
-        string topic = jsonItem.get<string>("topic");
-        int type = jsonItem.get<int>("type");
-        if (type == 1) {
-            //消费消息
-            auto consumer = wp.getConsumer(topic, topic, connection);
-            consumer->queue.push(connection);
-        } else if (type == 2) {
-            //ack消息
-            string msgId = jsonItem.get<string>("msgId");
-            auto consumer = wp.getConsumer(topic, topic, connection);
-            auto iter1 = consumer->msgMutexMap.find(msgId);
-            auto iter2 = consumer->conditionVariableMap.find(msgId);
-            if(iter1 != consumer->msgMutexMap.end() && iter2 != consumer->conditionVariableMap.end()) {
-                auto mtx = iter1->second;
-                auto consumed = iter2->second;
-                std::unique_lock<std::mutex> lck(*mtx);
-                consumed->notify_one();
+        try {
+            string topic = jsonItem.get<string>("topic");
+            int type = jsonItem.get<int>("type");
+            if (type == 1) {
+                //消费消息
+                auto consumer = wp.getConsumer(topic, topic, connection);
+                consumer->queue.push(connection);
+            } else if (type == 2) {
+                //ack消息
+                string msgId = jsonItem.get<string>("msgId");
+                auto consumer = wp.getConsumer(topic, topic, connection);
+                auto iter1 = consumer->msgMutexMap.find(msgId);
+                auto iter2 = consumer->conditionVariableMap.find(msgId);
+                if(iter1 != consumer->msgMutexMap.end() && iter2 != consumer->conditionVariableMap.end()) {
+                    auto mtx = iter1->second;
+                    auto consumed = iter2->second;
+                    std::unique_lock<std::mutex> lck(*mtx);
+                    consumed->notify_one();
+                }
+            } else {
+                connection->send("params error!");
             }
-        } else {
-            connection->send("params error!");
+        } catch (exception &e) {
+            connection->send(e.what());
         }
     };
 
