@@ -93,7 +93,7 @@ public:
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
             consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
-            consumer->setConsumeThreadCount(15);
+            consumer->setConsumeThreadCount(2);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             ConsumerMsgListener * listener = new ConsumerMsgListener();
