@@ -35,6 +35,8 @@ public:
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
+    map<string, std::mutex * > msgMutexMap;
+    map<string, std::condition_variable *> conditionVariableMap;
     ProxyPushConsumer(const std::string& groupname) : DefaultMQPushConsumer(groupname) {
     }
 };
@@ -49,7 +51,19 @@ public:
         for (size_t i = 0; i < msgs.size(); ++i) {
             auto conn = consumer->queue.wait_and_pop();
             conn->send(msgs[i].getMsgId());
+            auto mtx = new std::mutex;
+            auto consumed = new std::condition_variable;
+            consumer->msgMutexMap.insert(pair<string, std::mutex *>(msgs[i].getMsgId(), mtx));
+            consumer->conditionVariableMap.insert(pair<string, std::condition_variable *>(msgs[i].getMsgId(), consumed));
+            std::unique_lock<std::mutex> lck(*mtx);
+            consumed->wait(lck);
+            //lock被唤醒，删除lock，避免内存泄漏
+            consumer->msgMutexMap.erase(msgs[i].getMsgId());
+            consumer->conditionVariableMap.erase(msgs[i].getMsgId());
+            delete mtx;
+            delete consumed;
         }
+        //阻塞住，等待客户端消费掉消息，或者断掉连接
         return CONSUME_SUCCESS;
     }
     void setConsumer(shared_ptr<ProxyPushConsumer>  con)
