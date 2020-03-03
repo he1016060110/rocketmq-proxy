@@ -20,3 +20,4 @@ wss_examples
 crypto_test
 io_test
 parse_test
+bin
