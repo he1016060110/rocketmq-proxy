@@ -63,11 +63,8 @@ public:
     virtual ~ConsumerMsgListener() {}
 
     virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt>& msgs) {
-        printf("size: %d consumeMessage!\n", msgs.size());
         for (size_t i = 0; i < msgs.size(); ++i) {
-            printf("wait_and_pop before\n");
             auto conn = consumer->queue.wait_and_pop();
-            printf("wait_and_pop after\n");
             conn->send(msgs[i].getMsgId());
             auto mtx = new std::mutex;
             auto consumed = new std::condition_variable;
@@ -82,10 +79,8 @@ public:
                 auto p = &iter->second;
                 p->insert(make_pair(msgs[i].getMsgId(), 1));
             }
-            printf("%s lock!\n", msgs[i].getMsgId().c_str());
             std::unique_lock<std::mutex> lck(*mtx);
             consumed->wait(lck);
-            printf("%s unlock!\n", msgs[i].getMsgId().c_str());
             //lock被唤醒，删除lock，避免内存泄漏
             consumer->msgMutexMap->erase(msgs[i].getMsgId());
             consumer->conditionVariableMap->erase(msgs[i].getMsgId());
@@ -96,7 +91,6 @@ public:
             }
             delete mtx;
             delete consumed;
-            printf("%s delete all!\n", msgs[i].getMsgId().c_str());
         }
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         return CONSUME_SUCCESS;
