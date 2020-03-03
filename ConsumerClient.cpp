@@ -11,7 +11,8 @@ int main() {
     client.on_message = [](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         cout << in_message->string() << "\n";
         string json= "{ \
-            \"topic\": \"TestTopicProxy\" \
+            \"topic\": \"TestTopicProxy\", \
+            \"type\": 1\
         }";
         connection->send(json);
     };
@@ -19,7 +20,8 @@ int main() {
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
         cout << "Client: Opened connection" << endl;
         string json= "{ \
-            \"topic\": \"TestTopicProxy\" \
+            \"topic\": \"TestTopicProxy\", \
+            \"type\": 1 \
         }";
         connection->send(json);
     };
