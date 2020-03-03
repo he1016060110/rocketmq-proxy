@@ -10,6 +10,10 @@ int main() {
     WsClient client("localhost:8080/consumerEndpoint");
     client.on_message = [](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         cout << in_message->string() << "\n";
+        string json= "{ \
+            \"topic\": \"TestTopicProxy\" \
+        }";
+        connection->send(json);
     };
 
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
@@ -17,10 +21,7 @@ int main() {
         string json= "{ \
             \"topic\": \"TestTopicProxy\" \
         }";
-        int count = 0;
-        while(count ++ < 10000) {
-            connection->send(json);
-        }
+        connection->send(json);
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
