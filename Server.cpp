@@ -64,15 +64,25 @@ public:
             auto consumed = new std::condition_variable;
             consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[i].getMsgId(), mtx));
             consumer->conditionVariableMap->insert(pair<string, std::condition_variable *>(msgs[i].getMsgId(), consumed));
-            map<string, int> temp;
-            temp.insert(make_pair(msgs[i].getMsgId(), 1));
-            consumer->pool->insert(make_pair(conn, temp));
+            auto iter = consumer->pool->find(conn);
+            if (iter == consumer->pool->end()) {
+                map<string, int> temp;
+                temp.insert(make_pair(msgs[i].getMsgId(), 1));
+                consumer->pool->insert(make_pair(conn, temp));
+            } else {
+                auto p = &iter->second;
+                p->insert(make_pair(msgs[i].getMsgId(), 1));
+            }
             std::unique_lock<std::mutex> lck(*mtx);
             consumed->wait(lck);
             //lock被唤醒，删除lock，避免内存泄漏
             consumer->msgMutexMap->erase(msgs[i].getMsgId());
             consumer->conditionVariableMap->erase(msgs[i].getMsgId());
-            consumer->pool->erase(conn);
+            iter = consumer->pool->find(conn);
+            if (iter != consumer->pool->end()) {
+                auto p = &iter->second;
+                p->erase(msgs[i].getMsgId());
+            }
             delete mtx;
             delete consumed;
         }
