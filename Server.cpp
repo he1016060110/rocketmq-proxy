@@ -5,6 +5,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "QueueTS.hpp"
+#include <stdio.h>
 
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
@@ -32,19 +33,24 @@ public:
     }
 };
 
+class WorkerPool;
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
     map<string, std::mutex * > * msgMutexMap;
     map<string, std::condition_variable *> *conditionVariableMap;
+    //被锁住的消息列表
     map<shared_ptr<WsServer::Connection>, map<string, int>> *pool;
+    WorkerPool * wp;
     void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> * pool_,
                       map<string, std::mutex * > * msgMutexMap_,
-                      map<string, std::condition_variable *> *conditionVariableMap_)
+                      map<string, std::condition_variable *> *conditionVariableMap_,
+                      WorkerPool * wp_)
     {
         pool = pool_;
         msgMutexMap = msgMutexMap_;
         conditionVariableMap = conditionVariableMap_;
+        wp = wp_;
     }
     ProxyPushConsumer(const std::string& groupname) : DefaultMQPushConsumer(groupname) {
     }
@@ -57,8 +63,11 @@ public:
     virtual ~ConsumerMsgListener() {}
 
     virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt>& msgs) {
+        printf("size: %d consumeMessage!\n", msgs.size());
         for (size_t i = 0; i < msgs.size(); ++i) {
+            printf("wait_and_pop before\n");
             auto conn = consumer->queue.wait_and_pop();
+            printf("wait_and_pop after\n");
             conn->send(msgs[i].getMsgId());
             auto mtx = new std::mutex;
             auto consumed = new std::condition_variable;
@@ -73,8 +82,10 @@ public:
                 auto p = &iter->second;
                 p->insert(make_pair(msgs[i].getMsgId(), 1));
             }
+            printf("%s lock!\n", msgs[i].getMsgId().c_str());
             std::unique_lock<std::mutex> lck(*mtx);
             consumed->wait(lck);
+            printf("%s unlock!\n", msgs[i].getMsgId().c_str());
             //lock被唤醒，删除lock，避免内存泄漏
             consumer->msgMutexMap->erase(msgs[i].getMsgId());
             consumer->conditionVariableMap->erase(msgs[i].getMsgId());
@@ -85,6 +96,7 @@ public:
             }
             delete mtx;
             delete consumed;
+            printf("%s delete all!\n", msgs[i].getMsgId().c_str());
         }
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         return CONSUME_SUCCESS;
@@ -99,8 +111,29 @@ class WorkerPool
 {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
+    //
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
+    //连接断掉后，以前队列要把相关连接清空！
+    void deleteConnection(shared_ptr<WsServer::Connection> con)
+    {
+        auto iter = consumers.begin();
+        while (iter != consumers.end()) {
+            auto consumer = iter->second;
+            shared_ptr<WsServer::Connection> value;
+            QueueTS<shared_ptr<WsServer::Connection>> tempQueue;
+            while(consumer->queue.try_pop(value)) {
+                if (value == con) {
+                    continue;
+                }
+                tempQueue.push(value);
+            }
+            while(tempQueue.try_pop(value)) {
+                consumer->queue.push(value);
+            }
+            iter++;
+        }
+    }
     map<string, std::mutex * > msgMutexMap;
     map<string, std::condition_variable *> conditionVariableMap;
     WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p): pool(p) {}
@@ -136,7 +169,7 @@ public:
             consumer->setConsumeThreadCount(2);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
-            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap);
+            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap, this);
             ConsumerMsgListener * listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
@@ -240,6 +273,8 @@ int main() {
 
     auto clearMsgPool = [] (shared_ptr<WsServer::Connection> &connection,
             map<shared_ptr<WsServer::Connection>, map<string, int>> &msgPool, WorkerPool &wp){
+        //删掉每个consumer里面连接队列的值
+        wp.deleteConnection(connection);
         auto iter = msgPool.find(connection);
         if (iter != msgPool.end()) {
             auto msgMap = iter->second;
