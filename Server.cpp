@@ -119,7 +119,8 @@ int main() {
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
 
     //producer proxy
-    producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
+    producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
+            shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
         jsonStream.str(json);
@@ -139,12 +140,14 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status, const string & /*reason*/) {
+    producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
+            const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
     // Can modify handshake response headers here if needed
-    producerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/, SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+    producerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
+            SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
         return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
@@ -154,7 +157,8 @@ int main() {
     };
 
     //consumer proxy
-    consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection, shared_ptr<WsServer::InMessage> in_message) {
+    consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
+            shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
         jsonStream.str(json);
@@ -169,15 +173,18 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    consumerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status, const string & /*reason*/) {
+    consumerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
+            const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
-    consumerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/, SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+    consumerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
+            SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
         return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
-    consumerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
+    consumerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection,
+            const SimpleWeb::error_code &ec) {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
