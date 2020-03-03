@@ -142,6 +142,7 @@ public:
     }
 };
 
+
 int main() {
     WsServer server;
     server.config.port = 8080;
@@ -227,8 +228,8 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    consumerEndpoint.on_close = [&msgPool, &wp](shared_ptr<WsServer::Connection> connection, int status,
-            const string & /*reason*/) {
+    auto clearMsgPool = [] (shared_ptr<WsServer::Connection> &connection,
+            map<shared_ptr<WsServer::Connection>, map<string, int>> &msgPool, WorkerPool &wp){
         auto iter = msgPool.find(connection);
         if (iter != msgPool.end()) {
             auto msgMap = iter->second;
@@ -241,10 +242,16 @@ int main() {
                     auto consumed = iter3->second;
                     std::unique_lock<std::mutex> lck(*mtx);
                     consumed->notify_one();
+                    cout << "notify_all:"<< iter1->first << "\n";
                 }
                 iter1++;
             }
         }
+    };
+
+    consumerEndpoint.on_close = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
+            const string & /*reason*/) {
+        clearMsgPool(connection, msgPool, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
@@ -253,8 +260,9 @@ int main() {
         return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
-    consumerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection,
+    consumerEndpoint.on_error = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
             const SimpleWeb::error_code &ec) {
+        clearMsgPool(connection, msgPool, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
