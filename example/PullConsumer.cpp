@@ -22,7 +22,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
-
+#include <boost/thread/thread.hpp>
 #include "common.h"
 
 using namespace rocketmq;
@@ -68,45 +68,50 @@ int main(int argc, char* argv[]) {
 
   auto start = std::chrono::system_clock::now();
   auto iter = mqs.begin();
-  for (; iter != mqs.end(); ++iter) {
-    MQMessageQueue mq = (*iter);
-    // if cluster model
-    // putMessageQueueOffset(mq, g_consumer.fetchConsumeOffset(mq,true));
-    // if broadcast model
-    // putMessageQueueOffset(mq, your last consume offset);
+  while(true) {
+      for (; iter != mqs.end(); ++iter) {
+          MQMessageQueue mq = (*iter);
+          // if cluster model
+          // putMessageQueueOffset(mq, g_consumer.fetchConsumeOffset(mq,true));
+          // if broadcast model
+          // putMessageQueueOffset(mq, your last consume offset);
 
-    bool noNewMsg = false;
-    do {
-      try {
-        PullResult result = consumer.pull(mq, "*", getMessageQueueOffset(mq), 32);
-        g_msgCount += result.msgFoundList.size();
-        std::cout << result.msgFoundList.size() << std::endl;
-        // if pull request timeout or received NULL response, pullStatus will be
-        // setted to BROKER_TIMEOUT,
-        // And nextBeginOffset/minOffset/MaxOffset will be setted to 0
-        if (result.pullStatus != BROKER_TIMEOUT) {
-          putMessageQueueOffset(mq, result.nextBeginOffset);
-          PrintPullResult(&result);
-        } else {
-          cout << "broker timeout occur" << endl;
-        }
-        switch (result.pullStatus) {
-          case FOUND:
-          case NO_MATCHED_MSG:
-          case OFFSET_ILLEGAL:
-          case BROKER_TIMEOUT:
-            break;
-          case NO_NEW_MSG:
-            noNewMsg = true;
-            break;
-          default:
-            break;
-        }
-      } catch (MQClientException& e) {
-        std::cout << e << std::endl;
+          bool noNewMsg = false;
+          do {
+              try {
+                  PullResult result = consumer.pull(mq, "*", getMessageQueueOffset(mq), 32);
+                  g_msgCount += result.msgFoundList.size();
+                  std::cout << result.msgFoundList.size() << std::endl;
+                  // if pull request timeout or received NULL response, pullStatus will be
+                  // setted to BROKER_TIMEOUT,
+                  // And nextBeginOffset/minOffset/MaxOffset will be setted to 0
+                  if (result.pullStatus != BROKER_TIMEOUT) {
+                      putMessageQueueOffset(mq, result.nextBeginOffset);
+                      PrintPullResult(&result);
+                  } else {
+                      cout << "broker timeout occur" << endl;
+                  }
+                  switch (result.pullStatus) {
+                      case FOUND:
+                      case NO_MATCHED_MSG:
+                      case OFFSET_ILLEGAL:
+                      case BROKER_TIMEOUT:
+                          break;
+                      case NO_NEW_MSG:
+                          noNewMsg = true;
+                          break;
+                      default:
+                          break;
+                  }
+              } catch (MQClientException& e) {
+                  std::cout << e << std::endl;
+              }
+          } while (!noNewMsg);
       }
-    } while (!noNewMsg);
+      boost::thread::sleep(boost::get_system_time() + boost::posix_time::seconds(2));
+      cout<< "loop end!\n";
   }
+
 
   auto end = std::chrono::system_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

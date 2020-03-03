@@ -43,13 +43,13 @@ class MyMsgListener : public MessageListenerConcurrently {
     g_msgCount.store(g_msgCount.load() - msgs.size());
     for (size_t i = 0; i < msgs.size(); ++i) {
       g_tps.Increment();
-      // cout << "msg body: "<<  msgs[i].getBody() << endl;
+       cout << "msg body: "<<  msgs[i].getBody() << endl;
     }
 
-    if (g_msgCount.load() <= 0) {
+/*    if (g_msgCount.load() <= 0) {
       std::unique_lock<std::mutex> lck(g_mtx);
       g_finished.notify_one();
-    }
+    }*/
     return CONSUME_SUCCESS;
   }
 };
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
                   "*",         // tag
                   info.body);  // body
 
-    //    std::this_thread::sleep_for(std::chrono::seconds(100000));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     try {
       producer.send(msg);
     } catch (MQException& e) {
