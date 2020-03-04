@@ -6,7 +6,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include "QueueTS.hpp"
 #include "Const.hpp"
-#include <stdio.h>
 
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
@@ -27,6 +26,14 @@ void getResponseJson(stringstream &ret, int code, string &msg, ptree &arr) {
     ptree data; \
     stringstream ret; \
     getResponseJson(ret, code, msg, data); \
+    con_->send(ret.str()); \
+} while(0);
+
+#define RESPONSE_ERROR_DATA(con_, code_, msg_, data_) do { \
+    int code = code_; \
+    string msg = msg_; \
+    stringstream ret; \
+    getResponseJson(ret, code, msg, data_); \
     con_->send(ret.str()); \
 } while(0);
 
@@ -95,6 +102,7 @@ public:
         auto conn = consumer->queue.wait_and_pop();
         ptree data;
         data.put("msgId", msgs[0].getMsgId());
+        data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
         RESPONSE_SUCCESS(conn, data);
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
@@ -303,6 +311,10 @@ int main() {
                         std::unique_lock<std::mutex> lck(*mtx);
                         consumed->notify_one();
                     }
+                    ptree data;
+                    data.put("msgId", msgId);
+                    data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK);
+                    RESPONSE_SUCCESS(connection, data);
                 }
             } else {
                 RESPONSE_ERROR(connection, 1, "params error!");
