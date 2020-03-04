@@ -5,6 +5,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "QueueTS.hpp"
+#include "Const.hpp"
 #include <stdio.h>
 
 using namespace std;
@@ -143,10 +144,14 @@ public:
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
-            producer->start();
-            producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (topic, producer));
-
-            return producer;
+            try {
+                producer->start();
+                producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (topic, producer));
+                return producer;
+            } catch (exception &e) {
+                cout << e.what() << endl;
+                return NULL;
+            }
         }
     }
     shared_ptr<ProxyPushConsumer>  getConsumer(const string &topic, const string &group)
@@ -169,12 +174,13 @@ public:
             consumer->registerMessageListener(listener);
             try {
                 consumer->start();
+                consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(topic, consumer));
+                return consumer;
             } catch (MQClientException &e) {
                 cout << e << endl;
+                return NULL;
             }
-            consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(topic, consumer));
 
-            return consumer;
         }
     }
 };
@@ -203,7 +209,11 @@ int main() {
         ProducerCallback * calllback = new ProducerCallback();
         calllback->setConn(connection);
         auto producer = wp.getProducer(name);
-        producer->send(msg, calllback);
+        if (producer == NULL) {
+            connection->send("system error!");
+        } else {
+            producer->send(msg, calllback);
+        };
     };
 
     producerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
@@ -237,21 +247,27 @@ int main() {
         try {
             string topic = jsonItem.get<string>("topic");
             int type = jsonItem.get<int>("type");
-            if (type == 1) {
+            if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME ||
+            type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK) {
                 //消费消息
                 auto consumer = wp.getConsumer(topic, topic);
-                consumer->queue.push(connection);
-            } else if (type == 2) {
-                //ack消息
-                string msgId = jsonItem.get<string>("msgId");
-                auto consumer = wp.getConsumer(topic, topic);
-                auto iter1 = consumer->msgMutexMap->find(msgId);
-                auto iter2 = consumer->conditionVariableMap->find(msgId);
-                if(iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
-                    auto mtx = iter1->second;
-                    auto consumed = iter2->second;
-                    std::unique_lock<std::mutex> lck(*mtx);
-                    consumed->notify_one();
+                if (consumer == NULL) {
+                    connection->send("system error!");
+                    return;
+                }
+                if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME) {
+                    consumer->queue.push(connection);
+                } else {
+                    //ack消息
+                    string msgId = jsonItem.get<string>("msgId");
+                    auto iter1 = consumer->msgMutexMap->find(msgId);
+                    auto iter2 = consumer->conditionVariableMap->find(msgId);
+                    if(iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
+                        auto mtx = iter1->second;
+                        auto consumed = iter2->second;
+                        std::unique_lock<std::mutex> lck(*mtx);
+                        consumed->notify_one();
+                    }
                 }
             } else {
                 connection->send("params error!");
