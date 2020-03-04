@@ -13,10 +13,10 @@ using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using namespace rocketmq;
 using namespace boost::property_tree;
 
-void getResponseJson(stringstream &ret, int code, string msg, ptree arr) {
+void getResponseJson(stringstream &ret, int code, string &msg, ptree &arr) {
     ptree root;
     root.put_value("code", code);
-    root.put_value("msg", msg);
+    root.put_value("msg", msg.c_str());
     root.add_child("data", arr);
     write_json(ret, root, false);
 };
@@ -28,7 +28,15 @@ void getResponseJson(stringstream &ret, int code, string msg, ptree arr) {
     stringstream ret; \
     getResponseJson(ret, code, msg, data); \
     con_->send(ret.str()); \
-} while(0)
+} while(0);
+
+#define RESPONSE_SUCCESS(con_, data_) do { \
+    int code = 0; \
+    string msg = ""; \
+    stringstream ret; \
+    getResponseJson(ret, code, msg, data_); \
+    con_->send(ret.str()); \
+} while (0);
 
 class ProducerCallback : public AutoDeleteSendCallBack {
     shared_ptr<WsServer::Connection> conn;
@@ -92,7 +100,9 @@ public:
             return RECONSUME_LATER;
         }
         auto conn = consumer->queue.wait_and_pop();
-        conn->send(msgs[0].getMsgId());
+        ptree data;
+        data.put_value("msgId", msgs[0].getMsgId());
+        RESPONSE_SUCCESS(conn, data);
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
         consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[0].getMsgId(), mtx));
