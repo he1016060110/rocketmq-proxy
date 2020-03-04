@@ -117,8 +117,12 @@ public:
             auto p = &iter->second;
             p->insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
-        std::unique_lock<std::mutex> lck(*mtx);
-        consumed->wait(lck);
+
+        //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
+        {
+            std::unique_lock<std::mutex> lck(*mtx);
+            consumed->wait(lck);
+        }
         //唤醒后删除lock
         delete mtx;
         delete consumed;
