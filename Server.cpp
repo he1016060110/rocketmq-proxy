@@ -314,8 +314,10 @@ int main() {
                     consumer->msgMutexMap->try_get(msgId, mtx);
                     consumer->conditionVariableMap->try_get(msgId, consumed);
                     if (mtx != NULL&& consumed != NULL) {
-                        std::unique_lock<std::mutex> lck(*mtx);
-                        consumed->notify_one();
+                        {
+                            std::unique_lock<std::mutex> lck(*mtx);
+                            consumed->notify_all();
+                        }
                     } else {
                         cout << "lock not found!msgId:"<< msgId<<endl;
                     }
@@ -350,9 +352,11 @@ int main() {
                 wp.msgMutexMap.try_get(iter1->first, mtx);
                 wp.conditionVariableMap.try_get(iter1->first, consumed);
                 if (mtx != NULL && consumed != NULL ) {
-                    std::unique_lock<std::mutex> lck(*mtx);
-                    consumed->notify_one();
-                    cout << "notify_all:" << iter1->first << "\n";
+                    {
+                        std::unique_lock<std::mutex> lck(*mtx);
+                        consumed->notify_all();
+                        cout << "notify_all:" << iter1->first << "\n";
+                    }
                 }
                 iter1++;
             }
