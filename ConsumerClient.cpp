@@ -28,6 +28,7 @@ int main() {
                 ptree requestItem;
                 requestItem.put("topic", "TestTopicProxy");
                 requestItem.put("msgId", msgId);
+                requestItem.put("status", 0);
                 requestItem.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK);
                 stringstream request_str;
                 write_json(request_str, requestItem, false);
