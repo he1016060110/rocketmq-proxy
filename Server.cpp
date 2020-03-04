@@ -236,9 +236,6 @@ int main() {
     WorkerPool wp(msgPool);
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
-
-
-
     //producer proxy
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
