@@ -40,22 +40,15 @@ void getResponseJson(stringstream &ret, int code, string &msg, ptree &arr) {
 
 class ProducerCallback : public AutoDeleteSendCallBack {
     shared_ptr<WsServer::Connection> conn;
-
     virtual ~ProducerCallback() {}
-
     virtual void onSuccess(SendResult &sendResult) {
-        this->conn->send(sendResult.getMsgId(), [](const SimpleWeb::error_code &ec) {
-            if (ec) {
-                cout << "Server: Error sending message. " <<
-                     "Error: " << ec << ", error message: " << ec.message() << endl;
-            }
-        });
+        ptree data;
+        data.put("msgId", sendResult.getMsgId());
+        RESPONSE_SUCCESS(this->conn, data);
     }
-
     virtual void onException(MQException &e) {
         RESPONSE_ERROR(this->conn, 1, e.what());
     }
-
 public:
     void setConn(shared_ptr<WsServer::Connection> &con) {
         this->conn = con;
