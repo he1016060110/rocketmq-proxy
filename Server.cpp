@@ -74,11 +74,11 @@ public:
             auto iter = consumer->pool->find(conn);
             if (iter == consumer->pool->end()) {
                 map<string, int> temp;
-                temp.insert(make_pair(msgs[i].getMsgId(), 1));
+                temp.insert(make_pair(msgs[i].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
                 consumer->pool->insert(make_pair(conn, temp));
             } else {
                 auto p = &iter->second;
-                p->insert(make_pair(msgs[i].getMsgId(), 1));
+                p->insert(make_pair(msgs[i].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
             }
             std::unique_lock<std::mutex> lck(*mtx);
             consumed->wait(lck);
