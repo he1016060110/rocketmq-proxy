@@ -35,6 +35,7 @@ class ROCKETMQCLIENT_API DefaultMQProducer {
 
   virtual void start();
   virtual void shutdown();
+  virtual std::string version();
 
   virtual SendResult send(MQMessage& msg, bool bSelectActiveBroker = false);
   virtual SendResult send(MQMessage& msg, const MQMessageQueue& mq);
@@ -113,7 +114,7 @@ class ROCKETMQCLIENT_API DefaultMQProducer {
    *     producer and consumer must set different instanceName.
    **/
   void setTcpTransportPullThreadNum(int num);
-  const int getTcpTransportPullThreadNum() const;
+  int getTcpTransportPullThreadNum() const;
 
   /** Timeout of tcp connect, it is same meaning for both producer and consumer;
    *    1. default value is 3000ms
@@ -121,7 +122,7 @@ class ROCKETMQCLIENT_API DefaultMQProducer {
    *       1000-3000ms;
    **/
   void setTcpTransportConnectTimeout(uint64_t timeout);  // ms
-  const uint64_t getTcpTransportConnectTimeout() const;
+  uint64_t getTcpTransportConnectTimeout() const;
 
   /** Timeout of tryLock tcpTransport before sendMsg/pullMsg, if timeout,
    *  returns NULL
@@ -131,7 +132,7 @@ class ROCKETMQCLIENT_API DefaultMQProducer {
    *       will be setted to 1000ms
    **/
   void setTcpTransportTryLockTimeout(uint64_t timeout);  // ms
-  const uint64_t getTcpTransportTryLockTimeout() const;
+  uint64_t getTcpTransportTryLockTimeout() const;
 
   void setUnitName(std::string unitName);
   const std::string& getUnitName() const;
