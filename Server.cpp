@@ -14,46 +14,50 @@ using namespace rocketmq;
 
 class ProducerCallback : public AutoDeleteSendCallBack {
     shared_ptr<WsServer::Connection> conn;
+
     virtual ~ProducerCallback() {}
-    virtual void onSuccess(SendResult& sendResult) {
+
+    virtual void onSuccess(SendResult &sendResult) {
         this->conn->send(sendResult.getMsgId(), [](const SimpleWeb::error_code &ec) {
-            if(ec) {
+            if (ec) {
                 cout << "Server: Error sending message. " <<
                      "Error: " << ec << ", error message: " << ec.message() << endl;
             }
         });
     }
-    virtual void onException(MQException& e) {
+
+    virtual void onException(MQException &e) {
         this->conn->send(e.what());
     }
 
 public:
-    void setConn(shared_ptr<WsServer::Connection> &con)
-    {
+    void setConn(shared_ptr<WsServer::Connection> &con) {
         this->conn = con;
     }
 };
 
 class WorkerPool;
+
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
-    map<string, std::mutex * > * msgMutexMap;
+    map<string, std::mutex *> *msgMutexMap;
     map<string, std::condition_variable *> *conditionVariableMap;
     //被锁住的消息列表
     map<shared_ptr<WsServer::Connection>, map<string, int>> *pool;
-    WorkerPool * wp;
-    void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> * pool_,
-                      map<string, std::mutex * > * msgMutexMap_,
+    WorkerPool *wp;
+
+    void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> *pool_,
+                      map<string, std::mutex *> *msgMutexMap_,
                       map<string, std::condition_variable *> *conditionVariableMap_,
-                      WorkerPool * wp_)
-    {
+                      WorkerPool *wp_) {
         pool = pool_;
         msgMutexMap = msgMutexMap_;
         conditionVariableMap = conditionVariableMap_;
         wp = wp_;
     }
-    ProxyPushConsumer(const std::string& groupname) : DefaultMQPushConsumer(groupname) {
+
+    ProxyPushConsumer(const std::string &groupname) : DefaultMQPushConsumer(groupname) {
     }
 };
 
@@ -61,84 +65,88 @@ class ConsumerMsgListener : public MessageListenerConcurrently {
     shared_ptr<ProxyPushConsumer> consumer;
 public:
     ConsumerMsgListener() {}
+
     virtual ~ConsumerMsgListener() {}
 
-    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt>& msgs) {
-        for (size_t i = 0; i < msgs.size(); ++i) {
-            auto conn = consumer->queue.wait_and_pop();
-            conn->send(msgs[i].getMsgId());
-            auto mtx = new std::mutex;
-            auto consumed = new std::condition_variable;
-            consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[i].getMsgId(), mtx));
-            consumer->conditionVariableMap->insert(pair<string, std::condition_variable *>(msgs[i].getMsgId(), consumed));
-            auto iter = consumer->pool->find(conn);
-            if (iter == consumer->pool->end()) {
-                map<string, int> temp;
-                temp.insert(make_pair(msgs[i].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
-                consumer->pool->insert(make_pair(conn, temp));
-            } else {
-                auto p = &iter->second;
-                p->insert(make_pair(msgs[i].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
-            }
-            std::unique_lock<std::mutex> lck(*mtx);
-            consumed->wait(lck);
-            //lock被唤醒，删除lock，避免内存泄漏
-            consumer->msgMutexMap->erase(msgs[i].getMsgId());
-            consumer->conditionVariableMap->erase(msgs[i].getMsgId());
-            iter = consumer->pool->find(conn);
-            if (iter != consumer->pool->end()) {
-                auto p = &iter->second;
-                p->erase(msgs[i].getMsgId());
-            }
-            delete mtx;
-            delete consumed;
+    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
+        if (msgs.size() != 1 ) {
+            cout << "consumeMessage msg max size is "<< msgs.size() << "\n";
+            return RECONSUME_LATER;
         }
+        auto conn = consumer->queue.wait_and_pop();
+        conn->send(msgs[0].getMsgId());
+        auto mtx = new std::mutex;
+        auto consumed = new std::condition_variable;
+        consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[0].getMsgId(), mtx));
+        consumer->conditionVariableMap->insert(
+                pair<string, std::condition_variable *>(msgs[0].getMsgId(), consumed));
+        auto iter = consumer->pool->find(conn);
+        if (iter == consumer->pool->end()) {
+            map<string, int> temp;
+            temp.insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
+            consumer->pool->insert(make_pair(conn, temp));
+        } else {
+            auto p = &iter->second;
+            p->insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
+        }
+        std::unique_lock<std::mutex> lck(*mtx);
+        consumed->wait(lck);
+        //lock被唤醒，删除lock，避免内存泄漏
+        consumer->msgMutexMap->erase(msgs[0].getMsgId());
+        consumer->conditionVariableMap->erase(msgs[0].getMsgId());
+        iter = consumer->pool->find(conn);
+        if (iter != consumer->pool->end()) {
+            auto p = &iter->second;
+            p->erase(msgs[0].getMsgId());
+        }
+        delete mtx;
+        delete consumed;
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         return CONSUME_SUCCESS;
     }
-    void setConsumer(shared_ptr<ProxyPushConsumer>  con)
-    {
+
+    void setConsumer(shared_ptr<ProxyPushConsumer> con) {
         this->consumer = con;
     }
 };
 
-class WorkerPool
-{
+class WorkerPool {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
     //
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
     //连接断掉后，以前队列要把相关连接清空！
-    void deleteConnection(shared_ptr<WsServer::Connection> con)
-    {
+    void deleteConnection(shared_ptr<WsServer::Connection> con) {
         auto iter = consumers.begin();
         while (iter != consumers.end()) {
             auto consumer = iter->second;
             shared_ptr<WsServer::Connection> value;
             QueueTS<shared_ptr<WsServer::Connection>> tempQueue;
-            while(consumer->queue.try_pop(value)) {
+            while (consumer->queue.try_pop(value)) {
                 if (value == con) {
                     continue;
                 }
                 tempQueue.push(value);
             }
-            while(tempQueue.try_pop(value)) {
+            while (tempQueue.try_pop(value)) {
                 consumer->queue.push(value);
             }
             iter++;
         }
     }
-    map<string, std::mutex * > msgMutexMap;
+
+    map<string, std::mutex *> msgMutexMap;
     map<string, std::condition_variable *> conditionVariableMap;
-    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p): pool(p) {}
-    shared_ptr<DefaultMQProducer> getProducer(const string &topic)
-    {
+
+    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
+
+    shared_ptr<DefaultMQProducer> getProducer(const string &topic) {
         auto iter = producers.find(topic);
-        if(iter != producers.end())
+        if (iter != producers.end())
             return iter->second;
         else {
-            shared_ptr<DefaultMQProducer> producer (new DefaultMQProducer(topic));
+            shared_ptr<DefaultMQProducer> producer(new DefaultMQProducer(topic));
             producer->setNamesrvAddr("namesrv:9876");
             producer->setInstanceName(topic);
             producer->setSendMsgTimeout(500);
@@ -146,7 +154,7 @@ public:
             producer->setTcpTransportConnectTimeout(400);
             try {
                 producer->start();
-                producers.insert(pair<string, shared_ptr<DefaultMQProducer>> (topic, producer));
+                producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(topic, producer));
                 return producer;
             } catch (exception &e) {
                 cout << e.what() << endl;
@@ -154,10 +162,10 @@ public:
             }
         }
     }
-    shared_ptr<ProxyPushConsumer>  getConsumer(const string &topic, const string &group)
-    {
+
+    shared_ptr<ProxyPushConsumer> getConsumer(const string &topic, const string &group) {
         auto iter = consumers.find(topic);
-        if(iter != consumers.end())
+        if (iter != consumers.end())
             return iter->second;
         else {
             shared_ptr<ProxyPushConsumer> consumer(new ProxyPushConsumer(group));
@@ -169,7 +177,7 @@ public:
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap, this);
-            ConsumerMsgListener * listener = new ConsumerMsgListener();
+            ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
             try {
@@ -196,7 +204,7 @@ int main() {
 
     //producer proxy
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
-            shared_ptr<WsServer::InMessage> in_message) {
+                                        shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
         jsonStream.str(json);
@@ -206,7 +214,7 @@ int main() {
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(name, tag, body);
-        ProducerCallback * calllback = new ProducerCallback();
+        ProducerCallback *calllback = new ProducerCallback();
         calllback->setConn(connection);
         auto producer = wp.getProducer(name);
         if (producer == NULL) {
@@ -221,13 +229,13 @@ int main() {
     };
 
     producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
-            const string & /*reason*/) {
+                                   const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
     // Can modify handshake response headers here if needed
     producerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
-            SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+                                       SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
         return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
@@ -238,7 +246,7 @@ int main() {
 
     //consumer proxy
     consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
-            shared_ptr<WsServer::InMessage> in_message) {
+                                        shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
         jsonStream.str(json);
@@ -248,7 +256,7 @@ int main() {
             string topic = jsonItem.get<string>("topic");
             int type = jsonItem.get<int>("type");
             if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME ||
-            type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK) {
+                type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK) {
                 //消费消息
                 auto consumer = wp.getConsumer(topic, topic);
                 if (consumer == NULL) {
@@ -262,7 +270,7 @@ int main() {
                     string msgId = jsonItem.get<string>("msgId");
                     auto iter1 = consumer->msgMutexMap->find(msgId);
                     auto iter2 = consumer->conditionVariableMap->find(msgId);
-                    if(iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
+                    if (iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
                         auto mtx = iter1->second;
                         auto consumed = iter2->second;
                         std::unique_lock<std::mutex> lck(*mtx);
@@ -281,23 +289,23 @@ int main() {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    auto clearMsgPool = [] (shared_ptr<WsServer::Connection> &connection,
-            map<shared_ptr<WsServer::Connection>, map<string, int>> &msgPool, WorkerPool &wp){
+    auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection,
+                           map<shared_ptr<WsServer::Connection>, map<string, int>> &msgPool, WorkerPool &wp) {
         //删掉每个consumer里面连接队列的值
         wp.deleteConnection(connection);
         auto iter = msgPool.find(connection);
         if (iter != msgPool.end()) {
             auto msgMap = iter->second;
             auto iter1 = msgMap.begin();
-            while(iter1 != msgMap.end()) {
+            while (iter1 != msgMap.end()) {
                 auto iter2 = wp.msgMutexMap.find(iter1->first);
                 auto iter3 = wp.conditionVariableMap.find(iter1->first);
-                if(iter2 != wp.msgMutexMap.end() && iter3 != wp.conditionVariableMap.end()) {
+                if (iter2 != wp.msgMutexMap.end() && iter3 != wp.conditionVariableMap.end()) {
                     auto mtx = iter2->second;
                     auto consumed = iter3->second;
                     std::unique_lock<std::mutex> lck(*mtx);
                     consumed->notify_one();
-                    cout << "notify_all:"<< iter1->first << "\n";
+                    cout << "notify_all:" << iter1->first << "\n";
                 }
                 iter1++;
             }
@@ -305,18 +313,18 @@ int main() {
     };
 
     consumerEndpoint.on_close = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
-            const string & /*reason*/) {
+                                                               const string & /*reason*/) {
         clearMsgPool(connection, msgPool, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
     consumerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
-            SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
+                                       SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
         return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
     consumerEndpoint.on_error = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
-            const SimpleWeb::error_code &ec) {
+                                                               const SimpleWeb::error_code &ec) {
         clearMsgPool(connection, msgPool, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
