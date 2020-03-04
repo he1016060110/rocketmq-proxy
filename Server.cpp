@@ -100,10 +100,7 @@ public:
             return RECONSUME_LATER;
         }
         auto conn = consumer->queue.wait_and_pop();
-        ptree data;
-        data.put("msgId", msgs[0].getMsgId());
-        data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
-        RESPONSE_SUCCESS(conn, data);
+        //设置锁信息，客户端发送ack后解开锁
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
         consumer->msgStatusMap->insert(pair<string, ConsumeStatus>(msgs[0].getMsgId(), RECONSUME_LATER));
@@ -119,6 +116,11 @@ public:
             auto p = &iter->second;
             p->insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
+        //先设置lock，然后再发送消息，顺序很重要
+        ptree data;
+        data.put("msgId", msgs[0].getMsgId());
+        data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
+        RESPONSE_SUCCESS(conn, data);
 
         //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
         {
@@ -320,6 +322,8 @@ int main() {
                         auto consumed = iter2->second;
                         std::unique_lock<std::mutex> lck(*mtx);
                         consumed->notify_one();
+                    } else {
+                        cout << "lock not found!msgId:"<< msgId<<endl;
                     }
                     ptree data;
                     data.put("msgId", msgId);
