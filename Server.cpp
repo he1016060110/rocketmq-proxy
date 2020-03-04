@@ -308,12 +308,12 @@ int main() {
                 } else {
                     //ack消息
                     string msgId = jsonItem.get<string>("msgId");
-                    ConsumeStatus status = jsonItem.get<ConsumeStatus>("status");
+                    int status = jsonItem.get<int>("status");
                     auto iter1 = consumer->msgMutexMap->find(msgId);
                     auto iter2 = consumer->conditionVariableMap->find(msgId);
                     auto iter3 = consumer->msgStatusMap->find(msgId);
                     if (iter3!= consumer->msgStatusMap->end()) {
-                        (*(consumer->msgStatusMap))[msgId] = status;
+                        (*(consumer->msgStatusMap))[msgId] = (ConsumeStatus) status;
                     }
                     if (iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
                         auto mtx = iter1->second;
