@@ -71,16 +71,16 @@ public:
     map<string, std::condition_variable *> *conditionVariableMap;
     //被锁住的消息列表
     map<shared_ptr<WsServer::Connection>, map<string, int>> *pool;
-    WorkerPool *wp;
+    map<string, ConsumeStatus> * msgStatusMap;
 
     void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> *pool_,
                       map<string, std::mutex *> *msgMutexMap_,
                       map<string, std::condition_variable *> *conditionVariableMap_,
-                      WorkerPool *wp_) {
+                      map<string, ConsumeStatus> * msgStatusMap_) {
         pool = pool_;
         msgMutexMap = msgMutexMap_;
         conditionVariableMap = conditionVariableMap_;
-        wp = wp_;
+        msgStatusMap = msgStatusMap_;
     }
 
     ProxyPushConsumer(const std::string &groupname) : DefaultMQPushConsumer(groupname) {
@@ -106,6 +106,7 @@ public:
         RESPONSE_SUCCESS(conn, data);
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
+        consumer->msgStatusMap->insert(pair<string, ConsumeStatus>(msgs[0].getMsgId(), RECONSUME_LATER));
         consumer->msgMutexMap->insert(pair<string, std::mutex *>(msgs[0].getMsgId(), mtx));
         consumer->conditionVariableMap->insert(
                 pair<string, std::condition_variable *>(msgs[0].getMsgId(), consumed));
@@ -131,12 +132,15 @@ public:
         consumer->msgMutexMap->erase(msgs[0].getMsgId());
         consumer->conditionVariableMap->erase(msgs[0].getMsgId());
         iter = consumer->pool->find(conn);
-        ConsumeStatus status = RECONSUME_LATER;
         if (iter != consumer->pool->end()) {
             auto p = &iter->second;
             p->erase(msgs[0].getMsgId());
         }
-
+        ConsumeStatus status = RECONSUME_LATER;
+        auto statusIter = consumer->msgStatusMap->find(msgs[0].getMsgId());
+        if (statusIter != consumer->msgStatusMap->end()) {
+            status = statusIter->second;
+        }
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         return status;
     }
@@ -174,6 +178,7 @@ public:
 
     map<string, std::mutex *> msgMutexMap;
     map<string, std::condition_variable *> conditionVariableMap;
+    map<string, ConsumeStatus> msgStatusMap;
 
     WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
 
@@ -212,7 +217,7 @@ public:
             consumer->setConsumeThreadCount(2);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
-            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap, this);
+            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap, &msgStatusMap);
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
@@ -303,8 +308,13 @@ int main() {
                 } else {
                     //ack消息
                     string msgId = jsonItem.get<string>("msgId");
+                    ConsumeStatus status = jsonItem.get<ConsumeStatus>("status");
                     auto iter1 = consumer->msgMutexMap->find(msgId);
                     auto iter2 = consumer->conditionVariableMap->find(msgId);
+                    auto iter3 = consumer->msgStatusMap->find(msgId);
+                    if (iter3!= consumer->msgStatusMap->end()) {
+                        (*(consumer->msgStatusMap))[msgId] = status;
+                    }
                     if (iter1 != consumer->msgMutexMap->end() && iter2 != consumer->conditionVariableMap->end()) {
                         auto mtx = iter1->second;
                         auto consumed = iter2->second;
