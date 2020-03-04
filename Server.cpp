@@ -11,6 +11,24 @@
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 using namespace rocketmq;
+using namespace boost::property_tree;
+
+void getResponseJson(stringstream &ret, int code, string msg, ptree arr) {
+    ptree root;
+    root.put_value("code", code);
+    root.put_value("msg", msg);
+    root.add_child("data", arr);
+    write_json(ret, root, false);
+};
+
+#define RESPONSE_ERROR(con_, code_, msg_) do { \
+    int code = code; \
+    string msg = msg_; \
+    ptree data; \
+    stringstream ret; \
+    getResponseJson(ret, code, msg, data); \
+    con_->send(ret.str()); \
+} while(0)
 
 class ProducerCallback : public AutoDeleteSendCallBack {
     shared_ptr<WsServer::Connection> conn;
@@ -27,7 +45,7 @@ class ProducerCallback : public AutoDeleteSendCallBack {
     }
 
     virtual void onException(MQException &e) {
-        this->conn->send(e.what());
+        RESPONSE_ERROR(this->conn, 1, e.what());
     }
 
 public:
@@ -91,18 +109,21 @@ public:
         }
         std::unique_lock<std::mutex> lck(*mtx);
         consumed->wait(lck);
+        //唤醒后删除lock
+        delete mtx;
+        delete consumed;
         //lock被唤醒，删除lock，避免内存泄漏
         consumer->msgMutexMap->erase(msgs[0].getMsgId());
         consumer->conditionVariableMap->erase(msgs[0].getMsgId());
         iter = consumer->pool->find(conn);
+        ConsumeStatus status = RECONSUME_LATER;
         if (iter != consumer->pool->end()) {
             auto p = &iter->second;
             p->erase(msgs[0].getMsgId());
         }
-        delete mtx;
-        delete consumed;
+
         //阻塞住，等待客户端消费掉消息，或者断掉连接
-        return CONSUME_SUCCESS;
+        return status;
     }
 
     void setConsumer(shared_ptr<ProxyPushConsumer> con) {
@@ -202,6 +223,8 @@ int main() {
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
 
+
+
     //producer proxy
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
@@ -218,7 +241,7 @@ int main() {
         calllback->setConn(connection);
         auto producer = wp.getProducer(name);
         if (producer == NULL) {
-            connection->send("system error!");
+            RESPONSE_ERROR(connection, 1, "system error!");
         } else {
             producer->send(msg, calllback);
         };
@@ -260,7 +283,7 @@ int main() {
                 //消费消息
                 auto consumer = wp.getConsumer(topic, topic);
                 if (consumer == NULL) {
-                    connection->send("system error!");
+                    RESPONSE_ERROR(connection, 1, "system error!");
                     return;
                 }
                 if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME) {
@@ -278,10 +301,10 @@ int main() {
                     }
                 }
             } else {
-                connection->send("params error!");
+                RESPONSE_ERROR(connection, 1, "params error!");
             }
         } catch (exception &e) {
-            connection->send(e.what());
+            RESPONSE_ERROR(connection, 1, e.what());
         }
     };
 
@@ -338,6 +361,7 @@ int main() {
             server_port.set_value(port);
         });
     });
+
     cout << "Server listening on port " << server_port.get_future().get() << endl << endl;
     server_thread.join();
 }
