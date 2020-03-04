@@ -15,14 +15,14 @@ using namespace boost::property_tree;
 
 void getResponseJson(stringstream &ret, int code, string &msg, ptree &arr) {
     ptree root;
-    root.put_value("code", code);
-    root.put_value("msg", msg.c_str());
+    root.put("code", code);
+    root.put("msg", msg.c_str());
     root.add_child("data", arr);
     write_json(ret, root, false);
 };
 
 #define RESPONSE_ERROR(con_, code_, msg_) do { \
-    int code = code; \
+    int code = code_; \
     string msg = msg_; \
     ptree data; \
     stringstream ret; \
@@ -101,7 +101,7 @@ public:
         }
         auto conn = consumer->queue.wait_and_pop();
         ptree data;
-        data.put_value("msgId", msgs[0].getMsgId());
+        data.put("msgId", msgs[0].getMsgId());
         RESPONSE_SUCCESS(conn, data);
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
