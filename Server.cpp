@@ -5,11 +5,6 @@
 #include "ProxyPushConsumer.hpp"
 #include "WorkerPool.hpp"
 
-using namespace std;
-using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
-using namespace rocketmq;
-using namespace boost::property_tree;
-
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string nameServer = arg_help.get_option_value("-n");

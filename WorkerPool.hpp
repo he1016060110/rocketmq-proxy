@@ -4,6 +4,7 @@
 
 #ifndef ROCKETMQ_PROXY_WORKERPOOL_HPP
 #define ROCKETMQ_PROXY_WORKERPOOL_HPP
+
 #include "common.hpp"
 
 using namespace std;

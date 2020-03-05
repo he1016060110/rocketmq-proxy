@@ -17,6 +17,11 @@
 #include <future>
 #include <boost/thread.hpp>
 
+using namespace std;
+using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
+using namespace rocketmq;
+using namespace boost::property_tree;
+
 void getResponseJson(stringstream &ret, int code, string &msg, ptree &arr) {
     ptree root;
     root.put("code", code);
