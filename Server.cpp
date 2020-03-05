@@ -4,6 +4,7 @@
 #include "DefaultMQPushConsumer.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/thread.hpp>
 #include "QueueTS.hpp"
 #include "MapTS.hpp"
 #include "Const.hpp"
@@ -126,6 +127,8 @@ public:
         //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
         {
             std::unique_lock<std::mutex> lck(unit->mtx);
+            unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT;
+            unit->cv.notify_one();
             unit->cv.wait(lck);
         }
         //唤醒后删除lock
@@ -302,7 +305,10 @@ int main() {
                     consumer->consumerUnitMap->try_get(msgId, unit);
                     unit->status = (ConsumeStatus)status;
                     {
-                        unit->cv.notify_all();
+                        while(unit->syncStatus != ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT) {
+                            boost::thread::sleep(boost::get_system_time() + boost::posix_time::milliseconds (1));
+                        }
+                        unit->cv.notify_one();
                     }
                     ptree data;
                     data.put("msgId", msgId);
