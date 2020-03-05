@@ -23,6 +23,13 @@ int main() {
     };
 
     client.on_open = [](shared_ptr<WsClient::Connection> connection) {
+        string out_message("Hello");
+        string json= "{ \
+            \"topic\": \"TestTopicProxy\", \
+            \"tag\": \"*\", \
+            \"body\": \"this this the TestTopicProxy!\" \
+        }";
+        connection->send(json);
         cout << "Client: Opened connection" << endl;
     };
 
