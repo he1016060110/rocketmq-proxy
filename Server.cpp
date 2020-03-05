@@ -65,23 +65,27 @@ public:
 
 class WorkerPool;
 
+class MsgConsumeUnit
+{
+public:
+    std::mutex mtx;
+    std::condition_variable cv;
+    ConsumeStatus status;
+    int syncStatus;
+    string msgId;
+    MsgConsumeUnit(): syncStatus(ROCKETMQ_PROXY_MSG_STATUS_SYNC_INIT), status(RECONSUME_LATER) {}
+};
+
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
-    MapTS<string, std::mutex *> *msgMutexMap;
-    MapTS<string, std::condition_variable *> *conditionVariableMap;
-    MapTS<string, ConsumeStatus> * msgStatusMap;
     //被锁住的消息列表
     map<shared_ptr<WsServer::Connection>, map<string, int>> *pool;
-
+    MapTS<string, MsgConsumeUnit *> *consumerUnitMap;
     void initResource(map<shared_ptr<WsServer::Connection>, map<string, int>> *pool_,
-                      MapTS<string, std::mutex *> *msgMutexMap_,
-                      MapTS<string, std::condition_variable *> *conditionVariableMap_,
-                      MapTS<string, ConsumeStatus> * msgStatusMap_) {
+                      MapTS<string, MsgConsumeUnit *> *consumerUnitMap_) {
         pool = pool_;
-        msgMutexMap = msgMutexMap_;
-        conditionVariableMap = conditionVariableMap_;
-        msgStatusMap = msgStatusMap_;
+        consumerUnitMap = consumerUnitMap_;
     }
 
     ProxyPushConsumer(const std::string &groupname) : DefaultMQPushConsumer(groupname) {
@@ -102,12 +106,9 @@ public:
         }
         auto conn = consumer->queue.wait_and_pop();
         //设置锁信息，客户端发送ack后解开锁
-        auto mtx = new std::mutex;
-        auto consumed = new std::condition_variable;
         string msgId = msgs[0].getMsgId();
-        consumer->msgStatusMap->insert(msgId, RECONSUME_LATER);
-        consumer->msgMutexMap->insert(msgId, mtx);
-        consumer->conditionVariableMap->insert(msgId, consumed);
+        auto unit = new MsgConsumeUnit();
+        consumer->consumerUnitMap->insert_or_update(msgId, unit);
         auto iter = consumer->pool->find(conn);
         if (iter == consumer->pool->end()) {
             map<string, int> temp;
@@ -122,26 +123,22 @@ public:
         data.put("msgId", msgId);
         data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
         RESPONSE_SUCCESS(conn, data);
-
         //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
         {
-            std::unique_lock<std::mutex> lck(*mtx);
-            consumed->wait(lck);
+            std::unique_lock<std::mutex> lck(unit->mtx);
+            unit->cv.wait(lck);
         }
         //唤醒后删除lock
-        delete mtx;
-        delete consumed;
         //lock被唤醒，删除lock，避免内存泄漏
-        consumer->msgMutexMap->erase(msgId);
-        consumer->conditionVariableMap->erase(msgId);
         iter = consumer->pool->find(conn);
         if (iter != consumer->pool->end()) {
             auto p = &iter->second;
             p->erase(msgId);
         }
-        ConsumeStatus status = RECONSUME_LATER;
-        consumer->msgStatusMap->try_get(msgId, status);
+        ConsumeStatus status = unit->status;
         //阻塞住，等待客户端消费掉消息，或者断掉连接
+        consumer->consumerUnitMap->erase(msgId);
+        delete unit;
         return status;
     }
 
@@ -155,9 +152,7 @@ class WorkerPool {
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
-    MapTS<string, std::mutex *> msgMutexMap;
-    MapTS<string, std::condition_variable *> conditionVariableMap;
-    MapTS<string, ConsumeStatus> msgStatusMap;
+    MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
     //连接断掉后，以前队列要把相关连接清空！
     void deleteConnection(shared_ptr<WsServer::Connection> con) {
@@ -213,7 +208,7 @@ public:
             consumer->setConsumeThreadCount(2);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
-            consumer->initResource(&pool, &msgMutexMap, &conditionVariableMap, &msgStatusMap);
+            consumer->initResource(&pool, &consumerUnitMap);
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
@@ -303,14 +298,11 @@ int main() {
                     //ack消息
                     string msgId = jsonItem.get<string>("msgId");
                     int status = jsonItem.get<int>("status");
-                    std::mutex * mtx = NULL;
-                    std::condition_variable * consumed = NULL;
-                    consumer->msgStatusMap->insert_or_update(msgId, (ConsumeStatus)status);
-                    if (consumer->msgMutexMap->try_get(msgId, mtx) &&
-                    consumer->conditionVariableMap->try_get(msgId, consumed)) {
-                        consumed->notify_all();
-                    } else {
-                        cout << "lock not found!msgId:"<< msgId<<endl;
+                    MsgConsumeUnit * unit;
+                    consumer->consumerUnitMap->try_get(msgId, unit);
+                    unit->status = (ConsumeStatus)status;
+                    {
+                        unit->cv.notify_all();
                     }
                     ptree data;
                     data.put("msgId", msgId);
@@ -338,12 +330,10 @@ int main() {
             auto msgMap = iter->second;
             auto iter1 = msgMap.begin();
             while (iter1 != msgMap.end()) {
-                std::mutex * mtx = NULL;
-                std::condition_variable *  consumed = NULL;
-                if (wp.msgMutexMap.try_get(iter1->first, mtx)
-                && wp.conditionVariableMap.try_get(iter1->first, consumed)) {
+                MsgConsumeUnit * unit;
+                if (wp.consumerUnitMap.try_get(iter1->first, unit)) {
                     {
-                        consumed->notify_all();
+                        unit->cv.notify_all();
                         cout << "notify_all:" << iter1->first << "\n";
                     }
                 }
