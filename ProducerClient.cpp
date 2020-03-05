@@ -13,27 +13,17 @@ int main() {
     client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
         cout << in_message->string();
-        if (count >= 10) {
-            //connection->send_close(1000);
-            //cout << "Client: Sending close connection" << endl;
-        }
-    };
-
-    client.on_open = [](shared_ptr<WsClient::Connection> connection) {
-        cout << "Client: Opened connection" << endl;
         string out_message("Hello");
-
         string json= "{ \
             \"topic\": \"TestTopicProxy\", \
             \"tag\": \"*\", \
             \"body\": \"this this the TestTopicProxy!\" \
         }";
-        boost::timer t;
-        for (int i =0 ; i< 10000; i++) {
-            connection->send(json);
-        }
-        std::cout << "send 10000 time cost: " << t.elapsed()<< std::endl;
-        boost::thread::sleep(boost::get_system_time() + boost::posix_time::seconds(10));
+        connection->send(json);
+    };
+
+    client.on_open = [](shared_ptr<WsClient::Connection> connection) {
+        cout << "Client: Opened connection" << endl;
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {

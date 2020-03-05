@@ -154,6 +154,10 @@ class WorkerPool {
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
+    MapTS<string, std::mutex *> msgMutexMap;
+    MapTS<string, std::condition_variable *> conditionVariableMap;
+    MapTS<string, ConsumeStatus> msgStatusMap;
+    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
     //连接断掉后，以前队列要把相关连接清空！
     void deleteConnection(shared_ptr<WsServer::Connection> con) {
         auto iter = consumers.begin();
@@ -173,13 +177,6 @@ public:
             iter++;
         }
     }
-
-    MapTS<string, std::mutex *> msgMutexMap;
-    MapTS<string, std::condition_variable *> conditionVariableMap;
-    MapTS<string, ConsumeStatus> msgStatusMap;
-
-    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
-
     shared_ptr<DefaultMQProducer> getProducer(const string &topic) {
         auto iter = producers.find(topic);
         if (iter != producers.end())
@@ -227,11 +224,9 @@ public:
                 cout << e << endl;
                 return NULL;
             }
-
         }
     }
 };
-
 
 int main() {
     WsServer server;
@@ -312,10 +307,7 @@ int main() {
                     consumer->msgStatusMap->insert_or_update(msgId, (ConsumeStatus)status);
                     if (consumer->msgMutexMap->try_get(msgId, mtx) &&
                     consumer->conditionVariableMap->try_get(msgId, consumed)) {
-                        {
-                            std::unique_lock<std::mutex> lck(*mtx);
-                            consumed->notify_all();
-                        }
+                        consumed->notify_all();
                     } else {
                         cout << "lock not found!msgId:"<< msgId<<endl;
                     }
@@ -350,7 +342,6 @@ int main() {
                 if (wp.msgMutexMap.try_get(iter1->first, mtx)
                 && wp.conditionVariableMap.try_get(iter1->first, consumed)) {
                     {
-                        std::unique_lock<std::mutex> lck(*mtx);
                         consumed->notify_all();
                         cout << "notify_all:" << iter1->first << "\n";
                     }
@@ -377,7 +368,6 @@ int main() {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
-
 
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {
