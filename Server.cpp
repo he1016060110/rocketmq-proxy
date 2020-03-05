@@ -220,6 +220,7 @@ public:
             consumer->registerMessageListener(listener);
             try {
                 consumer->start();
+                cout << "connected to "<< nameServerHost<< " topic is " << topic << endl;
                 consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(topic, consumer));
                 return consumer;
             } catch (MQClientException &e) {
@@ -274,12 +275,6 @@ int main(int argc, char* argv[]) {
     producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
                                    const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
-    };
-
-    // Can modify handshake response headers here if needed
-    producerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
-                                       SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
-        return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
     };
 
     producerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
@@ -365,11 +360,6 @@ int main(int argc, char* argv[]) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
-    consumerEndpoint.on_handshake = [](shared_ptr<WsServer::Connection> /*connection*/,
-                                       SimpleWeb::CaseInsensitiveMultimap & /*response_header*/) {
-        return SimpleWeb::StatusCode::information_switching_protocols; // Upgrade to websocket
-    };
-
     consumerEndpoint.on_error = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
                                                                const SimpleWeb::error_code &ec) {
         clearMsgPool(connection, msgPool, wp);
@@ -379,7 +369,6 @@ int main(int argc, char* argv[]) {
 
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {
-        // Start server
         server.start([&server_port](unsigned short port) {
             server_port.set_value(port);
         });
