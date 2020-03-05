@@ -1,6 +1,7 @@
 #include "client_ws.hpp"
 #include <future>
 #include <boost/timer.hpp>
+#include <boost/thread.hpp>
 
 using namespace std;
 
@@ -28,11 +29,13 @@ int main() {
             \"body\": \"this this the TestTopicProxy!\" \
         }";
         boost::timer t;
-
-        for (int i =0 ; i< 10000; i++) {
-            connection->send(json);
+        while (true) {
+            for (int i =0 ; i< 10000; i++) {
+                connection->send(json);
+            }
+            std::cout << "send 10000 time cost: " << t.elapsed()<< std::endl;
+            boost::thread::sleep(boost::get_system_time() + boost::posix_time::seconds(10));
         }
-        std::cout << "time cost: " << t.elapsed() << "\n" << std::endl;
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {

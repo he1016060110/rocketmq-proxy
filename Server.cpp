@@ -152,7 +152,6 @@ public:
 class WorkerPool {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
-    //
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
 public:
     //连接断掉后，以前队列要把相关连接清空！
