@@ -5,6 +5,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/thread.hpp>
+#include "Arg_helper.h"
 #include "QueueTS.hpp"
 #include "MapTS.hpp"
 #include "Const.hpp"
@@ -154,9 +155,11 @@ class WorkerPool {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
     map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
+    string nameServerHost;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
-    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p) : pool(p) {}
+    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p, string nameServer)
+    : pool(p), nameServerHost(nameServer) {};
     //连接断掉后，以前队列要把相关连接清空！
     void deleteConnection(shared_ptr<WsServer::Connection> con) {
         auto iter = consumers.begin();
@@ -182,7 +185,7 @@ public:
             return iter->second;
         else {
             shared_ptr<DefaultMQProducer> producer(new DefaultMQProducer(topic));
-            producer->setNamesrvAddr("namesrv:9876");
+            producer->setNamesrvAddr(nameServerHost);
             producer->setInstanceName(topic);
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
@@ -204,7 +207,7 @@ public:
             return iter->second;
         else {
             shared_ptr<ProxyPushConsumer> consumer(new ProxyPushConsumer(group));
-            consumer->setNamesrvAddr("namesrv:9876");
+            consumer->setNamesrvAddr(nameServerHost);
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
             consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
@@ -227,11 +230,19 @@ public:
     }
 };
 
-int main() {
+int main(int argc, char* argv[]) {
+    rocketmq::Arg_helper arg_help(argc, argv);
+    string nameServer = arg_help.get_option_value("-n");
+    string host = arg_help.get_option_value("-h");
+    string port = arg_help.get_option_value("-p");
+    if (!nameServer.size() || !host.size() || !port.size()) {
+        cout << "-n nameServer -h host -p port" <<endl;
+        return 0;
+    }
     WsServer server;
-    server.config.port = 8080;
+    server.config.port = stoi(port);
     map<shared_ptr<WsServer::Connection>, map<string, int>> msgPool;
-    WorkerPool wp(msgPool);
+    WorkerPool wp(msgPool, nameServer);
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
     //producer proxy
