@@ -47,7 +47,6 @@ public:
         {
             std::unique_lock<std::mutex> lck(unit->mtx);
             unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT;
-            unit->cv.notify_one();
             unit->cv.wait(lck);
         }
         //唤醒后删除lock
