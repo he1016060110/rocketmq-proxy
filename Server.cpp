@@ -104,21 +104,22 @@ public:
         //设置锁信息，客户端发送ack后解开锁
         auto mtx = new std::mutex;
         auto consumed = new std::condition_variable;
-        consumer->msgStatusMap->insert(msgs[0].getMsgId(), RECONSUME_LATER);
-        consumer->msgMutexMap->insert(msgs[0].getMsgId(), mtx);
-        consumer->conditionVariableMap->insert(msgs[0].getMsgId(), consumed);
+        string msgId = msgs[0].getMsgId();
+        consumer->msgStatusMap->insert(msgId, RECONSUME_LATER);
+        consumer->msgMutexMap->insert(msgId, mtx);
+        consumer->conditionVariableMap->insert(msgId, consumed);
         auto iter = consumer->pool->find(conn);
         if (iter == consumer->pool->end()) {
             map<string, int> temp;
-            temp.insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
+            temp.insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
             consumer->pool->insert(make_pair(conn, temp));
         } else {
             auto p = &iter->second;
-            p->insert(make_pair(msgs[0].getMsgId(), ROCKETMQ_PROXY_MSG_STATUS_SENT));
+            p->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
         //先设置lock，然后再发送消息，顺序很重要
         ptree data;
-        data.put("msgId", msgs[0].getMsgId());
+        data.put("msgId", msgId);
         data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
         RESPONSE_SUCCESS(conn, data);
 
@@ -131,15 +132,15 @@ public:
         delete mtx;
         delete consumed;
         //lock被唤醒，删除lock，避免内存泄漏
-        consumer->msgMutexMap->erase(msgs[0].getMsgId());
-        consumer->conditionVariableMap->erase(msgs[0].getMsgId());
+        consumer->msgMutexMap->erase(msgId);
+        consumer->conditionVariableMap->erase(msgId);
         iter = consumer->pool->find(conn);
         if (iter != consumer->pool->end()) {
             auto p = &iter->second;
-            p->erase(msgs[0].getMsgId());
+            p->erase(msgId);
         }
         ConsumeStatus status = RECONSUME_LATER;
-        consumer->msgStatusMap->try_get(msgs[0].getMsgId(), status);
+        consumer->msgStatusMap->try_get(msgId, status);
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         return status;
     }
