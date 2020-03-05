@@ -310,9 +310,8 @@ int main() {
                     std::mutex * mtx = NULL;
                     std::condition_variable * consumed = NULL;
                     consumer->msgStatusMap->insert_or_update(msgId, (ConsumeStatus)status);
-                    consumer->msgMutexMap->try_get(msgId, mtx);
-                    consumer->conditionVariableMap->try_get(msgId, consumed);
-                    if (mtx != NULL&& consumed != NULL) {
+                    if (consumer->msgMutexMap->try_get(msgId, mtx) &&
+                    consumer->conditionVariableMap->try_get(msgId, consumed)) {
                         {
                             std::unique_lock<std::mutex> lck(*mtx);
                             consumed->notify_all();
@@ -348,9 +347,8 @@ int main() {
             while (iter1 != msgMap.end()) {
                 std::mutex * mtx = NULL;
                 std::condition_variable *  consumed = NULL;
-                wp.msgMutexMap.try_get(iter1->first, mtx);
-                wp.conditionVariableMap.try_get(iter1->first, consumed);
-                if (mtx != NULL && consumed != NULL ) {
+                if (wp.msgMutexMap.try_get(iter1->first, mtx)
+                && wp.conditionVariableMap.try_get(iter1->first, consumed)) {
                     {
                         std::unique_lock<std::mutex> lck(*mtx);
                         consumed->notify_all();
