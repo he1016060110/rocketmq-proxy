@@ -5,22 +5,9 @@
 #include "ProxyPushConsumer.hpp"
 #include "WorkerPool.hpp"
 
-int main(int argc, char* argv[]) {
-    rocketmq::Arg_helper arg_help(argc, argv);
-    string nameServer = arg_help.get_option_value("-n");
-    string host = arg_help.get_option_value("-h");
-    string port = arg_help.get_option_value("-p");
-    if (!nameServer.size() || !host.size() || !port.size()) {
-        cout << "-n nameServer -h host -p port" <<endl;
-        return 0;
-    }
-    WsServer server;
-    server.config.port = stoi(port);
-    map<shared_ptr<WsServer::Connection>, map<string, int>> msgPool;
-    WorkerPool wp(msgPool, nameServer);
+void startProducer(WsServer &server, WorkerPool &wp)
+{
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
-    auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
-    //producer proxy
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
@@ -55,8 +42,11 @@ int main(int argc, char* argv[]) {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
+}
 
-    //consumer proxy
+void startConsumer(WsServer &server, WorkerPool &wp)
+{
+    auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
     consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
@@ -107,10 +97,10 @@ int main(int argc, char* argv[]) {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection,
-                           map<shared_ptr<WsServer::Connection>, map<string, int>> &msgPool, WorkerPool &wp) {
+    auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
         //删掉每个consumer里面连接队列的值
         wp.deleteConnection(connection);
+        auto msgPool = wp.pool;
         auto iter = msgPool.find(connection);
         if (iter != msgPool.end()) {
             auto msgMap = iter->second;
@@ -128,19 +118,34 @@ int main(int argc, char* argv[]) {
         }
     };
 
-    consumerEndpoint.on_close = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
+    consumerEndpoint.on_close = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
                                                                const string & /*reason*/) {
-        clearMsgPool(connection, msgPool, wp);
+        clearMsgPool(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
-    consumerEndpoint.on_error = [&msgPool, &wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
+    consumerEndpoint.on_error = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
                                                                const SimpleWeb::error_code &ec) {
-        clearMsgPool(connection, msgPool, wp);
+        clearMsgPool(connection, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
+}
 
+int main(int argc, char* argv[]) {
+    rocketmq::Arg_helper arg_help(argc, argv);
+    string nameServer = arg_help.get_option_value("-n");
+    string host = arg_help.get_option_value("-h");
+    string port = arg_help.get_option_value("-p");
+    if (!nameServer.size() || !host.size() || !port.size()) {
+        cout << "-n nameServer -h host -p port" <<endl;
+        return 0;
+    }
+    WsServer server;
+    server.config.port = stoi(port);
+    WorkerPool wp(nameServer);
+    startProducer(server, wp);
+    startConsumer(server, wp);
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {
         server.start([&server_port](unsigned short port) {

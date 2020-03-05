@@ -14,12 +14,12 @@ using namespace rocketmq;
 class WorkerPool {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
-    map<shared_ptr<WsServer::Connection>, map<string, int>> &pool;
     string nameServerHost;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
-    WorkerPool(map<shared_ptr<WsServer::Connection>, map<string, int>> &p, string nameServer)
-            : pool(p), nameServerHost(nameServer) {};
+    map<shared_ptr<WsServer::Connection>, map<string, int>> pool;
+    WorkerPool(string nameServer)
+            : nameServerHost(nameServer) {};
     //连接断掉后，以前队列要把相关连接清空！
     void deleteConnection(shared_ptr<WsServer::Connection> con) {
         auto iter = consumers.begin();
