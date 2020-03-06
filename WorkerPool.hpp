@@ -7,10 +7,6 @@
 
 #include "common.hpp"
 
-using namespace std;
-using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
-using namespace rocketmq;
-
 class WorkerPool {
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
