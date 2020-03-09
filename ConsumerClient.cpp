@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     string host = arg_help.get_option_value("-h");
     string port = arg_help.get_option_value("-p");
     if (!host.size() || !port.size()) {
-        cout << "-n nameServer -h host -p port" <<endl;
+        cout << "-h host -p port" <<endl;
         return 0;
     }
     string serverPath = host + ":" + port + "/consumerEndpoint";
