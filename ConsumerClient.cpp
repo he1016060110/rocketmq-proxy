@@ -9,7 +9,6 @@ using namespace std;
 using namespace boost::property_tree;
 using namespace std;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
-using boost::timer;
 using namespace std;
 using namespace chrono;
 
