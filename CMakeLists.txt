@@ -78,9 +78,9 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 
 # If Simple-WebSocket-Server is not a sub-project:
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_executable(ProducerClient ProducerClient.cpp)
+    add_executable(ProducerClient ProducerClient.cpp Arg_helper.cpp UtilAll.cpp)
     target_link_libraries(ProducerClient simple-websocket-server)
-    add_executable(ConsumerClient ConsumerClient.cpp)
+    add_executable(ConsumerClient ConsumerClient.cpp Arg_helper.cpp UtilAll.cpp)
     target_link_libraries(ConsumerClient simple-websocket-server)
 
     add_executable(Server Server.cpp)
