@@ -1,9 +1,11 @@
 #include "client_ws.hpp"
 #include "Arg_helper.h"
-#include <boost/timer.hpp>
+#include <chrono>
+
 using namespace std;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
-using boost::timer;
+using namespace std;
+using namespace chrono;
 
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
@@ -16,11 +18,15 @@ int main(int argc, char* argv[]) {
     string serverPath = host + ":" + port + "/producerEndpoint";
     WsClient client(serverPath);
     int count = 0;
-    timer t;
-    client.on_message = [&count,&t](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    auto start = system_clock::now();
+    client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
         if (count % 1000 == 0) {
-            cout << "生产" << count << "条：" << t.elapsed_min() << "秒" << endl;
+            auto end   = system_clock::now();
+            auto duration = duration_cast<microseconds>(end - start);
+            cout <<  count << "条花费了"
+                 << double(duration.count()) * microseconds::period::num / microseconds::period::den
+                 << "秒" << endl;
         }
         string out_message("Hello");
         string json= "{ \

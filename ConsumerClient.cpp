@@ -4,13 +4,15 @@
 #include "Const.hpp"
 #include "Arg_helper.h"
 #include <boost/timer.hpp>
+#include <chrono>
 
 using namespace std;
 using namespace boost::property_tree;
 using namespace std;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 using boost::timer;
-
+using namespace std;
+using namespace chrono;
 
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
@@ -22,14 +24,18 @@ int main(int argc, char* argv[]) {
     }
     string serverPath = host + ":" + port + "/consumerEndpoint";
     WsClient client(serverPath);
-    timer t;
     int count;
-    client.on_message = [&t, &count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    auto start = system_clock::now();
+    client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
         //cout << "Received msg: "<< json;
         count++;
         if (count % 1000 == 0) {
-            cout << "消费" << count << "条：" << t.elapsed_min() << "秒" << endl;
+            auto end   = system_clock::now();
+            auto duration = duration_cast<microseconds>(end - start);
+            cout <<  count << "条花费了"
+                 << double(duration.count()) * microseconds::period::num / microseconds::period::den
+                 << "秒" << endl;
         }
         std::istringstream jsonStream;
         jsonStream.str(json);
