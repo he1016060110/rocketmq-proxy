@@ -1,14 +1,19 @@
 #include "client_ws.hpp"
-#include <future>
-#include <boost/timer.hpp>
-#include <boost/thread.hpp>
+#include "Arg_helper.h"
 
 using namespace std;
-
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
-int main() {
-    WsClient client("localhost:8080/producerEndpoint");
+int main(int argc, char* argv[]) {
+    rocketmq::Arg_helper arg_help(argc, argv);
+    string host = arg_help.get_option_value("-h");
+    string port = arg_help.get_option_value("-p");
+    if (!host.size() || !port.size()) {
+        cout << "-n nameServer -h host -p port" <<endl;
+        return 0;
+    }
+    string serverPath = host + ":" + port + "/producerEndpoint";
+    WsClient client(serverPath);
     int count = 0;
     client.on_message = [&count](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;

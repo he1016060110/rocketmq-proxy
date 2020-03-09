@@ -89,6 +89,8 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(Server rocketmq)
     target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
     target_include_directories(Server PRIVATE include)
+    target_include_directories(ProducerClient PRIVATE include)
+    target_include_directories(ConsumerClient PRIVATE include)
 
     set(BUILD_TESTING ON)
 

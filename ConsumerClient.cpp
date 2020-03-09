@@ -1,17 +1,24 @@
 #include "client_ws.hpp"
-#include <future>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "Const.hpp"
+#include "Arg_helper.h"
+
 using namespace std;
 using namespace boost::property_tree;
-
 using namespace std;
-
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
-int main() {
-    WsClient client("localhost:8080/consumerEndpoint");
+int main(int argc, char* argv[]) {
+    rocketmq::Arg_helper arg_help(argc, argv);
+    string host = arg_help.get_option_value("-h");
+    string port = arg_help.get_option_value("-p");
+    if (!host.size() || !port.size()) {
+        cout << "-n nameServer -h host -p port" <<endl;
+        return 0;
+    }
+    string serverPath = host + ":" + port + "/consumerEndpoint";
+    WsClient client(serverPath);
     client.on_message = [](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
         cout << "Received msg: "<< json;
