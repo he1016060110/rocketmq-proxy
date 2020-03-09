@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     }
     string serverPath = host + ":" + port + "/consumerEndpoint";
     WsClient client(serverPath);
-    int count;
+    int count = 0;
     auto start = system_clock::now();
     client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
