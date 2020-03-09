@@ -93,7 +93,11 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     set(BUILD_TESTING ON)
 
     install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp
-            utility.hpp status_code.hpp mutex.hpp DESTINATION include/simple-websocket-server)
+            utility.hpp status_code.hpp mutex.hpp DESTINATION include)
+    install(FILES ${PROJECT_SOURCE_DIR}/bin/Server DESTINATION bin)
+    install(FILES ${PROJECT_SOURCE_DIR}/bin/ProducerClient DESTINATION bin)
+    install(FILES ${PROJECT_SOURCE_DIR}/bin/ConsumerClient DESTINATION bin)
+
 endif()
 
 if(BUILD_TESTING)
