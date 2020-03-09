@@ -78,22 +78,25 @@ target_include_directories(simple-websocket-server INTERFACE ${OPENSSL_INCLUDE_D
 
 # If Simple-WebSocket-Server is not a sub-project:
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_executable(ProducerClient ProducerClient.cpp Arg_helper.cpp UtilAll.cpp)
+    add_executable(ProducerClient ProducerClient.cpp)
     target_link_libraries(ProducerClient simple-websocket-server)
-    add_executable(ConsumerClient ConsumerClient.cpp Arg_helper.cpp UtilAll.cpp)
+    target_include_directories(ProducerClient PRIVATE include)
+    target_link_libraries(ProducerClient rocketmq)
+    target_include_directories(ProducerClient PRIVATE ${Boost_INCLUDE_DIR})
+
+    add_executable(ConsumerClient ConsumerClient.cpp)
     target_link_libraries(ConsumerClient simple-websocket-server)
+    target_include_directories(ConsumerClient PRIVATE include)
+    target_link_libraries(ConsumerClient rocketmq)
+    target_include_directories(ConsumerClient PRIVATE ${Boost_INCLUDE_DIR})
 
     add_executable(Server Server.cpp)
     target_link_libraries(Server simple-websocket-server)
-
     target_link_libraries(Server rocketmq)
     target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
     target_include_directories(Server PRIVATE include)
-    target_include_directories(ProducerClient PRIVATE include)
-    target_include_directories(ConsumerClient PRIVATE include)
 
-    set(BUILD_TESTING ON)
-
+    #set(BUILD_TESTING ON)
     install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp
             utility.hpp status_code.hpp mutex.hpp DESTINATION include)
     install(TARGETS Server DESTINATION bin)
