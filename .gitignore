@@ -22,3 +22,4 @@ io_test
 parse_test
 bin
 valgrind_report.log
+core
