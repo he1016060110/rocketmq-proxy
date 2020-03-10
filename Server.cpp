@@ -109,8 +109,8 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         auto iter = msgPool.find(connection);
         if (iter != msgPool.end()) {
             auto msgMap = iter->second;
-            auto iter1 = msgMap.begin();
-            while (iter1 != msgMap.end()) {
+            auto iter1 = msgMap->begin();
+            while (iter1 != msgMap->end()) {
                 MsgConsumeUnit * unit;
                 if (wp.consumerUnitMap.try_get(iter1->first, unit)) {
                     {

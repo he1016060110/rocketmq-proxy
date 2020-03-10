@@ -13,7 +13,7 @@ class WorkerPool {
     string nameServerHost;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
-    map<shared_ptr<WsServer::Connection>, map<string, int>> pool;
+    map<shared_ptr<WsServer::Connection>, shared_ptr<map<string, int>> > pool;
     WorkerPool(string nameServer)
             : nameServerHost(nameServer) {};
     //连接断掉后，以前队列要把相关连接清空！

@@ -31,11 +31,11 @@ public:
         consumer->consumerUnitMap->insert_or_update(msgId, unit);
         auto iter = consumer->pool->find(conn);
         if (iter == consumer->pool->end()) {
-            map<string, int> temp;
-            temp.insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
+            shared_ptr<map<string, int>> temp(new map<string, int>);
+            temp->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
             consumer->pool->insert(make_pair(conn, temp));
         } else {
-            auto p = &iter->second;
+            shared_ptr<map<string, int>> p = iter->second;
             p->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
         //先设置lock，然后再发送消息，顺序很重要
@@ -53,7 +53,7 @@ public:
         //lock被唤醒，删除lock，避免内存泄漏
         iter = consumer->pool->find(conn);
         if (iter != consumer->pool->end()) {
-            auto p = &iter->second;
+            auto p = iter->second;
             p->erase(msgId);
         }
         ConsumeStatus status = unit->status;
