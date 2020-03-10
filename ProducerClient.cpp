@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     auto start = system_clock::now();
     client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
+        cout << "Received msg: "<< in_message->string();
         if (count % 1000 == 0) {
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
