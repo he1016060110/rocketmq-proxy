@@ -38,14 +38,14 @@ public:
             shared_ptr<map<string, int>> p = iter->second;
             p->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
-        //先设置lock，然后再发送消息，顺序很重要
-        ptree data;
-        data.put("msgId", msgId);
-        data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
-        RESPONSE_SUCCESS(conn, data);
         //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
         {
+            //先设置lock，然后再发送消息，顺序很重要
             std::unique_lock<std::mutex> lck(unit->mtx);
+            ptree data;
+            data.put("msgId", msgId);
+            data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
+            RESPONSE_SUCCESS(conn, data);
             unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT;
             unit->cv.wait(lck);
         }
