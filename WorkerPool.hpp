@@ -67,7 +67,8 @@ public:
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
             consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
-            consumer->setConsumeThreadCount(2);
+            //改为一个线程看是否有问题
+            consumer->setConsumeThreadCount(1);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             consumer->initResource(&pool, &consumerUnitMap);
