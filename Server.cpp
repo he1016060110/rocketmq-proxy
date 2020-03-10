@@ -2,7 +2,6 @@
 #include "common.hpp"
 #include "ProducerCallback.h"
 #include "ConsumerMsgListener.hpp"
-#include "ProxyPushConsumer.hpp"
 #include "WorkerPool.hpp"
 
 void startProducer(WsServer &server, WorkerPool &wp)
@@ -19,14 +18,20 @@ void startProducer(WsServer &server, WorkerPool &wp)
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(name, tag, body);
-        ProducerCallback *calllback = new ProducerCallback();
-        calllback->setConn(connection);
         auto producer = wp.getProducer(name);
-        if (producer == NULL) {
-            RESPONSE_ERROR(connection, 1, "system error!");
-        } else {
-            producer->send(msg, calllback);
-        };
+        try {
+            if (producer == NULL) {
+                RESPONSE_ERROR(connection, 1, "system error!");
+            } else {
+                SendResult sendResult = producer->send(msg);
+                ptree data;
+                data.put("msgId", sendResult.getMsgId());
+                RESPONSE_SUCCESS(connection, data);
+            };
+        } catch (exception &e) {
+            auto msg = "send msg error! " + string(e.what());
+            RESPONSE_ERROR(connection, 1, msg);
+        }
     };
 
     producerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
