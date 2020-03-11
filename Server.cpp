@@ -84,7 +84,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
                         std::unique_lock<std::mutex> lck(unit->mtx);
                         unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_ACK;
                         lck.unlock();
-                        unit->cv.notify_one();
+                        unit->cv.notify_all();
                     }
                     ptree data;
                     data.put("msgId", msgId);
