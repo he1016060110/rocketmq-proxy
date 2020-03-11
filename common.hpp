@@ -73,6 +73,7 @@ public:
     std::mutex mtx;
     std::condition_variable cv;
     shared_ptr<map<string, int>> msgPool;
+    ConnectionUnit() : msgPool(new map<string, int>) {};
 };
 
 #endif //ROCKETMQ_PROXY_COMMON_HPP
