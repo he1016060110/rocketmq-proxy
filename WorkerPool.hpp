@@ -17,7 +17,7 @@ public:
     WorkerPool(string nameServer)
             : nameServerHost(nameServer) {};
     //连接断掉后，以前队列要把相关连接清空！
-    void deleteConnection(shared_ptr<WsServer::Connection> con) {
+    void deleteConnection(shared_ptr<WsServer::Connection> &con) {
         auto iter = consumers.begin();
         while (iter != consumers.end()) {
             auto consumer = iter->second;
