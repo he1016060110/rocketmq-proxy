@@ -114,8 +114,9 @@ void startConsumer(WsServer &server, WorkerPool &wp)
                 MsgConsumeUnit * unit;
                 if (wp.consumerUnitMap.try_get(iter1->first, unit)) {
                     {
-                        unit->cv.notify_all();
+                        std::unique_lock<std::mutex> lck(unit->mtx);
                         cout << "notify_all:" << iter1->first << "\n";
+                        unit->cv.notify_all();
                     }
                 }
                 iter1++;
