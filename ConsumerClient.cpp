@@ -15,16 +15,27 @@ using namespace chrono;
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string host = arg_help.get_option_value("-h");
-    string port = arg_help.get_option_value("-p");
-    if (!host.size() || !port.size()) {
-        cout << "-h host -p port" <<endl;
+    string group = arg_help.get_option_value("-g");
+    string topic = arg_help.get_option_value("-t");
+    if (!topic.size() || !group.size() || !host.size()) {
+        cout << "-g group -h host -p port" <<endl;
         return 0;
     }
-    string serverPath = host + ":" + port + "/consumerEndpoint";
+    string serverPath = host + "/consumerEndpoint";
     WsClient client(serverPath);
     int count = 0;
     auto start = system_clock::now();
-    client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    auto sendConsumeRequest = [] (shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
+        ptree requestItem;
+        requestItem.put("topic", topic);
+        requestItem.put("group", group);
+        requestItem.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
+        stringstream request_str;
+        write_json(request_str, requestItem, false);
+        connection->send(request_str.str());
+    };
+
+    client.on_message = [&topic, &group, &count, &start, &sendConsumeRequest](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
         cout << "Received msg: "<< json;
         count++;
@@ -46,7 +57,8 @@ int main(int argc, char* argv[]) {
             string msgId = data.get<string>("msgId");
             if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME) {
                 ptree requestItem;
-                requestItem.put("topic", "TestTopicProxy");
+                requestItem.put("topic", topic);
+                requestItem.put("group", group);
                 requestItem.put("msgId", msgId);
                 requestItem.put("status", 0);
                 requestItem.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK);
@@ -54,23 +66,13 @@ int main(int argc, char* argv[]) {
                 write_json(request_str, requestItem, false);
                 connection->send(request_str.str());
             } else {
-                ptree requestItem;
-                requestItem.put("topic", "TestTopicProxy");
-                requestItem.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
-                stringstream request_str;
-                write_json(request_str, requestItem, false);
-                connection->send(request_str.str());
+                sendConsumeRequest(connection, topic, group);
             }
         }
     };
 
-    client.on_open = [](shared_ptr<WsClient::Connection> connection) {
-        cout << "Client: Opened connection" << endl;
-        string json= "{ \
-            \"topic\": \"TestTopicProxy\", \
-            \"type\": 1 \
-        }";
-        connection->send(json);
+    client.on_open = [&topic, &group, &sendConsumeRequest](shared_ptr<WsClient::Connection> connection) {
+        sendConsumeRequest(connection, topic, group);
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {

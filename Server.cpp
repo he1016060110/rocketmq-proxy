@@ -62,10 +62,11 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         try {
             string topic = jsonItem.get<string>("topic");
             int type = jsonItem.get<int>("type");
+            string group = jsonItem.get<string>("group");
             if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME ||
                 type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK) {
                 //消费消息
-                auto consumer = wp.getConsumer(topic, topic);
+                auto consumer = wp.getConsumer(topic, group);
                 if (consumer == NULL) {
                     RESPONSE_ERROR(connection, 1, "system error!");
                     return;

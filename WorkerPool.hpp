@@ -58,7 +58,8 @@ public:
     }
 
     shared_ptr<ProxyPushConsumer> getConsumer(const string &topic, const string &group) {
-        auto iter = consumers.find(topic);
+        auto key = topic + group;
+        auto iter = consumers.find(key);
         if (iter != consumers.end())
             return iter->second;
         else {
@@ -78,7 +79,7 @@ public:
             try {
                 consumer->start();
                 cout << "connected to "<< nameServerHost<< " topic is " << topic << endl;
-                consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(topic, consumer));
+                consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(key, consumer));
                 return consumer;
             } catch (MQClientException &e) {
                 cout << e << endl;
