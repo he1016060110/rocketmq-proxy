@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     string group = arg_help.get_option_value("-g");
     string topic = arg_help.get_option_value("-t");
     if (!topic.size() || !group.size() || !host.size()) {
-        cout << "-g group -h host -p port" <<endl;
+        cout << "-g group -t topic -h host" <<endl;
         return 0;
     }
     string serverPath = host + "/consumerEndpoint";
