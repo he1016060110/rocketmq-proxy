@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     client.on_message = [&topic, &group, &count, &start, &sendConsumeRequest](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
-        cout << "Received msg: "<< json;
+        //cout << "Received msg: "<< json;
         count++;
         if (count % 1000 == 0) {
             auto end   = system_clock::now();
