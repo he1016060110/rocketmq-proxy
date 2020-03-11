@@ -99,27 +99,28 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         }
     };
 
-    consumerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
+    consumerEndpoint.on_open = [&wp](shared_ptr<WsServer::Connection> connection) {
+        shared_ptr<ConnectionUnit> unit(new ConnectionUnit);
+        wp.connectionUnit.insert(make_pair(connection, unit));
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
     auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
         //删掉每个consumer里面连接队列的值
         wp.deleteConnection(connection);
-        auto msgPool = wp.pool;
-        auto iter = msgPool.find(connection);
-        if (iter != msgPool.end()) {
-            auto msgMap = iter->second;
-            auto iter1 = msgMap->begin();
-            while (iter1 != msgMap->end()) {
+        {
+            auto connectionUnit = wp.connectionUnit[connection];
+            std::unique_lock<std::mutex> lck(connectionUnit->mtx);
+            auto iter = connectionUnit->msgPool->begin();
+            while (iter != connectionUnit->msgPool->end()) {
                 MsgConsumeUnit * unit;
-                if (wp.consumerUnitMap.try_get(iter1->first, unit)) {
+                if (wp.consumerUnitMap.try_get(iter->first, unit)) {
                     {
-                        cout << "notify_all:" << iter1->first << "\n";
+                        cout << "notify_all:" << iter->first << "\n";
                         unit->cv.notify_all();
                     }
                 }
-                iter1++;
+                iter++;
             }
         }
     };

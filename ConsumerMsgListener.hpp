@@ -4,6 +4,7 @@
 
 #include "common.hpp"
 #include "ProxyPushConsumer.hpp"
+#include "stdio.h"
 
 #ifndef ROCKETMQ_PROXY_CONSUMERMSGLISTENER_HPP
 #define ROCKETMQ_PROXY_CONSUMERMSGLISTENER_HPP
@@ -29,14 +30,10 @@ public:
         string msgId = msgs[0].getMsgId();
         auto unit = new MsgConsumeUnit();
         consumer->consumerUnitMap->insert_or_update(msgId, unit);
-        auto iter = consumer->pool->find(conn);
-        if (iter == consumer->pool->end()) {
-            shared_ptr<map<string, int>> temp(new map<string, int>);
-            temp->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
-            consumer->pool->insert(make_pair(conn, temp));
-        } else {
-            shared_ptr<map<string, int>> p = iter->second;
-            p->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
+        auto connectionUnit = (*(consumer->connectionUnit))[conn];
+        {
+            std::unique_lock<std::mutex> lck(connectionUnit->mtx);
+            connectionUnit->msgPool->insert(make_pair(msgId, ROCKETMQ_PROXY_MSG_STATUS_SENT));
         }
         //必须大括号括起来，不然删掉了两个变量，但是lck却最后才释放
         {
@@ -47,14 +44,15 @@ public:
             data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
             RESPONSE_SUCCESS(conn, data);
             unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT;
+            //printf("%s lock before!\n", msgId.c_str());
             unit->cv.wait(lck);
+            //printf("%s lock after!\n", msgId.c_str());
         }
         //唤醒后删除lock
         //lock被唤醒，删除lock，避免内存泄漏
-        iter = consumer->pool->find(conn);
-        if (iter != consumer->pool->end()) {
-            auto p = iter->second;
-            p->erase(msgId);
+        {
+            std::unique_lock<std::mutex> lck(connectionUnit->mtx);
+            connectionUnit->msgPool->erase(msgId);
         }
         ConsumeStatus status = unit->status;
         //阻塞住，等待客户端消费掉消息，或者断掉连接

@@ -13,7 +13,7 @@ class WorkerPool {
     string nameServerHost;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
-    map<shared_ptr<WsServer::Connection>, shared_ptr<map<string, int>> > pool;
+    map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer)
             : nameServerHost(nameServer) {};
     //连接断掉后，以前队列要把相关连接清空！
@@ -69,10 +69,10 @@ public:
             consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
             //改为一个线程看是否有问题
-            consumer->setConsumeThreadCount(1);
+            consumer->setConsumeThreadCount(5);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
-            consumer->initResource(&pool, &consumerUnitMap);
+            consumer->initResource(&connectionUnit, &consumerUnitMap);
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);

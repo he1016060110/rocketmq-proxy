@@ -67,4 +67,12 @@ public:
     MsgConsumeUnit(): syncStatus(ROCKETMQ_PROXY_MSG_STATUS_SYNC_INIT), status(RECONSUME_LATER) {}
 };
 
+class ConnectionUnit
+{
+public:
+    std::mutex mtx;
+    std::condition_variable cv;
+    shared_ptr<map<string, int>> msgPool;
+};
+
 #endif //ROCKETMQ_PROXY_COMMON_HPP

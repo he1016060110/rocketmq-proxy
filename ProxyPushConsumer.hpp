@@ -10,12 +10,11 @@
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     QueueTS<shared_ptr<WsServer::Connection>> queue;
-    //被锁住的消息列表
-    map<shared_ptr<WsServer::Connection>, shared_ptr<map<string, int>> > *pool;
+    map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > *connectionUnit;
     MapTS<string, MsgConsumeUnit *> *consumerUnitMap;
-    void initResource(map<shared_ptr<WsServer::Connection>, shared_ptr<map<string, int>> > *pool_,
+    void initResource(map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > *unit_,
                       MapTS<string, MsgConsumeUnit *> *consumerUnitMap_) {
-        pool = pool_;
+        connectionUnit = unit_;
         consumerUnitMap = consumerUnitMap_;
     }
 
