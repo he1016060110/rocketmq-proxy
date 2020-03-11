@@ -23,10 +23,9 @@ public:
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer)
             : nameServerHost(nameServer) {};
-    //连接断掉后，以前队列要把相关连接清空！
-    void deleteConnection(shared_ptr<WsServer::Connection> &con) {
+
+    void deleteQueue(shared_ptr<WsServer::Connection> &con) {
         auto iter = consumers.begin();
-        QueueTS<string> consumerEraseQueue;
         while (iter != consumers.end()) {
             auto consumer = iter->second;
             shared_ptr<WsServer::Connection> value;
@@ -41,6 +40,16 @@ public:
             while (tempQueue.try_pop(value)) {
                 consumer->queue.push(value);
             }
+            iter++;
+        }
+    }
+
+    //连接断掉后，以前队列要把相关连接清空！
+    void deleteConnection(shared_ptr<WsServer::Connection> &con) {
+        auto iter = consumers.begin();
+        QueueTS<string> consumerEraseQueue;
+        while (iter != consumers.end()) {
+            auto consumer = iter->second;
             //删掉consumer
             shared_ptr<ConsumerConnectionUnit> unit(new ConsumerConnectionUnit);
             if (consumerConnUnit.try_get(consumer, unit)) {
@@ -52,6 +61,7 @@ public:
                     }
                 }
                 if (!unit->conn.size()) {
+                    consumer->toDelete = true;
                     consumer->shutdown();
                     consumerEraseQueue.push(consumer->uniqKey);
                     consumerConnUnit.erase(consumer);

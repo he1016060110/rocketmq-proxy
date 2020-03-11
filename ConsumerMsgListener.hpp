@@ -25,7 +25,15 @@ public:
             cout << "consumeMessage msg max size is "<< msgs.size() << "\n";
             return RECONSUME_LATER;
         }
-        auto conn = consumer->queue.wait_and_pop();
+        //如果是要删除consumer了，则不再堵塞消费
+        shared_ptr<WsServer::Connection> conn;
+        while(!consumer->queue.try_pop(conn)) {
+            if (consumer->toDelete) {
+                return RECONSUME_LATER;
+            }
+            //
+            boost::this_thread::sleep(boost::posix_time::milliseconds (1));
+        }
         //设置锁信息，客户端发送ack后解开锁
         string msgId = msgs[0].getMsgId();
         auto unit = new MsgConsumeUnit();

@@ -107,8 +107,9 @@ void startConsumer(WsServer &server, WorkerPool &wp)
     };
 
     auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
-        //删掉每个consumer里面连接队列的值
-        wp.deleteConnection(connection);
+        //删掉队列里面的请求
+        wp.deleteQueue(connection);
+        //通知锁掉的等待消费结果通知的线程
         {
             auto connectionUnit = wp.connectionUnit[connection];
             std::unique_lock<std::mutex> lck(connectionUnit->mtx);
@@ -124,6 +125,8 @@ void startConsumer(WsServer &server, WorkerPool &wp)
                 iter++;
             }
         }
+        //关闭不必要的consumer
+        wp.deleteConnection(connection);
     };
 
     consumerEndpoint.on_close = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,

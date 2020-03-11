@@ -10,6 +10,7 @@
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     string uniqKey;
+    bool toDelete;
     QueueTS<shared_ptr<WsServer::Connection>> queue;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > *connectionUnit;
     MapTS<string, MsgConsumeUnit *> *consumerUnitMap;
@@ -20,6 +21,7 @@ public:
     }
 
     ProxyPushConsumer(const std::string &groupname) : DefaultMQPushConsumer(groupname) {
+        toDelete = false;
     }
 };
 
