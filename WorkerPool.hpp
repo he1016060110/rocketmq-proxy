@@ -26,6 +26,7 @@ public:
     //连接断掉后，以前队列要把相关连接清空！
     void deleteConnection(shared_ptr<WsServer::Connection> &con) {
         auto iter = consumers.begin();
+        QueueTS<string> consumerEraseQueue;
         while (iter != consumers.end()) {
             auto consumer = iter->second;
             shared_ptr<WsServer::Connection> value;
@@ -52,12 +53,16 @@ public:
                 }
                 if (!unit->conn.size()) {
                     consumer->shutdown();
-                    consumers.erase(consumer->uniqKey);
+                    consumerEraseQueue.push(consumer->uniqKey);
                     consumerConnUnit.erase(consumer);
                 }
             }
-            //todo ++对于已经改变的map是否有影响
             iter++;
+        }
+        string key;
+        //map遍历的时候不能修改
+        while (consumerEraseQueue.try_pop(key)) {
+            consumers.erase(key);
         }
     }
 
