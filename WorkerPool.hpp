@@ -35,20 +35,23 @@ public:
             iter++;
         }
     }
-    shared_ptr<DefaultMQProducer> getProducer(const string &topic) {
-        auto iter = producers.find(topic);
+
+    shared_ptr<DefaultMQProducer> getProducer(const string &topic, const string &group) {
+        auto key = topic + group;
+        auto iter = producers.find(key);
         if (iter != producers.end())
             return iter->second;
         else {
             shared_ptr<DefaultMQProducer> producer(new DefaultMQProducer(topic));
             producer->setNamesrvAddr(nameServerHost);
+            producer->setGroupName(group);
             producer->setInstanceName(topic);
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
             try {
                 producer->start();
-                producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(topic, producer));
+                producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));
                 return producer;
             } catch (exception &e) {
                 cout << e.what() << endl;

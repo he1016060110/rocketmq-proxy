@@ -14,11 +14,12 @@ void startProducer(WsServer &server, WorkerPool &wp)
         jsonStream.str(json);
         boost::property_tree::ptree jsonItem;
         boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
-        string name = jsonItem.get<string>("topic");
+        string topic = jsonItem.get<string>("topic");
+        string group = jsonItem.get<string>("group");
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
-        rocketmq::MQMessage msg(name, tag, body);
-        auto producer = wp.getProducer(name);
+        rocketmq::MQMessage msg(topic, tag, body);
+        auto producer = wp.getProducer(topic, group);
         try {
             if (producer == NULL) {
                 RESPONSE_ERROR(connection, 1, "system error!");

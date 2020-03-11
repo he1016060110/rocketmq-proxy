@@ -1,7 +1,10 @@
 #include "client_ws.hpp"
 #include "Arg_helper.h"
 #include <chrono>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
+using namespace boost::property_tree;
 using namespace std;
 using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 using namespace std;
@@ -10,18 +13,34 @@ using namespace chrono;
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string host = arg_help.get_option_value("-h");
-    string port = arg_help.get_option_value("-p");
-    if (!host.size() || !port.size()) {
-        cout << "-h host -p port" <<endl;
+    string group = arg_help.get_option_value("-g");
+    string topic = arg_help.get_option_value("-t");
+    if (!host.size() || !topic.size()) {
+        cout << "-t topic -h host -p port -g group (optional) " <<endl;
         return 0;
     }
-    string serverPath = host + ":" + port + "/producerEndpoint";
+
+    if (!group.size()) {
+        group = topic;
+    }
+    string serverPath = host + "/producerEndpoint";
     WsClient client(serverPath);
     int count = 0;
     auto start = system_clock::now();
-    client.on_message = [&count, &start](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    auto sendConsumeRequest = [] (shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
+        ptree requestItem;
+        requestItem.put("topic", topic);
+        requestItem.put("group", group);
+        requestItem.put("tag", "*");
+        requestItem.put("body", "this is test!");
+        stringstream request_str;
+        write_json(request_str, requestItem, false);
+        connection->send(request_str.str());
+    };
+
+    client.on_message = [&count, &start, &sendConsumeRequest, &topic, &group](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
-        cout << "Received msg: "<< in_message->string();
+        //cout << "Received msg: "<< in_message->string();
         if (count % 1000 == 0) {
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
@@ -29,24 +48,11 @@ int main(int argc, char* argv[]) {
                  << double(duration.count()) * microseconds::period::num / microseconds::period::den
                  << "秒" << endl;
         }
-        string out_message("Hello");
-        string json= "{ \
-            \"topic\": \"TestTopicProxy\", \
-            \"tag\": \"*\", \
-            \"body\": \"this this the TestTopicProxy!\" \
-        }";
-        connection->send(json);
+        sendConsumeRequest(connection, topic, group);
     };
 
-    client.on_open = [](shared_ptr<WsClient::Connection> connection) {
-        string out_message("Hello");
-        string json= "{ \
-            \"topic\": \"TestTopicProxy\", \
-            \"tag\": \"*\", \
-            \"body\": \"this this the TestTopicProxy!\" \
-        }";
-        connection->send(json);
-        cout << "Client: Opened connection" << endl;
+    client.on_open = [&sendConsumeRequest, &topic, &group](shared_ptr<WsClient::Connection> connection) {
+        sendConsumeRequest(connection, topic, group);
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
