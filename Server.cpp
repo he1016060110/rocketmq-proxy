@@ -67,7 +67,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
             if (type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME ||
                 type == ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_ACK) {
                 //消费消息
-                auto consumer = wp.getConsumer(topic, group);
+                auto consumer = wp.getConsumer(topic, group, connection);
                 if (consumer == NULL) {
                     RESPONSE_ERROR(connection, 1, "system error!");
                     return;

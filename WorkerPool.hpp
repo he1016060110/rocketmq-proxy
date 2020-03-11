@@ -8,8 +8,15 @@
 #include "common.hpp"
 
 class WorkerPool {
+    class ConsumerConnectionUnit
+    {
+    public:
+        std::mutex mtx;
+        std::map<shared_ptr<WsServer::Connection>, int> conn;
+    };
     std::map<string, shared_ptr<DefaultMQProducer> > producers;
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
+    MapTS<shared_ptr<ProxyPushConsumer>, shared_ptr<ConsumerConnectionUnit> > consumerConnUnit;
     string nameServerHost;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
@@ -23,6 +30,7 @@ public:
             auto consumer = iter->second;
             shared_ptr<WsServer::Connection> value;
             QueueTS<shared_ptr<WsServer::Connection>> tempQueue;
+            //1.过滤掉消息
             while (consumer->queue.try_pop(value)) {
                 if (value == con) {
                     continue;
@@ -32,6 +40,23 @@ public:
             while (tempQueue.try_pop(value)) {
                 consumer->queue.push(value);
             }
+            //删掉consumer
+            shared_ptr<ConsumerConnectionUnit> unit(new ConsumerConnectionUnit);
+            if (consumerConnUnit.try_get(consumer, unit)) {
+                {
+                    std::unique_lock<std::mutex> lck(unit->mtx);
+                    auto iterConn = unit->conn.find(con);
+                    if (iterConn != unit->conn.end()) {
+                        unit->conn.erase(con);
+                    }
+                }
+                if (!unit->conn.size()) {
+                    consumer->shutdown();
+                    consumers.erase(consumer->uniqKey);
+                    consumerConnUnit.erase(consumer);
+                }
+            }
+            //todo ++对于已经改变的map是否有影响
             iter++;
         }
     }
@@ -60,12 +85,22 @@ public:
         }
     }
 
-    shared_ptr<ProxyPushConsumer> getConsumer(const string &topic, const string &group) {
+    shared_ptr<ProxyPushConsumer> getConsumer(const string &topic, const string &group, shared_ptr<WsServer::Connection> &conn) {
         auto key = topic + group;
         auto iter = consumers.find(key);
-        if (iter != consumers.end())
+        if (iter != consumers.end()) {
+            shared_ptr<ConsumerConnectionUnit> unit(new ConsumerConnectionUnit);
+            if (consumerConnUnit.try_get(iter->second, unit)) {
+                {
+                    std::unique_lock<std::mutex> lck(unit->mtx);
+                    auto iterConn = unit->conn.find(conn);
+                    if (iterConn == unit->conn.end()) {
+                        unit->conn.insert(make_pair(conn, 1));
+                    }
+                }
+            }
             return iter->second;
-        else {
+        } else {
             shared_ptr<ProxyPushConsumer> consumer(new ProxyPushConsumer(group));
             consumer->setNamesrvAddr(nameServerHost);
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
@@ -79,10 +114,14 @@ public:
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
+            consumer->uniqKey = key;
             try {
                 consumer->start();
                 cout << "connected to "<< nameServerHost<< " topic is " << topic << endl;
                 consumers.insert(pair<string, shared_ptr<ProxyPushConsumer>>(key, consumer));
+                shared_ptr<ConsumerConnectionUnit> unit(new ConsumerConnectionUnit);
+                unit->conn.insert(make_pair(conn, 1));
+                consumerConnUnit.insert(consumer, unit);
                 return consumer;
             } catch (MQClientException &e) {
                 cout << e << endl;

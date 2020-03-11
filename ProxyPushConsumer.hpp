@@ -9,6 +9,7 @@
 
 class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
+    string uniqKey;
     QueueTS<shared_ptr<WsServer::Connection>> queue;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > *connectionUnit;
     MapTS<string, MsgConsumeUnit *> *consumerUnitMap;
