@@ -17,9 +17,14 @@ int main(int argc, char* argv[]) {
     string host = arg_help.get_option_value("-h");
     string group = arg_help.get_option_value("-g");
     string topic = arg_help.get_option_value("-t");
+    string concurrency = arg_help.get_option_value("-c");
     if (!topic.size() || !group.size() || !host.size()) {
-        cout << "-g group -t topic -h host" <<endl;
+        cout << "-g group -t topic -h host -c concurrency (optional)" <<endl;
         return 0;
+    }
+    int concurrencyNum = 1;
+    if (concurrency.size()) {
+        concurrency = atoi(concurrency.c_str());
     }
     string serverPath = host + "/consumerEndpoint";
     WsClient client(serverPath);
@@ -71,8 +76,10 @@ int main(int argc, char* argv[]) {
         }
     };
 
-    client.on_open = [&topic, &group, &sendConsumeRequest](shared_ptr<WsClient::Connection> connection) {
-        sendConsumeRequest(connection, topic, group);
+    client.on_open = [&topic, &group, &sendConsumeRequest, &concurrencyNum](shared_ptr<WsClient::Connection> connection) {
+        for (int i = 0; i < concurrencyNum; i++) {
+            sendConsumeRequest(connection, topic, group);
+        }
     };
 
     client.on_close = [](shared_ptr<WsClient::Connection> /*connection*/, int status, const string & /*reason*/) {
