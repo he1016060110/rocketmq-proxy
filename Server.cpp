@@ -7,14 +7,7 @@
 void startProducer(WsServer &server, WorkerPool &wp)
 {
     auto clearProducers = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
-        auto producerMap = wp.producers[connection];
-        auto iter = producerMap->begin();
-        while (iter != producerMap->end()) {
-            auto producer = iter->second;
-            producer->shutdown();
-            iter++;
-        }
-        wp.producers.erase(connection);
+
     };
 
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
@@ -30,7 +23,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(topic, tag, body);
-        auto producer = wp.getProducer(topic, group, connection);
+        auto producer = wp.getProducer(topic, group);
         auto callback = new ProducerCallback();
         callback->setConn(connection);
         try {
@@ -43,7 +36,6 @@ void startProducer(WsServer &server, WorkerPool &wp)
 
     producerEndpoint.on_open = [&wp, &clearProducers](shared_ptr<WsServer::Connection> connection) {
         shared_ptr<std::map<string, shared_ptr<DefaultMQProducer>>> productMap(new std::map<string, shared_ptr<DefaultMQProducer>>);
-        wp.producers[connection] = productMap;
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 

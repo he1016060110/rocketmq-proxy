@@ -18,7 +18,7 @@ class WorkerPool {
     MapTS<shared_ptr<ProxyPushConsumer>, shared_ptr<ConsumerConnectionUnit> > consumerConnUnit;
     string nameServerHost;
 public:
-    std::map<shared_ptr<WsServer::Connection>, shared_ptr<std::map<string, shared_ptr<DefaultMQProducer>>> > producers;
+    std::map<string, shared_ptr<DefaultMQProducer>> producers;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer)
@@ -76,11 +76,10 @@ public:
         }
     }
 
-    shared_ptr<DefaultMQProducer> getProducer(const string &topic, const string &group, shared_ptr<WsServer::Connection> & conn) {
-        auto productMap = producers[conn];
+    shared_ptr<DefaultMQProducer> getProducer(const string &topic, const string &group) {
         auto key = topic + group;
-        auto iter = productMap->find(key);
-        if (iter != productMap->end())
+        auto iter = producers.find(key);
+        if (iter != producers.end())
             return iter->second;
         else {
             shared_ptr<DefaultMQProducer> producer(new DefaultMQProducer(topic));
@@ -92,7 +91,7 @@ public:
             producer->setTcpTransportConnectTimeout(400);
             try {
                 producer->start();
-                producers[conn]->insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));
+                producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));
                 return producer;
             } catch (exception &e) {
                 cout << e.what() << endl;
