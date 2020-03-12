@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
                     cout << count << "条花费了"
                          << double(duration.count()) * microseconds::period::num / microseconds::period::den
                          << "秒" << endl;
+                    connection->send_close(1000);
                     return;
                 }
                 sendConsumeRequest(connection, topic, group);
