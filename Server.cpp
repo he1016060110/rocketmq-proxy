@@ -33,8 +33,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
         }
     };
 
-    producerEndpoint.on_open = [&wp, &clearProducers](shared_ptr<WsServer::Connection> connection) {
-        shared_ptr<std::map<string, shared_ptr<DefaultMQProducer>>> productMap(new std::map<string, shared_ptr<DefaultMQProducer>>);
+    producerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 

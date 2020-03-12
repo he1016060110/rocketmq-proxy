@@ -37,10 +37,10 @@ public:
             }
             if (!connMap->size()) {
                 producer->shutdown();
-                producerConnectionMap.erase(producer);
-                //producers 也要干掉
                 producers.erase(key);
+                producerConnectionMap.erase(producer);
             }
+            iter++;
         }
     }
 
