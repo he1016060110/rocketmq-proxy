@@ -6,6 +6,17 @@
 
 void startProducer(WsServer &server, WorkerPool &wp)
 {
+    auto clearProducers = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
+        auto producerMap = wp.producers[connection];
+        auto iter = producerMap->begin();
+        while (iter != producerMap->end()) {
+            auto producer = iter->second;
+            producer->shutdown();
+            iter++;
+        }
+        wp.producers.erase(connection);
+    };
+
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
@@ -19,7 +30,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(topic, tag, body);
-        auto producer = wp.getProducer(topic, group);
+        auto producer = wp.getProducer(topic, group, connection);
         try {
             if (producer == NULL) {
                 RESPONSE_ERROR(connection, 1, "system error!");
@@ -35,12 +46,15 @@ void startProducer(WsServer &server, WorkerPool &wp)
         }
     };
 
-    producerEndpoint.on_open = [](shared_ptr<WsServer::Connection> connection) {
+    producerEndpoint.on_open = [&wp, &clearProducers](shared_ptr<WsServer::Connection> connection) {
+        shared_ptr<std::map<string, shared_ptr<DefaultMQProducer>>> productMap(new std::map<string, shared_ptr<DefaultMQProducer>>);
+        wp.producers[connection] = productMap;
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    producerEndpoint.on_close = [](shared_ptr<WsServer::Connection> connection, int status,
+    producerEndpoint.on_close = [&wp, &clearProducers](shared_ptr<WsServer::Connection> connection, int status,
                                    const string & /*reason*/) {
+        clearProducers(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
@@ -137,7 +151,6 @@ void startConsumer(WsServer &server, WorkerPool &wp)
 
     consumerEndpoint.on_error = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
                                                                const SimpleWeb::error_code &ec) {
-        clearMsgPool(connection, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
