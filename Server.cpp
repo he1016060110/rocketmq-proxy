@@ -22,7 +22,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
         string tag = jsonItem.get<string>("tag");
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(topic, tag, body);
-        auto producer = wp.getProducer(topic, group);
+        auto producer = wp.getProducer(topic, group, connection);
         auto callback = new ProducerCallback();
         callback->setConn(connection);
         try {
