@@ -32,14 +32,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
         rocketmq::MQMessage msg(topic, tag, body);
         auto producer = wp.getProducer(topic, group, connection);
         try {
-            if (producer == NULL) {
-                RESPONSE_ERROR(connection, 1, "system error!");
-            } else {
-                SendResult sendResult = producer->send(msg);
-                ptree data;
-                data.put("msgId", sendResult.getMsgId());
-                RESPONSE_SUCCESS(connection, data);
-            };
+            producer->send(msg);
         } catch (exception &e) {
             auto msg = "send msg error! " + string(e.what());
             RESPONSE_ERROR(connection, 1, msg);
