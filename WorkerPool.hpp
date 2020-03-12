@@ -15,16 +15,36 @@ class WorkerPool {
         std::map<shared_ptr<WsServer::Connection>, int> conn;
     };
     std::map<string, shared_ptr<ProxyPushConsumer> > consumers;
+    std::map<string, shared_ptr<DefaultMQProducer>> producers;
+    std::map<shared_ptr<DefaultMQProducer>, shared_ptr<std::map<shared_ptr<WsServer::Connection>, int>>> producerConnectionMap;
     MapTS<shared_ptr<ProxyPushConsumer>, shared_ptr<ConsumerConnectionUnit> > consumerConnUnit;
     string nameServerHost;
 public:
-    std::map<string, shared_ptr<DefaultMQProducer>> producers;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer)
             : nameServerHost(nameServer) {};
 
-    void deleteQueue(shared_ptr<WsServer::Connection> &con) {
+    void deleteProducerConn(shared_ptr<WsServer::Connection> &con) {
+        auto iter = producers.begin();
+        while(iter != producers.end()) {
+            auto producer = iter->second;
+            string key = iter->first;
+            auto connMap = producerConnectionMap[producer];
+            auto iter1 = connMap->find(con);
+            if (iter1 != connMap->end()) {
+                connMap->erase(con);
+            }
+            if (!connMap->size()) {
+                producer->shutdown();
+                producerConnectionMap.erase(producer);
+                //producers 也要干掉
+                producers.erase(key);
+            }
+        }
+    }
+
+    void deleteConsumerQueue(shared_ptr<WsServer::Connection> &con) {
         auto iter = consumers.begin();
         while (iter != consumers.end()) {
             auto consumer = iter->second;
@@ -45,7 +65,7 @@ public:
     }
 
     //连接断掉后，以前队列要把相关连接清空！
-    void deleteConnection(shared_ptr<WsServer::Connection> &con) {
+    void deleteConsumerConnection(shared_ptr<WsServer::Connection> &con) {
         auto iter = consumers.begin();
         QueueTS<string> consumerEraseQueue;
         while (iter != consumers.end()) {
@@ -76,12 +96,17 @@ public:
         }
     }
 
-    shared_ptr<DefaultMQProducer> getProducer(const string &topic, const string &group) {
+    shared_ptr<DefaultMQProducer> getProducer(const string &topic, const string &group, shared_ptr<WsServer::Connection> & conn) {
         auto key = topic + group;
         auto iter = producers.find(key);
-        if (iter != producers.end())
+        if (iter != producers.end()) {
+            auto connMap = producerConnectionMap[iter->second];
+            auto iter1 = connMap->find(conn);
+            if (iter1 == connMap->end()) {
+                connMap->insert(make_pair(conn, 1));
+            }
             return iter->second;
-        else {
+        } else {
             shared_ptr<DefaultMQProducer> producer(new DefaultMQProducer(topic));
             producer->setNamesrvAddr(nameServerHost);
             producer->setGroupName(group);
@@ -92,6 +117,9 @@ public:
             try {
                 producer->start();
                 producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));
+                shared_ptr<std::map<shared_ptr<WsServer::Connection>, int>> connMap(new std::map<shared_ptr<WsServer::Connection>, int>);
+                connMap->insert(make_pair(conn, 1));
+                producerConnectionMap.insert(make_pair(producer, connMap));
                 return producer;
             } catch (exception &e) {
                 cout << e.what() << endl;

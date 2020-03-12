@@ -7,9 +7,8 @@
 void startProducer(WsServer &server, WorkerPool &wp)
 {
     auto clearProducers = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
-
+        wp.deleteProducerConn(connection);
     };
-
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
@@ -109,7 +108,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
 
     auto clearMsgPool = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
         //删掉队列里面的请求
-        wp.deleteQueue(connection);
+        wp.deleteConsumerQueue(connection);
         //通知锁掉的等待消费结果通知的线程
         {
             auto connectionUnit = wp.connectionUnit[connection];
@@ -127,7 +126,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
             }
         }
         //关闭不必要的consumer
-        wp.deleteConnection(connection);
+        wp.deleteConsumerConnection(connection);
     };
 
     consumerEndpoint.on_close = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
