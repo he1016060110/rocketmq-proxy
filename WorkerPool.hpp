@@ -90,8 +90,6 @@ public:
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
-            auto callback = new ProducerCallback();
-            callback->setConn(conn);
             try {
                 producer->start();
                 producers[conn]->insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));

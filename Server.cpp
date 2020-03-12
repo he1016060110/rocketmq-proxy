@@ -31,8 +31,10 @@ void startProducer(WsServer &server, WorkerPool &wp)
         string body = jsonItem.get<string>("body");
         rocketmq::MQMessage msg(topic, tag, body);
         auto producer = wp.getProducer(topic, group, connection);
+        auto callback = new ProducerCallback();
+        callback->setConn(connection);
         try {
-            producer->send(msg);
+            producer->send(msg, callback);
         } catch (exception &e) {
             auto msg = "send msg error! " + string(e.what());
             RESPONSE_ERROR(connection, 1, msg);
