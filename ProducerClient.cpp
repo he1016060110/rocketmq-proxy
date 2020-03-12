@@ -10,19 +10,24 @@ using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 using namespace std;
 using namespace chrono;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string host = arg_help.get_option_value("-h");
     string group = arg_help.get_option_value("-g");
     string topic = arg_help.get_option_value("-t");
     string concurrency = arg_help.get_option_value("-c");
+    string num = arg_help.get_option_value("-n");
     if (!host.size() || !topic.size()) {
-        cout << "-t topic -h host -g group (optional) -c concurrency (optional) " <<endl;
+        cout << "-t topic -h host -g group (optional) -c concurrency (optional) " << endl;
         return 0;
     }
     int concurrencyNum = 1;
     if (concurrency.size()) {
         concurrency = atoi(concurrency.c_str());
+    }
+    int max = 1000;
+    if (num.size()) {
+        max = atoi(num.c_str());
     }
     if (!group.size()) {
         group = topic;
@@ -31,7 +36,7 @@ int main(int argc, char* argv[]) {
     WsClient client(serverPath);
     int count = 0;
     auto start = system_clock::now();
-    auto sendConsumeRequest = [] (shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
+    auto sendConsumeRequest = [](shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
         ptree requestItem;
         requestItem.put("topic", topic);
         requestItem.put("group", group);
@@ -42,20 +47,23 @@ int main(int argc, char* argv[]) {
         connection->send(request_str.str());
     };
 
-    client.on_message = [&count, &start, &sendConsumeRequest, &topic, &group](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    client.on_message = [&count, &start, &max, &sendConsumeRequest, &topic, &group](
+            shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
         //cout << "Received msg: "<< in_message->string();
-        if (count % 1000 == 0) {
-            auto end   = system_clock::now();
+        if (count >= max) {
+            auto end = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
-            cout <<  count << "条花费了"
+            cout << count << "条花费了"
                  << double(duration.count()) * microseconds::period::num / microseconds::period::den
                  << "秒" << endl;
+            return;
         }
         sendConsumeRequest(connection, topic, group);
     };
 
-    client.on_open = [&sendConsumeRequest, &topic, &group, &concurrencyNum](shared_ptr<WsClient::Connection> connection) {
+    client.on_open = [&sendConsumeRequest, &topic, &group, &concurrencyNum](
+            shared_ptr<WsClient::Connection> connection) {
         for (int i = 0; i < concurrencyNum; i++) {
             sendConsumeRequest(connection, topic, group);
         }

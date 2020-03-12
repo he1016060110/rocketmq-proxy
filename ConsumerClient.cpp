@@ -12,25 +12,30 @@ using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 using namespace std;
 using namespace chrono;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string host = arg_help.get_option_value("-h");
     string group = arg_help.get_option_value("-g");
     string topic = arg_help.get_option_value("-t");
     string concurrency = arg_help.get_option_value("-c");
+    string num = arg_help.get_option_value("-n");
     if (!topic.size() || !group.size() || !host.size()) {
-        cout << "-g group -t topic -h host -c concurrency (optional)" <<endl;
+        cout << "-g group -t topic -h host -c concurrency (optional)" << endl;
         return 0;
     }
     int concurrencyNum = 1;
     if (concurrency.size()) {
         concurrency = atoi(concurrency.c_str());
     }
+    int max = 1000;
+    if (num.size()) {
+        max = atoi(num.c_str());
+    }
     string serverPath = host + "/consumerEndpoint";
     WsClient client(serverPath);
     int count = 0;
     auto start = system_clock::now();
-    auto sendConsumeRequest = [] (shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
+    auto sendConsumeRequest = [](shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
         ptree requestItem;
         requestItem.put("topic", topic);
         requestItem.put("group", group);
@@ -40,17 +45,10 @@ int main(int argc, char* argv[]) {
         connection->send(request_str.str());
     };
 
-    client.on_message = [&topic, &group, &count, &start, &sendConsumeRequest](shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
+    client.on_message = [&topic, &group, &count, &max, &start, &sendConsumeRequest](
+            shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
         //cout << "Received msg: "<< json;
-        count++;
-        if (count % 1000 == 0) {
-            auto end   = system_clock::now();
-            auto duration = duration_cast<microseconds>(end - start);
-            cout <<  count << "条花费了"
-                 << double(duration.count()) * microseconds::period::num / microseconds::period::den
-                 << "秒" << endl;
-        }
         std::istringstream jsonStream;
         jsonStream.str(json);
         boost::property_tree::ptree jsonItem;
@@ -71,12 +69,22 @@ int main(int argc, char* argv[]) {
                 write_json(request_str, requestItem, false);
                 connection->send(request_str.str());
             } else {
+                count++;
+                if (count > max) {
+                    auto end = system_clock::now();
+                    auto duration = duration_cast<microseconds>(end - start);
+                    cout << count << "条花费了"
+                         << double(duration.count()) * microseconds::period::num / microseconds::period::den
+                         << "秒" << endl;
+                    return;
+                }
                 sendConsumeRequest(connection, topic, group);
             }
         }
     };
 
-    client.on_open = [&topic, &group, &sendConsumeRequest, &concurrencyNum](shared_ptr<WsClient::Connection> connection) {
+    client.on_open = [&topic, &group, &sendConsumeRequest, &concurrencyNum](
+            shared_ptr<WsClient::Connection> connection) {
         for (int i = 0; i < concurrencyNum; i++) {
             sendConsumeRequest(connection, topic, group);
         }
