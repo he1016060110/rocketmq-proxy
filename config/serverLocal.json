@@ -1,0 +1,7 @@
+{
+  "host":"127.0.0.1",
+  "port": 8080,
+  "accessKey": "dsh2894h",
+  "secretKey": "ndsh2894Tshavq345",
+  "nameServer":"namesrv:9876"
+}
