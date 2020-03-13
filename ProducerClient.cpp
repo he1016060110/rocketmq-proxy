@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     client.on_message = [&count, &start, &max, &sendConsumeRequest, &topic, &group](
             shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
-        //cout << "Received msg: "<< in_message->string();
+        cout << "Received msg: "<< in_message->string();
         if (count >= max) {
             auto end = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);

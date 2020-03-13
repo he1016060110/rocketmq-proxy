@@ -143,16 +143,40 @@ void startConsumer(WsServer &server, WorkerPool &wp)
 
 int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
-    string nameServer = arg_help.get_option_value("-n");
-    string host = arg_help.get_option_value("-h");
-    string port = arg_help.get_option_value("-p");
-    if (!nameServer.size() || !host.size() || !port.size()) {
-        cout << "-n nameServer -h host -p port" <<endl;
+    string file = arg_help.get_option_value("-f");
+    if (file.size() == 0 || access( file.c_str(), F_OK ) == -1) {
+        cout << file.size() << endl;
+        cout << access( file.c_str(), F_OK ) << endl;
+        cout << "Server -c [file_name]" <<endl;
         return 0;
     }
+    string nameServer;
+    string host;
+    string accessKey;
+    string secretKey;
+    int port;
+    try {
+        std::ifstream t(file);
+        std::stringstream buffer;
+        buffer << t.rdbuf();
+        std::string contents(buffer.str());
+        std::istringstream jsonStream;
+        jsonStream.str(contents);
+        boost::property_tree::ptree jsonItem;
+        boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+        nameServer = jsonItem.get<string>("nameServer");
+        accessKey = jsonItem.get<string>("accessKey");
+        secretKey = jsonItem.get<string>("secretKey");
+        host = jsonItem.get<string>("host");
+        port = jsonItem.get<int>("port");
+    } catch ( exception &e) {
+        cout << e.what() << endl;
+        return 0;
+    }
+
     WsServer server;
-    server.config.port = stoi(port);
-    WorkerPool wp(nameServer);
+    server.config.port = port;
+    WorkerPool wp(nameServer, accessKey, secretKey);
     startProducer(server, wp);
     startConsumer(server, wp);
     promise<unsigned short> server_port;

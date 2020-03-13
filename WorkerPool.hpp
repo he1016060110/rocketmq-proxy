@@ -19,11 +19,14 @@ class WorkerPool {
     std::map<shared_ptr<DefaultMQProducer>, shared_ptr<std::map<shared_ptr<WsServer::Connection>, int>>> producerConnectionMap;
     MapTS<shared_ptr<ProxyPushConsumer>, shared_ptr<ConsumerConnectionUnit> > consumerConnUnit;
     string nameServerHost;
+    string accessKey;
+    string secretKey;
+    string accessChannel;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
-    WorkerPool(string nameServer)
-            : nameServerHost(nameServer) {};
+    WorkerPool(string nameServer, string accessKey, string secretKey)
+            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local") {};
 
     void deleteProducerConn(shared_ptr<WsServer::Connection> &con) {
         auto iter = producers.begin();
@@ -114,6 +117,7 @@ public:
             producer->setSendMsgTimeout(500);
             producer->setTcpTransportTryLockTimeout(1000);
             producer->setTcpTransportConnectTimeout(400);
+            producer->setSessionCredentials(accessKey, secretKey, accessChannel);
             try {
                 producer->start();
                 producers.insert(pair<string, shared_ptr<DefaultMQProducer>>(key, producer));
@@ -154,6 +158,7 @@ public:
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             consumer->initResource(&connectionUnit, &consumerUnitMap);
+            consumer->setSessionCredentials(accessKey, secretKey, accessChannel);
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);
