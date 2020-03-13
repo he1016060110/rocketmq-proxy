@@ -48,7 +48,6 @@ int main(int argc, char *argv[]) {
     client.on_message = [&topic, &group, &count, &max, &start, &sendConsumeRequest](
             shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         string json = in_message->string();
-        cout << "Received msg: "<< json;
         std::istringstream jsonStream;
         jsonStream.str(json);
         boost::property_tree::ptree jsonItem;
@@ -81,6 +80,8 @@ int main(int argc, char *argv[]) {
                 }
                 sendConsumeRequest(connection, topic, group);
             }
+        } else {
+            cout << "Received msg: "<< json;
         }
     };
 
