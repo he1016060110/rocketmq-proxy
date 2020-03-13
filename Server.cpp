@@ -145,8 +145,6 @@ int main(int argc, char* argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string file = arg_help.get_option_value("-f");
     if (file.size() == 0 || access( file.c_str(), F_OK ) == -1) {
-        cout << file.size() << endl;
-        cout << access( file.c_str(), F_OK ) << endl;
         cout << "Server -c [file_name]" <<endl;
         return 0;
     }
