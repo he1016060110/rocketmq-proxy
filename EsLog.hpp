@@ -30,7 +30,7 @@ class EsLog {
     int max;
     QueueTS<shared_ptr<LogUnit>> logQueue;
 public:
-    EsLog(int max = 100): max(max) {};
+    EsLog(int _max = 100): max(_max) {};
     bool writeLog(int type, string topic, string group, string body, int delayLevel = 0, int status = 0)
     {
         shared_ptr<LogUnit> unit(new LogUnit);
@@ -47,11 +47,11 @@ public:
     {
         int count = 0;
         string data;
-        string init("{ \"create\": { \"_index\": \"msg\", \"_type\": \"msg\"}}\n");
-        data = init;
+        string init("{ \"index\": { \"_index\": \"msg\", \"_type\": \"msg\"}}\n");
         shared_ptr<LogUnit> unit;
         while(unit= logQueue.wait_and_pop())
         {
+            data += init;
             count++;
             stringstream json_str;
             ptree json;
@@ -63,10 +63,9 @@ public:
             json.put("body", unit->body);
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
-            if (count <= max) {
+            if (count >= max) {
                 post("http://es.t.xianghuanji.com:9200/_bulk", data);
-                cout << data << endl;
-                data = init;
+                data = "";
                 count = 0;
             }
         }

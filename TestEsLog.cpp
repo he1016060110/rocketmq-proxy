@@ -16,7 +16,7 @@ void writeLog(EsLog *logger) {
 }
 
 int main() {
-    auto logger = new EsLog(10);
+    auto logger = new EsLog(100);
     boost::thread thd(boost::bind(writeLog, logger));
     logger->loopConsumeLog();
 }
