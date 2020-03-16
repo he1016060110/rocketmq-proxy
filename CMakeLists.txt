@@ -97,6 +97,12 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
     target_include_directories(Server PRIVATE include)
 
+    add_executable(TestEsLog TestEsLog.cpp)
+    target_link_libraries(TestEsLog boost_thread)
+    target_link_libraries(TestEsLog pthread)
+    target_link_libraries(TestEsLog boost_system)
+    target_link_libraries(TestEsLog curl)
+
     #set(BUILD_TESTING ON)
     install(FILES asio_compatibility.hpp server_ws.hpp client_ws.hpp server_wss.hpp client_wss.hpp crypto.hpp
             utility.hpp status_code.hpp mutex.hpp DESTINATION include)

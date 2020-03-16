@@ -7,6 +7,7 @@
 
 #include <curl/curl.h>
 #include <string>
+#include "QueueTS.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -21,12 +22,15 @@ public:
     string body;
     int delayLevel;
     int status;//0
-    LogUnit() : type(0), topic(""), group(""), delayLevel(0), status(0), body() {};
+public:
+    LogUnit() : type(0), topic(""), group(""), body(), delayLevel(0) ,status(0){};
 };
 
 class EsLog {
-    int max = 100;
+    int max;
     QueueTS<shared_ptr<LogUnit>> logQueue;
+public:
+    EsLog(int max = 100): max(max) {};
     bool writeLog(int type, string topic, string group, string body, int delayLevel = 0, int status = 0)
     {
         shared_ptr<LogUnit> unit(new LogUnit);
@@ -42,7 +46,9 @@ class EsLog {
     void loopConsumeLog()
     {
         int count = 0;
-        string data = "";
+        string data;
+        string init("{ \"create\": { \"_index\": \"msg\", \"_type\": \"msg\"}}\n");
+        data = init;
         shared_ptr<LogUnit> unit;
         while(unit= logQueue.wait_and_pop())
         {
@@ -58,8 +64,9 @@ class EsLog {
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
             if (count <= max) {
-                post("/_bulk", data);
-                data.empty();
+                post("http://es.t.xianghuanji.com:9200/_bulk", data);
+                cout << data << endl;
+                data = init;
                 count = 0;
             }
         }
@@ -71,10 +78,17 @@ class EsLog {
         CURLcode res;
         curl = curl_easy_init();
         if (curl) {
+            struct curl_slist *chunk = NULL;
+            chunk = curl_slist_append(chunk, "Content-type: application/json");
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());    // 指定post内容
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());   // 指定url
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, stdout);
             res = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
+            curl_slist_free_all(chunk);
         }
         return true;
     }
