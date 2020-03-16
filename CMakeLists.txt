@@ -93,6 +93,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     add_executable(Server Server.cpp)
     target_link_libraries(Server simple-websocket-server)
     target_link_libraries(Server rocketmq)
+    target_link_libraries(Server curl)
     target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
     target_include_directories(Server PRIVATE include)
 
