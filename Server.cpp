@@ -12,20 +12,24 @@ void startProducer(WsServer &server, WorkerPool &wp)
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
-        string json = in_message->string();
-        std::istringstream jsonStream;
-        jsonStream.str(json);
-        boost::property_tree::ptree jsonItem;
-        boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
-        string topic = jsonItem.get<string>("topic");
-        string group = jsonItem.get<string>("group");
-        string tag = jsonItem.get<string>("tag");
-        string body = jsonItem.get<string>("body");
-        rocketmq::MQMessage msg(topic, tag, body);
-        auto producer = wp.getProducer(topic, group, connection);
-        auto callback = new ProducerCallback();
-        callback->setConn(connection);
         try {
+            string json = in_message->string();
+            std::istringstream jsonStream;
+            jsonStream.str(json);
+            boost::property_tree::ptree jsonItem;
+            boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+            string topic = jsonItem.get<string>("topic");
+            string group = jsonItem.get<string>("group");
+            string tag = jsonItem.get<string>("tag");
+            string body = jsonItem.get<string>("body");
+            rocketmq::MQMessage msg(topic, tag, body);
+            auto producer = wp.getProducer(topic, group, connection);
+            auto callback = new ProducerCallback();
+            callback->setConn(connection);
+            if (jsonItem.get_child_optional("delayLevel")) {
+                int delayLevel = jsonItem.get<int>("delayLevel");
+                msg.setDelayTimeLevel(delayLevel);
+            }
             producer->send(msg, callback);
         } catch (exception &e) {
             auto msg = "send msg error! " + string(e.what());
