@@ -22,6 +22,7 @@ class WorkerPool {
     string accessKey;
     string secretKey;
     string accessChannel;
+    EsLog log;
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
