@@ -3,7 +3,7 @@
 //
 
 #include <curl/curl.h>
-#include <iostream>
+#include <string>
 
 class EsLog {
     class EasyCurl {
@@ -15,7 +15,7 @@ class EsLog {
             curl = curl_easy_init();    // 初始化
             if (curl) {
                 curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);// 改协议头
-                curl_easy_setopt(curl, CURLOPT_URL, url);
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
                 res = curl_easy_perform(curl);   // 执行
                 if (res != 0) {
 
@@ -26,14 +26,14 @@ class EsLog {
             }
         }
 
-        bool post(const string &url) {
+        bool post(const string &url, const string & data) {
             CURL *curl;
             CURLcode res;
             FILE *fp;
             curl = curl_easy_init();
             if (curl) {
-                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "&logintype=uid&u=xieyan&psw=xxx86");    // 指定post内容
-                curl_easy_setopt(curl, CURLOPT_URL, " http://mail.sina.com.cn/cgi-bin/login.cgi ");   // 指定url
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());    // 指定post内容
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());   // 指定url
                 res = curl_easy_perform(curl);
                 curl_easy_cleanup(curl);
             }
