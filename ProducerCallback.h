@@ -10,19 +10,20 @@
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 
 class ProducerCallback : public AutoDeleteSendCallBack {
-    shared_ptr<WsServer::Connection> conn;
+    std::function<void(string)> successFunc;
+    std::function<void(string)> failureFunc;
     virtual ~ProducerCallback() {}
     virtual void onSuccess(SendResult &sendResult) {
-        ptree data;
-        data.put("msgId", sendResult.getMsgId());
-        RESPONSE_SUCCESS(this->conn, data);
+        successFunc(sendResult.getMsgId());
     }
     virtual void onException(MQException &e) {
-        RESPONSE_ERROR(this->conn, 1, e.what());
+        failureFunc(e.what());
     }
 public:
-    void setConn(shared_ptr<WsServer::Connection> &con) {
-        this->conn = con;
+    void setCallbackFunc(std::function<void(string)> &succ, std::function<void(string)> &failure)
+    {
+        successFunc = succ;
+        failureFunc = failure;
     }
 };
 

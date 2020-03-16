@@ -16,7 +16,7 @@ void writeLog(EsLog *logger) {
 }
 
 int main() {
-    auto logger = new EsLog(100);
+    auto logger = new EsLog("http://es.t.xianghuanji.com:9200",100);
     boost::thread thd(boost::bind(writeLog, logger));
     logger->loopConsumeLog();
 }

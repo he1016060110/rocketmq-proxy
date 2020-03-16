@@ -26,9 +26,14 @@ class WorkerPool {
 public:
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
-    WorkerPool(string nameServer, string accessKey, string secretKey)
-            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local") {};
+    WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer)
+            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local"),log(esServer) {
+        startEsLog();
+    };
 
+    void startEsLog() {
+        boost::thread(boost::bind(&EsLog::loopConsumeLog, &log));
+    }
     void deleteProducerConn(shared_ptr<WsServer::Connection> &con) {
         auto iter = producers.begin();
         while(iter != producers.end()) {

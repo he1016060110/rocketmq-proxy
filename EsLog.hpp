@@ -23,16 +23,16 @@ public:
     int delayLevel;
     int status;//0
 public:
-    LogUnit() : type(0), topic(""), group(""), body(), delayLevel(0) ,status(0){};
+    LogUnit() : type(0), topic(""), group(""), body(), delayLevel(0), status(0) {};
 };
 
 class EsLog {
     int max;
     QueueTS<shared_ptr<LogUnit>> logQueue;
+    string host;
 public:
-    EsLog(int _max = 100): max(_max) {};
-    bool writeLog(int type, string topic, string group, string body, int delayLevel = 0, int status = 0)
-    {
+    EsLog(string esHost, int _max = 100) : max(_max), host(esHost) {};
+    bool writeLog(int type, string topic, string group, string body, int delayLevel = 0, int status = 0) {
         shared_ptr<LogUnit> unit(new LogUnit);
         unit->type = type;
         unit->topic = topic;
@@ -43,14 +43,13 @@ public:
         logQueue.push(unit);
     }
 
-    void loopConsumeLog()
-    {
+    void loopConsumeLog() {
         int count = 0;
         string data;
         string init("{ \"index\": { \"_index\": \"msg\", \"_type\": \"msg\"}}\n");
         shared_ptr<LogUnit> unit;
-        while(unit= logQueue.wait_and_pop())
-        {
+        string url = host + "/_bulk";
+        while (unit = logQueue.wait_and_pop()) {
             data += init;
             count++;
             stringstream json_str;
@@ -64,7 +63,7 @@ public:
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
             if (count >= max) {
-                post("http://es.t.xianghuanji.com:9200/_bulk", data);
+                post(url, data);
                 data = "";
                 count = 0;
             }

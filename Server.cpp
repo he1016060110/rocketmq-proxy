@@ -27,6 +27,16 @@ void startProducer(WsServer &server, WorkerPool &wp)
             auto producer = wp.getProducer(topic, group, connection);
             auto callback = new ProducerCallback();
             callback->setConn(connection);
+            auto successCallback = [&connection] (string &msgId) {
+                ptree responseData;
+                responseData.put("msgId",msgId);
+                RESPONSE_SUCCESS(connection, responseData);
+            };
+            auto failureCallback = [&connection](string &msg)
+            {
+                RESPONSE_ERROR(connection, 1, msg);
+            };
+            callback->setCallbackFunc(successCallback, failureCallback);
             if (jsonItem.get_child_optional("delayLevel")) {
                 int delayLevel = jsonItem.get<int>("delayLevel");
                 msg.setDelayTimeLevel(delayLevel);
@@ -157,6 +167,7 @@ int main(int argc, char* argv[]) {
     string host;
     string accessKey;
     string secretKey;
+    string esServer;
     int port;
     try {
         std::ifstream t(file);
@@ -170,6 +181,7 @@ int main(int argc, char* argv[]) {
         nameServer = jsonItem.get<string>("nameServer");
         accessKey = jsonItem.get<string>("accessKey");
         secretKey = jsonItem.get<string>("secretKey");
+        esServer = jsonItem.get<string>("esServer");
         host = jsonItem.get<string>("host");
         port = jsonItem.get<int>("port");
     } catch ( exception &e) {
@@ -179,7 +191,7 @@ int main(int argc, char* argv[]) {
 
     WsServer server;
     server.config.port = port;
-    WorkerPool wp(nameServer, accessKey, secretKey);
+    WorkerPool wp(nameServer, accessKey, secretKey, esServer);
     startProducer(server, wp);
     startConsumer(server, wp);
     promise<unsigned short> server_port;
