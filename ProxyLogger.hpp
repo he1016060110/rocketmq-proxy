@@ -7,6 +7,9 @@
 
 #include "common.hpp"
 
+using namespace std;
+using namespace boost::property_tree;
+
 class LogUnit {
 public:
     int type;//1,produce,consume
