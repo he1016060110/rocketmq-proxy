@@ -51,6 +51,9 @@ public:
             data.put("msgId", msgId);
             data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
             RESPONSE_SUCCESS(conn, data);
+            consumer->log->writeLog(ROCKETMQ_PROXY_LOG_TYPE_CONSUMER, msgId, msgs[0].getTopic(),
+                    consumer->getGroupName() , msgs[0].getBody(), msgs[0].getDelayTimeLevel(),
+                    ROCKETMQ_PROXY_LOG_STATUS_CONSUMER_SEND);
             unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_SENT;
             //printf("%s lock before!\n", msgId.c_str());
             unit->cv.wait(lck);
@@ -63,6 +66,9 @@ public:
             connectionUnit->msgPool->erase(msgId);
         }
         ConsumeStatus status = unit->status;
+        consumer->log->writeLog(ROCKETMQ_PROXY_LOG_TYPE_CONSUMER, msgId, msgs[0].getTopic(),
+                                consumer->getGroupName() , msgs[0].getBody(), msgs[0].getDelayTimeLevel(),
+                                unit->status == CONSUME_SUCCESS ? ROCKETMQ_PROXY_LOG_STATUS_CONSUMER_ACK_SUCCESS : ROCKETMQ_PROXY_LOG_STATUS_CONSUMER_ACK_LATER);
         //阻塞住，等待客户端消费掉消息，或者断掉连接
         consumer->consumerUnitMap->erase(msgId);
         delete unit;

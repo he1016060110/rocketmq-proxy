@@ -22,8 +22,8 @@ class WorkerPool {
     string accessKey;
     string secretKey;
     string accessChannel;
-    EsLog log;
 public:
+    EsLog log;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer)
@@ -165,6 +165,7 @@ public:
             consumer->setTcpTransportConnectTimeout(400);
             consumer->initResource(&connectionUnit, &consumerUnitMap);
             consumer->setSessionCredentials(accessKey, secretKey, accessChannel);
+            consumer->log = &log;
             ConsumerMsgListener *listener = new ConsumerMsgListener();
             listener->setConsumer(consumer);
             consumer->registerMessageListener(listener);

@@ -24,21 +24,25 @@ void startProducer(WsServer &server, WorkerPool &wp)
             string tag = jsonItem.get<string>("tag");
             string body = jsonItem.get<string>("body");
             rocketmq::MQMessage msg(topic, tag, body);
+            int delayLevel = 0;
+            if (jsonItem.get_child_optional("delayLevel")) {
+                delayLevel = jsonItem.get<int>("delayLevel");
+                msg.setDelayTimeLevel(delayLevel);
+            }
             auto producer = wp.getProducer(topic, group, connection);
             auto callback = new ProducerCallback();
-            callback->successFunc = [&, connection] (const string &msgId) {
+            //不能传引用，因为都是临时变量
+            callback->successFunc = [=, &wp] (const string &msgId) {
                 ptree responseData;
                 responseData.put("msgId",msgId);
+                wp.log.writeLog(ROCKETMQ_PROXY_LOG_TYPE_PRODUCER, msgId, topic, group, body, delayLevel);
                 RESPONSE_SUCCESS(connection, responseData);
             };
-            callback->failureFunc = [&, connection](const string &msg)
+            callback->failureFunc = [=](const string &msg)
             {
                 RESPONSE_ERROR(connection, 1, msg);
             };
-            if (jsonItem.get_child_optional("delayLevel")) {
-                int delayLevel = jsonItem.get<int>("delayLevel");
-                msg.setDelayTimeLevel(delayLevel);
-            }
+
             producer->send(msg, callback);
         } catch (exception &e) {
             auto msg = "send msg error! " + string(e.what());

@@ -9,7 +9,7 @@
 void writeLog(EsLog *logger) {
     while (true) {
         for (int i = 0; i < 100; i++) {
-            logger->writeLog(0, "test", "test", "test", 0, 0);
+            logger->writeLog(0, "ssssssssss", "test", "test", "test", 0, 0);
         }
         boost::this_thread::sleep(boost::posix_time::seconds(1));
     }

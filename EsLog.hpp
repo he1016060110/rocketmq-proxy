@@ -17,13 +17,14 @@ using namespace std;
 class LogUnit {
 public:
     int type;//1,produce,consume
+    string msgId;
     string topic;
     string group;
     string body;
     int delayLevel;
     int status;//0
 public:
-    LogUnit() : type(0), topic(""), group(""), body(), delayLevel(0), status(0) {};
+    LogUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
 };
 
 class EsLog {
@@ -32,12 +33,13 @@ class EsLog {
     string host;
 public:
     EsLog(string esHost, int _max = 100) : max(_max), host(esHost) {};
-    bool writeLog(int type, string topic, string group, string body, int delayLevel = 0, int status = 0) {
+    bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0, int status = 0) {
         shared_ptr<LogUnit> unit(new LogUnit);
         unit->type = type;
         unit->topic = topic;
         unit->group = group;
         unit->body = body;
+        unit->msgId = msgId;
         unit->delayLevel = delayLevel;
         unit->status = status;
         logQueue.push(unit);
