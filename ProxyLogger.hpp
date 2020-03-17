@@ -101,10 +101,20 @@ public:
             curl_easy_cleanup(curl);
             curl_slist_free_all(chunk);
             if (res == CURLE_OK) {
-                cout << ret <<endl;
-                return true;
+                std::istringstream jsonStream;
+                jsonStream.str(ret);
+                boost::property_tree::ptree jsonItem;
+                boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+                if (jsonItem.get_child_optional("errors")) {
+                    bool hasError = jsonItem.get<bool>("errors");
+                    if (!hasError) {
+                        return true;
+                    }
+                }
+                cout << ret << endl;
             }
         }
+
         return false;
     }
 };
