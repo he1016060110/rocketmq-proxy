@@ -26,8 +26,8 @@ public:
     ProxyLogger log;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
-    WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer)
-            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local"),log(esServer) {
+    WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer, string logFileName)
+            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local"),log(esServer, logFileName) {
         startEsLog();
     };
 

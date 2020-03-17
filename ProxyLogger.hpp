@@ -10,6 +10,7 @@
 #include "QueueTS.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <exception>
 
 using namespace boost::property_tree;
 using namespace std;
@@ -39,8 +40,12 @@ class ProxyLogger {
     string host;
     FILE *logFile;
 public:
-    ProxyLogger(string esHost, int _max = 100) : max(_max), host(esHost) {
-        logFile = fopen("/root/es.log", "a+");
+    ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost) {
+        logFile = fopen(logFileName.c_str(), "a+");
+        if (logFile == NULL) {
+            cout << "log file cannot open!" << endl;
+            exit;
+        }
     };
 
     bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0, int status = 0) {
@@ -75,14 +80,16 @@ public:
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
             if (count >= max) {
-                post(url, data);
+                if (!bulk(url, data)) {
+
+                }
                 data = "";
                 count = 0;
             }
         }
     }
 
-    bool post(const string &url, const string &data) {
+    bool bulk(const string &url, const string &data) {
         CURL *curl;
         CURLcode res;
         curl = curl_easy_init();

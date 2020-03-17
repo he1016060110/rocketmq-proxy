@@ -170,6 +170,7 @@ int main(int argc, char* argv[]) {
     string accessKey;
     string secretKey;
     string esServer;
+    string logFileName;
     int port;
     try {
         std::ifstream t(file);
@@ -185,6 +186,7 @@ int main(int argc, char* argv[]) {
         secretKey = jsonItem.get<string>("secretKey");
         esServer = jsonItem.get<string>("esServer");
         host = jsonItem.get<string>("host");
+        logFileName = jsonItem.get<string>("logFileName");
         port = jsonItem.get<int>("port");
     } catch ( exception &e) {
         cout << e.what() << endl;
@@ -193,7 +195,7 @@ int main(int argc, char* argv[]) {
 
     WsServer server;
     server.config.port = port;
-    WorkerPool wp(nameServer, accessKey, secretKey, esServer);
+    WorkerPool wp(nameServer, accessKey, secretKey, esServer, logFileName);
     startProducer(server, wp);
     startConsumer(server, wp);
     promise<unsigned short> server_port;
