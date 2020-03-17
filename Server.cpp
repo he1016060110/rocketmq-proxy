@@ -11,12 +11,11 @@ void startProducer(WsServer &server, WorkerPool &wp)
         wp.deleteProducerConn(connection);
     };
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
-    producerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
+    producerEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
         try {
-            string json = in_message->string();
             std::istringstream jsonStream;
-            jsonStream.str(json);
+            jsonStream.str(in_message->string().c_str());
             boost::property_tree::ptree jsonItem;
             boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
             string topic = jsonItem.get<string>("topic");
@@ -69,7 +68,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
 void startConsumer(WsServer &server, WorkerPool &wp)
 {
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
-    consumerEndpoint.on_message = [&wp](shared_ptr<WsServer::Connection> connection,
+    consumerEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
                                         shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
@@ -116,7 +115,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         }
     };
 
-    consumerEndpoint.on_open = [&wp](shared_ptr<WsServer::Connection> connection) {
+    consumerEndpoint.on_open = [&](shared_ptr<WsServer::Connection> connection) {
         shared_ptr<ConnectionUnit> unit(new ConnectionUnit);
         wp.connectionUnit.insert(make_pair(connection, unit));
         cout << "Server: Opened connection " << connection.get() << endl;
@@ -145,13 +144,13 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         wp.deleteConsumerConnection(connection);
     };
 
-    consumerEndpoint.on_close = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection, int status,
+    consumerEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
                                                                const string & /*reason*/) {
         clearMsgPool(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
-    consumerEndpoint.on_error = [&wp, &clearMsgPool](shared_ptr<WsServer::Connection> connection,
+    consumerEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection,
                                                                const SimpleWeb::error_code &ec) {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;

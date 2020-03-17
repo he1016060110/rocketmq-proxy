@@ -4,7 +4,10 @@
 
 #ifndef ROCKETMQ_PROXY_COMMON_HPP
 #define ROCKETMQ_PROXY_COMMON_HPP
+#define BOOST_SPIRIT_THREADSAFE
 
+#include <curl/curl.h>
+#include <exception>
 #include "DefaultMQProducer.h"
 #include "DefaultMQPushConsumer.h"
 #include <boost/property_tree/ptree.hpp>

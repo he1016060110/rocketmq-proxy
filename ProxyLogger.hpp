@@ -5,15 +5,7 @@
 #ifndef ROCKETMQ_PROXY_ESLOG
 #define ROCKETMQ_PROXY_ESLOG
 
-#include <curl/curl.h>
-#include <string>
-#include "QueueTS.hpp"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <exception>
-
-using namespace boost::property_tree;
-using namespace std;
+#include "common.hpp"
 
 class LogUnit {
 public:
