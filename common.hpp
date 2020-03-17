@@ -16,7 +16,7 @@
 #include "server_ws.hpp"
 #include <future>
 #include <boost/thread.hpp>
-#include "EsLog.hpp"
+#include "ProxyLogger.hpp"
 
 using namespace std;
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;

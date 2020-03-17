@@ -23,7 +23,7 @@ class WorkerPool {
     string secretKey;
     string accessChannel;
 public:
-    EsLog log;
+    ProxyLogger log;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
     WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer)
@@ -32,7 +32,7 @@ public:
     };
 
     void startEsLog() {
-        boost::thread(boost::bind(&EsLog::loopConsumeLog, &log));
+        boost::thread(boost::bind(&ProxyLogger::loopConsumeLog, &log));
     }
     void deleteProducerConn(shared_ptr<WsServer::Connection> &con) {
         auto iter = producers.begin();

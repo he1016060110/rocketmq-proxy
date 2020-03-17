@@ -11,7 +11,7 @@ class ProxyPushConsumer : public DefaultMQPushConsumer {
 public:
     string uniqKey;
     bool toDelete;
-    EsLog * log;
+    ProxyLogger * log;
     QueueTS<shared_ptr<WsServer::Connection>> queue;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > *connectionUnit;
     MapTS<string, MsgConsumeUnit *> *consumerUnitMap;

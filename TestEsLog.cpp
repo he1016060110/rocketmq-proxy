@@ -2,7 +2,7 @@
 // Created by hexi on 2020/3/16.
 //
 
-#include "EsLog.hpp"
+#include "ProxyLogger.hpp"
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 

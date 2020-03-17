@@ -27,12 +27,22 @@ public:
     LogUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
 };
 
-class EsLog {
+size_t writeData(void *ptr, size_t size, size_t nmemb, string *str) {
+    int numbytes = size * nmemb;
+    str->append(static_cast<char *>(ptr), numbytes);
+    return numbytes;
+}
+
+class ProxyLogger {
     int max;
     QueueTS<shared_ptr<LogUnit>> logQueue;
     string host;
+    FILE *logFile;
 public:
-    EsLog(string esHost, int _max = 100) : max(_max), host(esHost) {};
+    ProxyLogger(string esHost, int _max = 100) : max(_max), host(esHost) {
+        logFile = fopen("/root/es.log", "a+");
+    };
+
     bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0, int status = 0) {
         shared_ptr<LogUnit> unit(new LogUnit);
         unit->type = type;
@@ -72,25 +82,30 @@ public:
         }
     }
 
-
     bool post(const string &url, const string &data) {
         CURL *curl;
         CURLcode res;
         curl = curl_easy_init();
         if (curl) {
             struct curl_slist *chunk = NULL;
+            string ret;
             chunk = curl_slist_append(chunk, "Content-type: application/json");
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());    // 指定post内容
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());   // 指定url
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, stdout);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
             res = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
             curl_slist_free_all(chunk);
+            if (res == CURLE_OK) {
+                cout << ret <<endl;
+                return true;
+            }
         }
-        return true;
+        return false;
     }
 };
 
