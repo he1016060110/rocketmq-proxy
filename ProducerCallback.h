@@ -10,8 +10,6 @@
 using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 
 class ProducerCallback : public AutoDeleteSendCallBack {
-    std::function<void(string)> successFunc;
-    std::function<void(string)> failureFunc;
     virtual ~ProducerCallback() {}
     virtual void onSuccess(SendResult &sendResult) {
         successFunc(sendResult.getMsgId());
@@ -20,11 +18,8 @@ class ProducerCallback : public AutoDeleteSendCallBack {
         failureFunc(e.what());
     }
 public:
-    void setCallbackFunc(std::function<void(string)> &succ, std::function<void(string)> &failure)
-    {
-        successFunc = succ;
-        failureFunc = failure;
-    }
+    std::function<void(string)> successFunc;
+    std::function<void(string)> failureFunc;
 };
 
 #endif //ROCKETMQ_PROXY_PRODUCERCALLBACK_H

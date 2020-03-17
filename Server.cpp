@@ -26,17 +26,15 @@ void startProducer(WsServer &server, WorkerPool &wp)
             rocketmq::MQMessage msg(topic, tag, body);
             auto producer = wp.getProducer(topic, group, connection);
             auto callback = new ProducerCallback();
-            callback->setConn(connection);
-            auto successCallback = [&connection] (string &msgId) {
+            callback->successFunc = [&, connection] (const string &msgId) {
                 ptree responseData;
                 responseData.put("msgId",msgId);
                 RESPONSE_SUCCESS(connection, responseData);
             };
-            auto failureCallback = [&connection](string &msg)
+            callback->failureFunc = [&, connection](const string &msg)
             {
                 RESPONSE_ERROR(connection, 1, msg);
             };
-            callback->setCallbackFunc(successCallback, failureCallback);
             if (jsonItem.get_child_optional("delayLevel")) {
                 int delayLevel = jsonItem.get<int>("delayLevel");
                 msg.setDelayTimeLevel(delayLevel);
