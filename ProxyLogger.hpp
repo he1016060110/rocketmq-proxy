@@ -6,6 +6,7 @@
 #define ROCKETMQ_PROXY_ESLOG
 
 #include "common.hpp"
+#include "Ip.hpp"
 
 using namespace std;
 using namespace boost::property_tree;
@@ -36,12 +37,21 @@ class ProxyLogger {
     FILE *logFile;
     int esErrorCount;
     int esErrorMax;
+    bool logFileOpened;
 public:
-    ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost),esErrorCount(0),esErrorMax(10) {
+    ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost), esErrorCount(0),
+                                                                     esErrorMax(10), logFileOpened(false) {
+        size_t size = 16;
+        char ip[size];
+        if (getLocalIp("eth0", ip, size) != 0) {
+            cout << "cannot find ip!" << endl;
+        }
+        logFileName.append("_").append(ip);
         logFile = fopen(logFileName.c_str(), "a+");
         if (logFile == NULL) {
             cout << "log file cannot open!" << endl;
-            exit;
+        } else {
+            logFileOpened = true;
         }
     };
 
@@ -78,11 +88,11 @@ public:
             data += json_str.str() + "\n";
             if (count >= max) {
                 if (esErrorCount >= esErrorMax) {
-                    fwrite(data.c_str(), data.size(), 1, logFile);
+                    logFileOpened && fwrite(data.c_str(), data.size(), 1, logFile);
                 } else {
                     if (!bulk(url, data)) {
                         //如果发送不了es，就发写入到日志
-                        fwrite(data.c_str(), data.size(), 1, logFile);
+                        logFileOpened && fwrite(data.c_str(), data.size(), 1, logFile);
                         esErrorCount++;
                     }
                 }
