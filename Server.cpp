@@ -37,15 +37,15 @@ void startProducer(WsServer &server, WorkerPool &wp)
                 wp.log.writeLog(ROCKETMQ_PROXY_LOG_TYPE_PRODUCER, msgId, topic, group, body, delayLevel);
                 RESPONSE_SUCCESS(connection, responseData);
             };
-            callback->failureFunc = [=](const string &msg)
+            callback->failureFunc = [=](const string &msgResp)
             {
-                RESPONSE_ERROR(connection, 1, msg);
+                RESPONSE_ERROR(connection, 1, msgResp);
             };
 
             producer->send(msg, callback);
         } catch (exception &e) {
-            auto msg = "send msg error! " + string(e.what());
-            RESPONSE_ERROR(connection, 1, msg);
+            auto msgResp = "send msg error! " + string(e.what());
+            RESPONSE_ERROR(connection, 1, msgResp);
         }
     };
 
