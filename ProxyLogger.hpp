@@ -96,7 +96,7 @@ public:
             json.put("topic", unit->topic);;
             json.put("group", unit->group);;
             json.put("delayLevel", unit->delayLevel);;
-            json.put("status", unit->type);
+            json.put("status", unit->status);
             json.put("body", unit->body);
             json.put("created_at", timeStr);
             write_json(json_str, json, false);
