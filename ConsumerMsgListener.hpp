@@ -49,6 +49,7 @@ public:
             std::unique_lock<std::mutex> lck(unit->mtx);
             ptree data;
             data.put("msgId", msgId);
+            data.put("body", msgs[0].getBody());
             data.put("type", ROCKETMQ_PROXY_CONSUMER_REQUEST_TYPE_CONSUME);
             RESPONSE_SUCCESS(conn, data);
             consumer->log->writeLog(ROCKETMQ_PROXY_LOG_TYPE_CONSUMER, msgId, msgs[0].getTopic(),
