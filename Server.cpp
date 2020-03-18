@@ -3,7 +3,6 @@
 #include "ProducerCallback.h"
 #include "ConsumerMsgListener.hpp"
 #include "WorkerPool.hpp"
-#include "ProxyLogger.hpp"
 
 void startProducer(WsServer &server, WorkerPool &wp)
 {
