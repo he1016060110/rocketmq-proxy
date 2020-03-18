@@ -52,13 +52,14 @@ void startProducer(WsServer &server, WorkerPool &wp)
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
-    producerEndpoint.on_close = [&wp, &clearProducers](shared_ptr<WsServer::Connection> connection, int status,
+    producerEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
                                    const string & /*reason*/) {
         clearProducers(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
-    producerEndpoint.on_error = [](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
+    producerEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection, const SimpleWeb::error_code &ec) {
+        clearProducers(connection, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
@@ -151,6 +152,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
 
     consumerEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection,
                                                                const SimpleWeb::error_code &ec) {
+        clearMsgPool(connection, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
