@@ -76,7 +76,8 @@ public:
             data += json_str.str() + "\n";
             if (count >= max) {
                 if (!bulk(url, data)) {
-
+                    //如果发送不了es，就发写入到日志
+                    fwrite(data.c_str(), data.size(), 1, logFile);
                 }
                 data = "";
                 count = 0;
