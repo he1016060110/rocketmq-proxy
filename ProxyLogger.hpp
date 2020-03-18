@@ -7,6 +7,7 @@
 
 #include "common.hpp"
 #include "Ip.hpp"
+#include <ctime>
 
 using namespace std;
 using namespace boost::property_tree;
@@ -55,6 +56,16 @@ public:
         }
     };
 
+    void getTime(string &timeStr) {
+        time_t now = time(0);
+        now += 28800;
+        tm *ltm = localtime(&now);
+        char t[20];
+        sprintf(t, "%d-%02d-%02dT%02d:%02d:%02dZ", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday,
+                ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+        timeStr.append(t);
+    }
+
     bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0, int status = 0) {
         shared_ptr<LogUnit> unit(new LogUnit);
         unit->type = type;
@@ -78,12 +89,16 @@ public:
             count++;
             stringstream json_str;
             ptree json;
+            string timeStr;
+            getTime(timeStr);
             json.put("type", unit->type);;
+            json.put("msgId", unit->msgId);;
             json.put("topic", unit->topic);;
             json.put("group", unit->group);;
             json.put("delayLevel", unit->delayLevel);;
             json.put("status", unit->type);
             json.put("body", unit->body);
+            json.put("created_at", timeStr);
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
             if (count >= max) {
