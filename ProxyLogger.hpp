@@ -34,8 +34,10 @@ class ProxyLogger {
     QueueTS<shared_ptr<LogUnit>> logQueue;
     string host;
     FILE *logFile;
+    int esErrorCount;
+    int esErrorMax;
 public:
-    ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost) {
+    ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost),esErrorCount(0),esErrorMax(10) {
         logFile = fopen(logFileName.c_str(), "a+");
         if (logFile == NULL) {
             cout << "log file cannot open!" << endl;
@@ -75,9 +77,14 @@ public:
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
             if (count >= max) {
-                if (!bulk(url, data)) {
-                    //如果发送不了es，就发写入到日志
+                if (esErrorCount >= esErrorMax) {
                     fwrite(data.c_str(), data.size(), 1, logFile);
+                } else {
+                    if (!bulk(url, data)) {
+                        //如果发送不了es，就发写入到日志
+                        fwrite(data.c_str(), data.size(), 1, logFile);
+                        esErrorCount++;
+                    }
                 }
                 data = "";
                 count = 0;
@@ -100,6 +107,7 @@ public:
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
             res = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
             curl_slist_free_all(chunk);
