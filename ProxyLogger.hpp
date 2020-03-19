@@ -58,10 +58,9 @@ public:
 
     void getTime(string &timeStr) {
         time_t now = time(0);
-        now += 28800;
         tm *ltm = localtime(&now);
-        char t[20];
-        sprintf(t, "%d-%02d-%02dT%02d:%02d:%02dZ", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday,
+        char t[25];
+        sprintf(t, "%d-%02d-%02dT%02d:%02d:%02d.000+0800", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday,
                 ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
         timeStr.append(t);
     }
