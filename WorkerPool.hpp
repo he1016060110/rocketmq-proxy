@@ -159,8 +159,7 @@ public:
             consumer->setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
             consumer->setInstanceName(group);
             consumer->subscribe(topic, "*");
-            //改为一个线程看是否有问题
-            consumer->setConsumeThreadCount(5);
+            consumer->setConsumeThreadCount(3);
             consumer->setTcpTransportTryLockTimeout(1000);
             consumer->setTcpTransportConnectTimeout(400);
             consumer->initResource(&connectionUnit, &consumerUnitMap);
