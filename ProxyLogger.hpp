@@ -85,25 +85,9 @@ public:
         shared_ptr<LogUnit> unit;
         string url = host + "/_bulk";
         auto lastTime = time(0);
-        while (unit = logQueue.wait_and_pop()) {
-            data += init;
-            count++;
-            stringstream json_str;
-            ptree json;
-            string timeStr;
-            getTime(timeStr);
-            json.put("type", unit->type);;
-            json.put("msgId", unit->msgId);;
-            json.put("topic", unit->topic);;
-            json.put("group", unit->group);;
-            json.put("delayLevel", unit->delayLevel);;
-            json.put("status", unit->status);
-            json.put("body", unit->body);
-            json.put("created_at", timeStr);
-            write_json(json_str, json, false);
-            data += json_str.str() + "\n";
-            //超时或者数量到了，都应该发送到es
-            if (count >= max || time(0) - lastTime > 1) {
+
+        auto checkAndSendLog = [&] () {
+            if (count >= max || ((time(0) - lastTime > 1) && data.size())) {
                 if (esErrorCount >= esErrorMax) {
                     logFileOpened && fwrite(data.c_str(), data.size(), 1, logFile);
                 } else {
@@ -115,8 +99,33 @@ public:
                 }
                 data = "";
                 count = 0;
+                lastTime = time(0);
             }
-            lastTime = time(0);
+        };
+
+        while (true) {
+            while (logQueue.try_pop(unit)) {
+                data += init;
+                count++;
+                stringstream json_str;
+                ptree json;
+                string timeStr;
+                getTime(timeStr);
+                json.put("type", unit->type);;
+                json.put("msgId", unit->msgId);;
+                json.put("topic", unit->topic);;
+                json.put("group", unit->group);;
+                json.put("delayLevel", unit->delayLevel);;
+                json.put("status", unit->status);
+                json.put("body", unit->body);
+                json.put("created_at", timeStr);
+                write_json(json_str, json, false);
+                data += json_str.str() + "\n";
+                //超时或者数量到了，都应该发送到es
+                checkAndSendLog();
+            }
+            checkAndSendLog();
+            boost::this_thread::sleep(boost::posix_time::seconds(1));
         }
     }
 
