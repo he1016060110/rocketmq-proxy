@@ -8,6 +8,7 @@
 #include "common.hpp"
 #include "Ip.hpp"
 #include <ctime>
+#include "boost/timer.hpp"
 
 using namespace std;
 using namespace boost::property_tree;
@@ -84,6 +85,8 @@ public:
         string init("{ \"index\": { \"_index\": \"msg\", \"_type\": \"msg\"}}\n");
         shared_ptr<LogUnit> unit;
         string url = host + "/_bulk";
+        boost::timer t;
+        double lastTime = 0;
         while (unit = logQueue.wait_and_pop()) {
             data += init;
             count++;
@@ -101,7 +104,8 @@ public:
             json.put("created_at", timeStr);
             write_json(json_str, json, false);
             data += json_str.str() + "\n";
-            if (count >= max) {
+            //超时或者数量到了，都应该发送到es
+            if (count >= max || t.elapsed() - lastTime > 1) {
                 if (esErrorCount >= esErrorMax) {
                     logFileOpened && fwrite(data.c_str(), data.size(), 1, logFile);
                 } else {
@@ -114,6 +118,7 @@ public:
                 data = "";
                 count = 0;
             }
+            lastTime = t.elapsed();
         }
     }
 
