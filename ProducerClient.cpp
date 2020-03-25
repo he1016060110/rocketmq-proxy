@@ -15,17 +15,14 @@ int main(int argc, char *argv[]) {
     string host = arg_help.get_option_value("-h");
     string group = arg_help.get_option_value("-g");
     string topic = arg_help.get_option_value("-t");
-    string concurrency = arg_help.get_option_value("-c");
     string num = arg_help.get_option_value("-n");
-    if (!host.size() || !topic.size()) {
-        cout << "-t topic -h host -g group (optional) -c concurrency (optional) " << endl;
+    string msg = arg_help.get_option_value("-m");
+    if (!host.size() || !topic.size() || !msg.size()) {
+        cout << "-t topic -h host -g group -m msg (optional) -c concurrency (optional) " << endl;
         return 0;
     }
     int concurrencyNum = 1;
-    if (concurrency.size()) {
-        concurrency = atoi(concurrency.c_str());
-    }
-    int max = 1000;
+    int max = 1;
     if (num.size()) {
         max = atoi(num.c_str());
     }
@@ -36,18 +33,18 @@ int main(int argc, char *argv[]) {
     WsClient client(serverPath);
     int count = 0;
     auto start = system_clock::now();
-    auto sendConsumeRequest = [](shared_ptr<WsClient::Connection> &connection, string &topic, string &group) {
+    auto sendConsumeRequest = [](shared_ptr<WsClient::Connection> &connection, string &topic, string &group, string & msg) {
         ptree requestItem;
         requestItem.put("topic", topic);
         requestItem.put("group", group);
         requestItem.put("tag", "*");
-        requestItem.put("body", "this is test!");
+        requestItem.put("body", msg);
         stringstream request_str;
         write_json(request_str, requestItem, false);
         connection->send(request_str.str());
     };
 
-    client.on_message = [&count, &start, &max, &sendConsumeRequest, &topic, &group](
+    client.on_message = [&](
             shared_ptr<WsClient::Connection> connection, shared_ptr<WsClient::InMessage> in_message) {
         count++;
         string json = in_message->string();
@@ -68,13 +65,13 @@ int main(int argc, char *argv[]) {
             connection->send_close(1000);
             return;
         }
-        sendConsumeRequest(connection, topic, group);
+        sendConsumeRequest(connection, topic, group, msg);
     };
 
-    client.on_open = [&sendConsumeRequest, &topic, &group, &concurrencyNum](
+    client.on_open = [&](
             shared_ptr<WsClient::Connection> connection) {
         for (int i = 0; i < concurrencyNum; i++) {
-            sendConsumeRequest(connection, topic, group);
+            sendConsumeRequest(connection, topic, group, msg);
         }
     };
 
