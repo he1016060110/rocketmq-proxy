@@ -3,13 +3,14 @@
 include_once __DIR__ . "/vendor/autoload.php";
 
 
-$url = "localhost:8090";
+$url = "ws://127.0.0.1:8090/consumerEndpoint";
 $topicName = "Test";
 $queueName = "Test";
 
 $loop = \React\EventLoop\Factory::create();
 $reactConnector = new \React\Socket\Connector($loop, [
 ]);
+
 $connector = new \Ratchet\Client\Connector($loop, $reactConnector);
 $connector($url, [], [])
     ->then(function (\Ratchet\Client\WebSocket $conn) use ($topicName, $queueName) {
@@ -25,8 +26,8 @@ $connector($url, [], [])
                     printf("msg:%s\n", $msg);
                     $ackData = [
                         "type" => 2,
-                        "topic" => $this->topicName,
-                        "group" => $this->queueName,
+                        "topic" => $topicName,
+                        "group" => $queueName,
                         "msgId" => $arr['data']['msgId'],
                         "status" => 0,
                     ];

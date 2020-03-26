@@ -1,7 +1,9 @@
 <?php
 
+include_once __DIR__ . "/vendor/autoload.php";
+
 $msgId = false;
-$url = "localhost:8090";
+$url = "ws://127.0.0.1:8090/producerEndpoint";
 $body = "this is test!";
 $topicName = "Test";
 $delayLevel = 0;
