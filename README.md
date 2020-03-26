@@ -69,3 +69,7 @@ Consumer
 ```text
 ConsumerClient -g group -t topic -h host -n mum (optional)
 ```
+
+##### 日志格式
+
+
