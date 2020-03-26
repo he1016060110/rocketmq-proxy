@@ -1,6 +1,6 @@
 #### XHJ ROCKETMQ PROXY SERVER  
 由于rocketmq在性能和功能上比其他消息队列都优秀，我们选择了rocketmq作为享换机消息队列。  
-由于我们技术栈是PHP，rocketmq对PHP没有很好的支持。我们面临三种选择：
+我们技术栈是PHP，尴尬的是rocketmq对PHP没有很好的支持。我们面临三种选择：
 - 根据c++sdk封装php扩展
 - 根据php实现rocketmq通信协议
 - 封装rocketmq代理
@@ -11,10 +11,10 @@
 经过权衡，我们采用了第三种方法。
 
 ##### server协议
-由于http协议会有大量的包传header信息，没有长连接，用http做高并发的应用并不合适。  
+http协议会有大量的包传header信息，没有长连接，用http做高并发的应用并不合适。  
 于是我们面临选择，是选用一个公用协议，还是自己封装一层协议。  
-我们选择了websocket协议作为server和服务端的通信协议，主要由于它足够common并且简单。  
-我们选择的开源 [Simple-WebSocket-Server](https://gitlab.com/eidheim/Simple-WebSocket-Server) 作为server框架。
+使用websocket协议作为server和服务端的通信协议，主要由于它足够common并且简单。  
+使用开源 [Simple-WebSocket-Server](https://gitlab.com/eidheim/Simple-WebSocket-Server) 作为server框架。
 没有使用grpc、thrift或brpc等是因为它足够简单，遇到问题好修改，而且也足够稳定（这也很重要）。
 
 #### 使用软件
