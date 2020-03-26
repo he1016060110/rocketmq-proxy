@@ -1,10 +1,9 @@
 #### XHJ ROCKETMQ PROXY SERVER  
 由于rocketmq在性能和功能上比其他消息队列都优秀，我们选择了rocketmq作为享换机消息队列。  
-由于我们技术栈是PHP，rocketmq对PHP没有很好的支持。我们面临三种选择：  
+由于我们技术栈是PHP，rocketmq对PHP没有很好的支持。我们面临三种选择：
 - 根据c++sdk封装php扩展
 - 根据php实现rocketmq通信协议
 - 封装rocketmq代理
-
 第一种方法经过验证不可行，因为c++sdk采用多线程的方式编写，php无法接入，会出现致命bug。  
 第二种方法代价较为大。  
 第三种方法代价比较小，只需要在c++ sdk上封装一个server即可。  
