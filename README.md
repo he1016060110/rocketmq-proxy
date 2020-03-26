@@ -25,3 +25,10 @@
 
 #### 安装
 
+推荐使用docker安装，安装命令如下
+
+```
+git clone git@github.com:he1016060110/rocketmq-proxy.git
+cd rocketmq-proxy
+docker build -t rocketmq-proxy:2.0.1 .
+```
