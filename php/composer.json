@@ -1,3 +1,10 @@
 {
-
+  "name": "he1016060110/rocketmq-proxy",
+  "description": "rocketmq proxy for php",
+  "type": "library",
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=7.0.0",
+    "ratchet/pawl": "~0.3.4"
+  }
 }
