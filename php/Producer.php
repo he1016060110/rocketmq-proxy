@@ -1,7 +1,7 @@
 <?php
 
 $msgId = false;
-$url = "localhost:8080";
+$url = "localhost:8090";
 $body = "this is test!";
 $topicName = "Test";
 $delayLevel = 0;

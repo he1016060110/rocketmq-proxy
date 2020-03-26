@@ -3,7 +3,7 @@
 include_once __DIR__ . "/vendor/autoload.php";
 
 
-$url = "localhost:8080";
+$url = "localhost:8090";
 $topicName = "Test";
 $queueName = "Test";
 
