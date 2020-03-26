@@ -32,3 +32,40 @@ git clone git@github.com:he1016060110/rocketmq-proxy.git
 cd rocketmq-proxy
 docker build -t rocketmq-proxy:2.0.1 .
 ```
+
+#### 使用方法
+
+把新创建的image run一个container出来
+```
+docker run --rm -d --name rocketmq-proxy -it rocketmq-proxy:2.0.1
+docker exec -it rocketmq-proxy bash
+```
+
+##### Server
+制作一个json配置文件，命名为server.json
+```
+{
+  "host":"127.0.0.1",
+  "port": 8080,
+  "accessKey": "XXXXXXX",//broker配置的acl
+  "secretKey": "XXXXX",//broker配置的acl
+  "nameServer":"XXXXXXX",//nameserver地址
+  "esServer": "http://es.AAAA.com:9200",//发送消息日志地址
+  "logFileName": "/root/es.log"//如果没有传es地址，消息日志将保存到本地
+}
+```
+
+```
+Server -f server.json
+```
+
+##### Client
+Producer
+```text
+ProducerClient -t topic -h host -g group -m msg (optional) -n mum (optional)
+```
+
+Consumer
+```text
+ConsumerClient -g group -t topic -h host -n mum (optional)
+```
