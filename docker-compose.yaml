@@ -8,15 +8,23 @@ services:
     volumes:
       - ./data/namesrv/logs:/home/rocketmq/logs
     command: sh mqnamesrv
+    networks:
+      extnetwork:
+        ipv4_address: 172.10.0.100
   console:
     image: styletang/rocketmq-console-ng
     ports:
       - 8080:8080
     environment:
       JAVA_OPTS: "-Drocketmq.namesrv.addr=namesrv:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false"
-  broker-1:
+    networks:
+      extnetwork:
+        ipv4_address: 172.10.0.101
+    depends_on:
+      - broker
+  broker:
     image: rocketmqinc/rocketmq:4.5.1
-    container_name: rmqbroker1
+    container_name: rmqbroker
     ports:
       - 10911:10911
     volumes:
@@ -27,6 +35,9 @@ services:
     command: sh mqbroker -n namesrv:9876 diskMaxUsedSpaceRatio=95 autoCreateTopicEnable=true -c ../conf/broker.conf
     depends_on:
       - namesrv
+    networks:
+      extnetwork:
+        ipv4_address: 172.10.0.102
   rocketmq-proxy:
     image: rocketmq-proxy:2.0.1
     cap_add:
@@ -37,3 +48,12 @@ services:
       - ./config/serverLocal.json:/data/config.json
     command:
       Server -f /data/config.json
+    networks:
+      extnetwork:
+        ipv4_address: 172.10.0.103
+networks:
+  extnetwork:
+    ipam:
+      config:
+        - subnet: 172.10.0.0/24
+          gateway: 172.10.0.1
