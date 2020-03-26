@@ -1,0 +1,9 @@
+globalWhiteRemoteAddresses:
+  - 172.0-255.0-255.0-255
+  - 172.168.0-255.0-255
+
+accounts:
+  - accessKey: dsh2894h
+    secretKey: ndsh2894Tshavq345
+    whiteRemoteAddress: 192.168.1.*
+    admin: true
