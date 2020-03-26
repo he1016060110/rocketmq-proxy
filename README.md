@@ -12,8 +12,7 @@
 
 ##### server协议
 http协议会有大量的包传header信息，没有长连接，用http做高并发的应用并不合适。  
-于是我们面临选择，是选用一个公用协议，还是自己封装一层协议。  
-使用websocket协议作为server和服务端的通信协议，主要由于它足够common并且简单。  
+经过权衡，我们决定使用websocket协议作为server和服务端的通信协议，主要由于它足够common并且简单。  
 使用开源 [Simple-WebSocket-Server](https://gitlab.com/eidheim/Simple-WebSocket-Server) 作为server框架。
 没有使用grpc、thrift或brpc等是因为它足够简单，遇到问题好修改，而且也足够稳定（这也很重要）。
 
