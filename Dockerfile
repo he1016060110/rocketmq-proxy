@@ -2,7 +2,7 @@ FROM centos:7
 
 WORKDIR /root/
 
-RUN buildDeps="gcc-c++ automake autoconf libtool bzip2-devel wget tar unzip make zlib-devel strace telnet gdb vim openssl-devel openssl git" \
+RUN buildDeps="gcc-c++ automake autoconf libtool bzip2-devel wget tar unzip make zlib-devel strace telnet gdb vim openssl-devel openssl git libcurl-devel " \
     && yum update -y \
     && yum install -y $buildDeps \
     && yum clean all -y \
@@ -26,6 +26,5 @@ RUN wget https://github.com/he1016060110/rocketmq-client-cpp/archive/xhj-2.0.1.t
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
-RUN yum install libcurl-devel -y
 RUN git clone https://github.com/he1016060110/rocketmq-proxy.git && cd rocketmq-proxy && cmake . && make -j4 \
     && make install && rm -rf /root/rocketmq-proxy
