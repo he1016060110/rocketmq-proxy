@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
                 sendConsumeRequest(connection, topic, group);
             }
         } else {
-            cout << "Received msg: "<< json;
+            cout << "Received msg: " << json << endl;
         }
     };
 

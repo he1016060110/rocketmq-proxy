@@ -4,14 +4,13 @@
 #include "ConsumerMsgListener.hpp"
 #include "WorkerPool.hpp"
 
-void startProducer(WsServer &server, WorkerPool &wp)
-{
+void startProducer(WsServer &server, WorkerPool &wp) {
     auto clearProducers = [](shared_ptr<WsServer::Connection> &connection, WorkerPool &wp) {
         wp.deleteProducerConn(connection);
     };
     auto &producerEndpoint = server.endpoint["^/producerEndpoint/?$"];
     producerEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
-                                        shared_ptr<WsServer::InMessage> in_message) {
+                                      shared_ptr<WsServer::InMessage> in_message) {
         try {
             std::istringstream jsonStream;
             jsonStream.str(in_message->string().c_str());
@@ -30,14 +29,13 @@ void startProducer(WsServer &server, WorkerPool &wp)
             auto producer = wp.getProducer(topic, group, connection);
             auto callback = new ProducerCallback();
             //不能传引用，因为都是临时变量
-            callback->successFunc = [=, &wp] (const string &msgId) {
+            callback->successFunc = [=, &wp](const string &msgId) {
                 ptree responseData;
-                responseData.put("msgId",msgId);
+                responseData.put("msgId", msgId);
                 wp.log.writeLog(ROCKETMQ_PROXY_LOG_TYPE_PRODUCER, msgId, topic, group, body, delayLevel);
                 RESPONSE_SUCCESS(connection, responseData);
             };
-            callback->failureFunc = [=](const string &msgResp)
-            {
+            callback->failureFunc = [=](const string &msgResp) {
                 RESPONSE_ERROR(connection, 1, msgResp);
             };
 
@@ -53,7 +51,7 @@ void startProducer(WsServer &server, WorkerPool &wp)
     };
 
     producerEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
-                                   const string & /*reason*/) {
+                                    const string & /*reason*/) {
         clearProducers(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
@@ -65,11 +63,10 @@ void startProducer(WsServer &server, WorkerPool &wp)
     };
 }
 
-void startConsumer(WsServer &server, WorkerPool &wp)
-{
+void startConsumer(WsServer &server, WorkerPool &wp) {
     auto &consumerEndpoint = server.endpoint["^/consumerEndpoint/?$"];
     consumerEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
-                                        shared_ptr<WsServer::InMessage> in_message) {
+                                      shared_ptr<WsServer::InMessage> in_message) {
         string json = in_message->string();
         std::istringstream jsonStream;
         jsonStream.str(json);
@@ -93,9 +90,9 @@ void startConsumer(WsServer &server, WorkerPool &wp)
                     //ack消息
                     string msgId = jsonItem.get<string>("msgId");
                     int status = jsonItem.get<int>("status");
-                    MsgConsumeUnit * unit;
+                    MsgConsumeUnit *unit;
                     consumer->consumerUnitMap->try_get(msgId, unit);
-                    unit->status = (ConsumeStatus)status;
+                    unit->status = (ConsumeStatus) status;
                     {
                         std::unique_lock<std::mutex> lck(unit->mtx);
                         unit->syncStatus = ROCKETMQ_PROXY_MSG_STATUS_SYNC_ACK;
@@ -130,7 +127,7 @@ void startConsumer(WsServer &server, WorkerPool &wp)
             std::unique_lock<std::mutex> lck(connectionUnit->mtx);
             auto iter = connectionUnit->msgPool->begin();
             while (iter != connectionUnit->msgPool->end()) {
-                MsgConsumeUnit * unit;
+                MsgConsumeUnit *unit;
                 if (wp.consumerUnitMap.try_get(iter->first, unit)) {
                     {
                         cout << "notify_all:" << iter->first << "\n";
@@ -142,51 +139,92 @@ void startConsumer(WsServer &server, WorkerPool &wp)
         }
         //关闭不必要的consumer
         wp.deleteConsumerConnection(connection);
+        {
+            std::unique_lock<std::mutex> lck(wp.connectionUnitMtx);
+            if (wp.connectionUnitChanged) {
+                wp.connectionUnitChanged = false;
+            }
+            wp.connectionUnit.erase(connection);
+        }
     };
 
     consumerEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
-                                                               const string & /*reason*/) {
+                                    const string & /*reason*/) {
         clearMsgPool(connection, wp);
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
     consumerEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection,
-                                                               const SimpleWeb::error_code &ec) {
+                                    const SimpleWeb::error_code &ec) {
         clearMsgPool(connection, wp);
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
 }
 
-void startMonitor(WsServer &server, WorkerPool &wp)
-{
+void startHeartBeat(WorkerPool * wp) {
+    while (true) {
+        {
+            std::unique_lock<std::mutex> lck(wp->connectionUnitMtx);
+            if (wp->connectionUnitChanged) {
+                wp->connectionUnitChanged = false;
+            }
+        }
+        auto iter = wp->connectionUnit.begin();
+        while (iter != wp->connectionUnit.end()) {
+            std::unique_lock<std::mutex> lck(wp->connectionUnitMtx);
+            //如果connection断掉，我们重新再遍历所有connection，发heartBeat
+            if (wp->connectionUnitChanged) {
+                break;
+            }
+            auto connection = iter->first;
+            //heartbeat
+            string msg = "{\"code\": 10000}";
+            connection->send(msg);
+            iter++;
+        }
+        {
+            std::unique_lock<std::mutex> lck(wp->connectionUnitMtx);
+            if (wp->connectionUnitChanged) {
+                continue;
+            }
+        }
+        //sleep 60秒发一次heartBeat
+        boost::this_thread::sleep(boost::posix_time::seconds(ROCKETMQ_PROXY_CONSUMER_HEARTBEAT));
+    }
+}
+
+void startHeartBeatThead(WorkerPool &wp) {
+    boost::thread(boost::bind(&startHeartBeat, &wp));
+}
+
+void startMonitor(WsServer &server, WorkerPool &wp) {
     auto &monitorEndpoint = server.endpoint["^/monitorEndpoint/?$"];
     monitorEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
-                                      shared_ptr<WsServer::InMessage> in_message) {
+                                     shared_ptr<WsServer::InMessage> in_message) {
     };
+
     monitorEndpoint.on_open = [&](shared_ptr<WsServer::Connection> connection) {
-        shared_ptr<ConnectionUnit> unit(new ConnectionUnit);
-        wp.connectionUnit.insert(make_pair(connection, unit));
         cout << "Server: Opened connection " << connection.get() << endl;
     };
 
     monitorEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
-                                    const string & /*reason*/) {
+                                   const string & /*reason*/) {
         cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
     };
 
     monitorEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection,
-                                    const SimpleWeb::error_code &ec) {
+                                   const SimpleWeb::error_code &ec) {
         cout << "Server: Error in connection " << connection.get() << ". "
              << "Error: " << ec << ", error message: " << ec.message() << endl;
     };
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string file = arg_help.get_option_value("-f");
-    if (file.size() == 0 || access( file.c_str(), F_OK ) == -1) {
-        cout << "Server -c [file_name]" <<endl;
+    if (file.size() == 0 || access(file.c_str(), F_OK) == -1) {
+        cout << "Server -c [file_name]" << endl;
         return 0;
     }
     string nameServer;
@@ -212,7 +250,7 @@ int main(int argc, char* argv[]) {
         host = jsonItem.get<string>("host");
         logFileName = jsonItem.get<string>("logFileName");
         port = jsonItem.get<int>("port");
-    } catch ( exception &e) {
+    } catch (exception &e) {
         cout << e.what() << endl;
         return 0;
     }
@@ -223,6 +261,7 @@ int main(int argc, char* argv[]) {
     startProducer(server, wp);
     startConsumer(server, wp);
     startMonitor(server, wp);
+    startHeartBeatThead(wp);
     promise<unsigned short> server_port;
     thread server_thread([&server, &server_port]() {
         server.start([&server_port](unsigned short port) {

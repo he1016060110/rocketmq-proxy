@@ -26,8 +26,11 @@ public:
     ProxyLogger log;
     MapTS<string, MsgConsumeUnit *> consumerUnitMap;
     map<shared_ptr<WsServer::Connection>, shared_ptr<ConnectionUnit> > connectionUnit;
+    std::mutex connectionUnitMtx;
+    bool connectionUnitChanged;
     WorkerPool(string nameServer, string accessKey, string secretKey, string  esServer, string logFileName)
-            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local"),log(esServer, logFileName) {
+            : nameServerHost(nameServer),accessKey(accessKey),secretKey(secretKey),accessChannel("local"),
+            log(esServer, logFileName), connectionUnitChanged(false) {
         startEsLog();
     };
 
