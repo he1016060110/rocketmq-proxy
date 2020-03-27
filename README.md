@@ -74,14 +74,17 @@ ConsumerClient -g group -t topic -h host -n mum (optional)
 ##### docker-compose
 
 项目中docker-compose.yaml包含以下组件以及配置
+
 - rocketmq
 - rocketmq-console-ng
 - rocketmq-proxy
 - elasticsearch
+
 ```text
 docker-compose -f docker-compose.yaml up
 ```
 ##### php
+
 ```text
 cd php
 composer install
