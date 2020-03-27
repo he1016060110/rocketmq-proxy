@@ -69,10 +69,21 @@ Consumer
 ConsumerClient -g group -t topic -h host -n mum (optional)
 ```
 
-#### docker-compose
+#### PHP usage
 
+##### docker-compose
+- rocketmq
+- rocketmq-console-ng
+- rocketmq-proxy
+- elasticsearch
 ```text
 docker-compose -f docker-compose.yaml up
 ```
-
+##### php
+```text
+cd php
+composer install
+php Producer.php
+php Consumer.php
+```
 
