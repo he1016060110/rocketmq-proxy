@@ -60,6 +60,7 @@ services:
       - 9200:9200
     volumes:
       - ./data/es/data:/root/elasticsearch-6.3.2/data
+      - ./config/elasticsearch.yml:/home/es/elasticsearch-6.3.2/config/elasticsearch.yml
     command:
       bash bin/elasticsearch
     networks:
