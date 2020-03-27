@@ -4,6 +4,6 @@
   "accessKey": "dsh2894h",
   "secretKey": "ndsh2894Tshavq345",
   "nameServer":"namesrv:9876",
-  "esServer": "http://es.t.xianghuanji.com:9200",
-  "logFileName": "/root/es.log"
+  "esServer": "http://elasticsearch:9200",
+  "logFileName": "/data/log/es.log"
 }

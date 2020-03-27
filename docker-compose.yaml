@@ -46,11 +46,25 @@ services:
       - 8090:8090
     volumes:
       - ./config/serverLocal.json:/data/config.json
+      - ./data/proxy/log:/data/log
     command:
       Server -f /data/config.json
     networks:
       extnetwork:
         ipv4_address: 172.10.0.103
+    depends_on:
+      - broker
+  elasticsearch:
+    image: elasticsearch:6.3.2
+    ports:
+      - 9200:9200
+    volumes:
+      - ./data/es/data:/root/elasticsearch-6.3.2/data
+    command:
+      bash bin/elasticsearch
+    networks:
+      extnetwork:
+        ipv4_address: 172.10.0.104
 networks:
   extnetwork:
     ipam:
