@@ -69,6 +69,10 @@ Consumer
 ConsumerClient -g group -t topic -h host -n mum (optional)
 ```
 
-##### 日志格式
+#### docker-compose
+
+```text
+docker-compose -f docker-compose.yaml up
+```
 
 
