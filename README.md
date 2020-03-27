@@ -69,7 +69,7 @@ Consumer
 ConsumerClient -g group -t topic -h host -n mum (optional)
 ```
 
-#### PHP usage
+#### PHP Usage
 
 ##### docker-compose
 - rocketmq
