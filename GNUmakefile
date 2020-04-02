@@ -40,7 +40,7 @@ vpath %.proto $(PROTOS_PATH)
 
 all: system-check server
 
-server: proxy.pb.o proxy.grpc.pb.o Server2.o
+server: Proxy.pb.o Proxy.grpc.pb.o Server2.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 .PRECIOUS: %.grpc.pb.cc

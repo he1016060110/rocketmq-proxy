@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package proxy;
+package Proxy;
 
 service Proxy {
     rpc Produce (ProduceRequest) returns (ProduceReply) {}
