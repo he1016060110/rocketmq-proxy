@@ -38,9 +38,12 @@ PROTOS_PATH = protos
 
 vpath %.proto $(PROTOS_PATH)
 
-all: system-check Server
+all: system-check Server ProduceClient
 
 Server: Proxy.pb.o Proxy.grpc.pb.o Server.o
+	$(CXX) $^ $(LDFLAGS) -o $@
+
+ProduceClient: Proxy.pb.o Proxy.grpc.pb.o ProduceClient.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 .PRECIOUS: %.grpc.pb.cc
