@@ -3,43 +3,47 @@ syntax = "proto3";
 package proxy;
 
 service Proxy {
-    rpc Producer (ProducerRequest) returns (ProducerReply) {}
-    rpc ConsumerPull (ConsumerPullRequest) returns (ConsumerPullReply) {}
-    rpc ConsumerPullAck (ConsumerPullAckRequest) returns (ConsumerPullAckReply) {}
+    rpc Produce (ProduceRequest) returns (ProduceReply) {}
+    rpc Consume (ConsumeRequest) returns (ConsumeReply) {}
+    rpc ConsumeAck (ConsumeAckRequest) returns (ConsumeAckReply) {}
 }
 
-message ProducerRequest {
+message ProduceRequest {
     string topic = 1;
-    string tag = 2;
-    string body = 3;
+    string group = 2;
+    string tag = 3;
+    string body = 4;
+    int32 delayLevel = 5;
 }
 
-message ProducerReply {
+message ProduceReply {
     int32 code = 1;
     string msg_id = 2;
+    string err_msg = 3;
 }
 
-message ConsumerPullRequest
+message ConsumeRequest
 {
     string topic = 1;
     string consumer_group = 2;
 }
 
-message ConsumerPullReply
+message ConsumeReply
 {
     int32 code = 1;
     string msg_id = 2;
     string body = 3;
+    string type = 4;
 }
 
-message ConsumerPullAckRequest
+message ConsumeAckRequest
 {
     string topic = 1;
     string msg_id = 2;
     string consumer_group = 3;
 }
 
-message ConsumerPullAckReply
+message ConsumeAckReply
 {
     int32 code = 1;
     string msg_id = 2;

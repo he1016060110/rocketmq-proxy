@@ -25,3 +25,4 @@ valgrind_report.log
 core*
 vendor
 data
+*.o
