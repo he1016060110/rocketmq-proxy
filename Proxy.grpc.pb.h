@@ -38,10 +38,10 @@ class MessageAllocator;
 
 namespace Proxy {
 
-class Proxy final {
+class ProxyServer final {
  public:
   static constexpr char const* service_full_name() {
-    return "Proxy.Proxy";
+    return "Proxy.ProxyServer";
   }
   class StubInterface {
    public:

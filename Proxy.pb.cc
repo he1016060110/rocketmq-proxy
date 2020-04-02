@@ -211,12 +211,12 @@ const char descriptor_table_protodef_Proxy_2eproto[] =
   "AckRequest\022\r\n\005topic\030\001 \001(\t\022\016\n\006msg_id\030\002 \001("
   "\t\022\026\n\016consumer_group\030\003 \001(\t\"G\n\017ConsumeAckR"
   "eply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001(\t\022\026\n\016co"
-  "nsumer_group\030\003 \001(\t2\273\001\n\005Proxy\0227\n\007Produce\022"
-  "\025.Proxy.ProduceRequest\032\023.Proxy.ProduceRe"
-  "ply\"\000\0227\n\007Consume\022\025.Proxy.ConsumeRequest\032"
-  "\023.Proxy.ConsumeReply\"\000\022@\n\nConsumeAck\022\030.P"
-  "roxy.ConsumeAckRequest\032\026.Proxy.ConsumeAc"
-  "kReply\"\000b\006proto3"
+  "nsumer_group\030\003 \001(\t2\301\001\n\013ProxyServer\0227\n\007Pr"
+  "oduce\022\025.Proxy.ProduceRequest\032\023.Proxy.Pro"
+  "duceReply\"\000\0227\n\007Consume\022\025.Proxy.ConsumeRe"
+  "quest\032\023.Proxy.ConsumeReply\"\000\022@\n\nConsumeA"
+  "ck\022\030.Proxy.ConsumeAckRequest\032\026.Proxy.Con"
+  "sumeAckReply\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_Proxy_2eproto_deps[1] = {
 };
@@ -231,7 +231,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_Pro
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_Proxy_2eproto_once;
 static bool descriptor_table_Proxy_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_Proxy_2eproto = {
-  &descriptor_table_Proxy_2eproto_initialized, descriptor_table_protodef_Proxy_2eproto, "Proxy.proto", 656,
+  &descriptor_table_Proxy_2eproto_initialized, descriptor_table_protodef_Proxy_2eproto, "Proxy.proto", 662,
   &descriptor_table_Proxy_2eproto_once, descriptor_table_Proxy_2eproto_sccs, descriptor_table_Proxy_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_Proxy_2eproto::offsets,
   file_level_metadata_Proxy_2eproto, 6, file_level_enum_descriptors_Proxy_2eproto, file_level_service_descriptors_Proxy_2eproto,

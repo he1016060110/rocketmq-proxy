@@ -18,144 +18,144 @@
 #include <grpcpp/impl/codegen/sync_stream.h>
 namespace Proxy {
 
-static const char* Proxy_method_names[] = {
-  "/Proxy.Proxy/Produce",
-  "/Proxy.Proxy/Consume",
-  "/Proxy.Proxy/ConsumeAck",
+static const char* ProxyServer_method_names[] = {
+  "/Proxy.ProxyServer/Produce",
+  "/Proxy.ProxyServer/Consume",
+  "/Proxy.ProxyServer/ConsumeAck",
 };
 
-std::unique_ptr< Proxy::Stub> Proxy::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
+std::unique_ptr< ProxyServer::Stub> ProxyServer::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
   (void)options;
-  std::unique_ptr< Proxy::Stub> stub(new Proxy::Stub(channel));
+  std::unique_ptr< ProxyServer::Stub> stub(new ProxyServer::Stub(channel));
   return stub;
 }
 
-Proxy::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
-  : channel_(channel), rpcmethod_Produce_(Proxy_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_Consume_(Proxy_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ConsumeAck_(Proxy_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+ProxyServer::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
+  : channel_(channel), rpcmethod_Produce_(ProxyServer_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Consume_(ProxyServer_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ConsumeAck_(ProxyServer_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
-::grpc::Status Proxy::Stub::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::Proxy::ProduceReply* response) {
+::grpc::Status ProxyServer::Stub::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::Proxy::ProduceReply* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_Produce_, context, request, response);
 }
 
-void Proxy::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Produce_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ProduceReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ProduceReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Produce_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Produce_, context, request, response, reactor);
 }
 
-void Proxy::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ProduceReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::Produce(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ProduceReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Produce_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ProduceReply>* Proxy::Stub::AsyncProduceRaw(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ProduceReply>* ProxyServer::Stub::AsyncProduceRaw(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ProduceReply>::Create(channel_.get(), cq, rpcmethod_Produce_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ProduceReply>* Proxy::Stub::PrepareAsyncProduceRaw(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ProduceReply>* ProxyServer::Stub::PrepareAsyncProduceRaw(::grpc::ClientContext* context, const ::Proxy::ProduceRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ProduceReply>::Create(channel_.get(), cq, rpcmethod_Produce_, context, request, false);
 }
 
-::grpc::Status Proxy::Stub::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::Proxy::ConsumeReply* response) {
+::grpc::Status ProxyServer::Stub::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::Proxy::ConsumeReply* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_Consume_, context, request, response);
 }
 
-void Proxy::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Consume_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Consume_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Consume_, context, request, response, reactor);
 }
 
-void Proxy::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::Consume(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Consume_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeReply>* Proxy::Stub::AsyncConsumeRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeReply>* ProxyServer::Stub::AsyncConsumeRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ConsumeReply>::Create(channel_.get(), cq, rpcmethod_Consume_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeReply>* Proxy::Stub::PrepareAsyncConsumeRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeReply>* ProxyServer::Stub::PrepareAsyncConsumeRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ConsumeReply>::Create(channel_.get(), cq, rpcmethod_Consume_, context, request, false);
 }
 
-::grpc::Status Proxy::Stub::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::Proxy::ConsumeAckReply* response) {
+::grpc::Status ProxyServer::Stub::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::Proxy::ConsumeAckReply* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_ConsumeAck_, context, request, response);
 }
 
-void Proxy::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_ConsumeAck_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeAckReply* response, std::function<void(::grpc::Status)> f) {
+void ProxyServer::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeAckReply* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_ConsumeAck_, context, request, response, std::move(f));
 }
 
-void Proxy::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_ConsumeAck_, context, request, response, reactor);
 }
 
-void Proxy::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeAckReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void ProxyServer::Stub::experimental_async::ConsumeAck(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::Proxy::ConsumeAckReply* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_ConsumeAck_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeAckReply>* Proxy::Stub::AsyncConsumeAckRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeAckReply>* ProxyServer::Stub::AsyncConsumeAckRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ConsumeAckReply>::Create(channel_.get(), cq, rpcmethod_ConsumeAck_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeAckReply>* Proxy::Stub::PrepareAsyncConsumeAckRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::Proxy::ConsumeAckReply>* ProxyServer::Stub::PrepareAsyncConsumeAckRaw(::grpc::ClientContext* context, const ::Proxy::ConsumeAckRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::Proxy::ConsumeAckReply>::Create(channel_.get(), cq, rpcmethod_ConsumeAck_, context, request, false);
 }
 
-Proxy::Service::Service() {
+ProxyServer::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Proxy_method_names[0],
+      ProxyServer_method_names[0],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< Proxy::Service, ::Proxy::ProduceRequest, ::Proxy::ProduceReply>(
-          std::mem_fn(&Proxy::Service::Produce), this)));
+      new ::grpc::internal::RpcMethodHandler< ProxyServer::Service, ::Proxy::ProduceRequest, ::Proxy::ProduceReply>(
+          std::mem_fn(&ProxyServer::Service::Produce), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Proxy_method_names[1],
+      ProxyServer_method_names[1],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< Proxy::Service, ::Proxy::ConsumeRequest, ::Proxy::ConsumeReply>(
-          std::mem_fn(&Proxy::Service::Consume), this)));
+      new ::grpc::internal::RpcMethodHandler< ProxyServer::Service, ::Proxy::ConsumeRequest, ::Proxy::ConsumeReply>(
+          std::mem_fn(&ProxyServer::Service::Consume), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Proxy_method_names[2],
+      ProxyServer_method_names[2],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< Proxy::Service, ::Proxy::ConsumeAckRequest, ::Proxy::ConsumeAckReply>(
-          std::mem_fn(&Proxy::Service::ConsumeAck), this)));
+      new ::grpc::internal::RpcMethodHandler< ProxyServer::Service, ::Proxy::ConsumeAckRequest, ::Proxy::ConsumeAckReply>(
+          std::mem_fn(&ProxyServer::Service::ConsumeAck), this)));
 }
 
-Proxy::Service::~Service() {
+ProxyServer::Service::~Service() {
 }
 
-::grpc::Status Proxy::Service::Produce(::grpc::ServerContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response) {
+::grpc::Status ProxyServer::Service::Produce(::grpc::ServerContext* context, const ::Proxy::ProduceRequest* request, ::Proxy::ProduceReply* response) {
   (void) context;
   (void) request;
   (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Proxy::Service::Consume(::grpc::ServerContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response) {
+::grpc::Status ProxyServer::Service::Consume(::grpc::ServerContext* context, const ::Proxy::ConsumeRequest* request, ::Proxy::ConsumeReply* response) {
   (void) context;
   (void) request;
   (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Proxy::Service::ConsumeAck(::grpc::ServerContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response) {
+::grpc::Status ProxyServer::Service::ConsumeAck(::grpc::ServerContext* context, const ::Proxy::ConsumeAckRequest* request, ::Proxy::ConsumeAckReply* response) {
   (void) context;
   (void) request;
   (void) response;

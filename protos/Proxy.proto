@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package Proxy;
 
-service Proxy {
+service ProxyServer {
     rpc Produce (ProduceRequest) returns (ProduceReply) {}
     rpc Consume (ConsumeRequest) returns (ConsumeReply) {}
     rpc ConsumeAck (ConsumeAckRequest) returns (ConsumeAckReply) {}
