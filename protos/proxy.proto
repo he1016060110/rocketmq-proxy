@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package proxy;
+
+service Proxy {
+    rpc Producer (ProducerRequest) returns (ProducerReply) {}
+    rpc ConsumerPull (ConsumerPullRequest) returns (ConsumerPullReply) {}
+    rpc ConsumerPullAck (ConsumerPullAckRequest) returns (ConsumerPullAckReply) {}
+}
+
+message ProducerRequest {
+    string topic = 1;
+    string tag = 2;
+    string body = 3;
+}
+
+message ProducerReply {
+    int32 code = 1;
+    string msg_id = 2;
+}
+
+message ConsumerPullRequest
+{
+    string topic = 1;
+    string consumer_group = 2;
+}
+
+message ConsumerPullReply
+{
+    int32 code = 1;
+    string msg_id = 2;
+    string body = 3;
+}
+
+message ConsumerPullAckRequest
+{
+    string topic = 1;
+    string msg_id = 2;
+    string consumer_group = 3;
+}
+
+message ConsumerPullAckReply
+{
+    int32 code = 1;
+    string msg_id = 2;
+    string consumer_group = 3;
+}
