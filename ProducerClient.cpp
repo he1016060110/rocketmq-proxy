@@ -6,8 +6,6 @@
 
 using namespace boost::property_tree;
 using namespace std;
-using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
-using namespace std;
 using namespace chrono;
 
 int main(int argc, char *argv[]) {

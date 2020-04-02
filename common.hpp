@@ -4,6 +4,8 @@
 
 #ifndef ROCKETMQ_PROXY_COMMON_HPP
 #define ROCKETMQ_PROXY_COMMON_HPP
+
+//property_tree 的线程安全
 #define BOOST_SPIRIT_THREADSAFE
 
 #include <curl/curl.h>
@@ -16,7 +18,6 @@
 #include "QueueTS.hpp"
 #include "MapTS.hpp"
 #include "Const.hpp"
-#include "server_ws.hpp"
 #include <future>
 #include <boost/thread.hpp>
 #include "ProxyLogger.hpp"

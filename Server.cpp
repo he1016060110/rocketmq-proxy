@@ -198,28 +198,6 @@ void startHeartBeatThead(WorkerPool &wp) {
     boost::thread(boost::bind(&startHeartBeat, &wp));
 }
 
-void startMonitor(WsServer &server, WorkerPool &wp) {
-    auto &monitorEndpoint = server.endpoint["^/monitorEndpoint/?$"];
-    monitorEndpoint.on_message = [&](shared_ptr<WsServer::Connection> connection,
-                                     shared_ptr<WsServer::InMessage> in_message) {
-    };
-
-    monitorEndpoint.on_open = [&](shared_ptr<WsServer::Connection> connection) {
-        cout << "Server: Opened connection " << connection.get() << endl;
-    };
-
-    monitorEndpoint.on_close = [&](shared_ptr<WsServer::Connection> connection, int status,
-                                   const string & /*reason*/) {
-        cout << "Server: Closed connection " << connection.get() << " with status code " << status << endl;
-    };
-
-    monitorEndpoint.on_error = [&](shared_ptr<WsServer::Connection> connection,
-                                   const SimpleWeb::error_code &ec) {
-        cout << "Server: Error in connection " << connection.get() << ". "
-             << "Error: " << ec << ", error message: " << ec.message() << endl;
-    };
-}
-
 int main(int argc, char *argv[]) {
     rocketmq::Arg_helper arg_help(argc, argv);
     string file = arg_help.get_option_value("-f");

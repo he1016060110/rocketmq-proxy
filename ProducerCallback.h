@@ -7,8 +7,6 @@
 
 #include "common.hpp"
 
-using WsServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
-
 class ProducerCallback : public AutoDeleteSendCallBack {
     virtual ~ProducerCallback() {}
     virtual void onSuccess(SendResult &sendResult) {
