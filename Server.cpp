@@ -177,7 +177,7 @@ protected:
 };
 
 
-class ProduceCallData : CallDataBase {
+class ProduceCallData : public CallDataBase {
 public:
     ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
         service, cq), responder_(&ctx_) {
@@ -229,7 +229,7 @@ private:
     ServerAsyncResponseWriter<ProduceReply> responder_;
 };
 
-class ConsumeCallData : CallDataBase {
+class ConsumeCallData : public CallDataBase {
 public:
     ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
         service, cq), responder_(&ctx_) {
@@ -262,7 +262,7 @@ private:
     ServerAsyncResponseWriter<ConsumeReply> responder_;
 };
 
-class ConsumeAckCallData : CallDataBase {
+class ConsumeAckCallData : public CallDataBase {
 public:
     ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
         service, cq), responder_(&ctx_) {
