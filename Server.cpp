@@ -62,6 +62,11 @@ enum MsgWorkerConsumeStatus {
     CONSUME_ACK
 };
 
+enum RequestType{
+    REQUEST_PRODUCE,
+    REQUEST_CONSUME,
+    REQUEST_CONSUME_ACK,
+};
 enum CallStatus {
     CREATE, PROCESS, FINISH
 };
@@ -145,7 +150,7 @@ public:
 
 class CallDataBase {
 public:
-    CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq)
+    CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
         : service_(service), cq_(cq), status_(CREATE) {
       Proceed();
     }
@@ -169,18 +174,24 @@ public:
       }
     }
 
+    RequestType getType()
+    {
+      return type_;
+    }
+
 protected:
     ProxyServer::AsyncService *service_;
     ServerCompletionQueue *cq_;
     ServerContext ctx_;
     CallStatus status_;
+    RequestType type_;
 };
 
 
 class ProduceCallData : public CallDataBase {
 public:
     ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq), responder_(&ctx_) {
+        service, cq, REQUEST_PRODUCE), responder_(&ctx_) {
       Proceed();
     }
 
@@ -232,7 +243,7 @@ private:
 class ConsumeCallData : public CallDataBase {
 public:
     ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq), responder_(&ctx_) {
+        service, cq, REQUEST_CONSUME), responder_(&ctx_) {
       Proceed();
     }
 
@@ -265,7 +276,7 @@ private:
 class ConsumeAckCallData : public CallDataBase {
 public:
     ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq), responder_(&ctx_) {
+        service, cq, REQUEST_CONSUME_ACK), responder_(&ctx_) {
       Proceed();
     }
 
@@ -329,7 +340,6 @@ public:
 
 private:
     void HandleRpcs() {
-
       new ProduceCallData(&service_, cq_.get());
       new ConsumeCallData(&service_, cq_.get());
       new ConsumeAckCallData(&service_, cq_.get());
@@ -338,7 +348,17 @@ private:
       while (true) {
         GPR_ASSERT(cq_->Next(&tag, &ok));
         GPR_ASSERT(ok);
-        static_cast<CallDataBase *>(tag)->Proceed();
+        switch (static_cast<CallDataBase *>(tag)->getType()) {
+          case REQUEST_PRODUCE:
+            static_cast<ProduceCallData *>(tag)->Proceed();
+            break;
+          case REQUEST_CONSUME:
+            static_cast<ConsumeCallData *>(tag)->Proceed();
+            break;
+          case REQUEST_CONSUME_ACK:
+            static_cast<ConsumeAckCallData *>(tag)->Proceed();
+            break;
+        }
       }
     }
 
