@@ -39,16 +39,18 @@ services:
       extnetwork:
         ipv4_address: 172.10.0.102
   rocketmq-proxy:
-    image: rocketmq-proxy:2.0.1
+    image: grpc-protobuf-boost-rocketmq:2.0.0
     cap_add:
       - SYS_PTRACE
     ports:
       - 8090:8090
     volumes:
-      - ./config/serverLocal.json:/data/config.json
-      - ./data/proxy/log:/data/log
-    command:
-      Server -f /data/config.json
+      - ../rocketmq-proxy:/data/rocketmq-proxy
+    command: >
+      bash -c while :
+      do
+        sleep 1
+      done
     networks:
       extnetwork:
         ipv4_address: 172.10.0.103
