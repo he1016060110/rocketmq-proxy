@@ -45,12 +45,9 @@ services:
     ports:
       - 8090:8090
     volumes:
-      - ../rocketmq-proxy:/data/rocketmq-proxy
-    command: >
-      bash -c while :
-      do
-        sleep 1
-      done
+      - /Users/hexi/Develop/rocketmq-proxy:/data/rocketmq-proxy
+    command:
+      bash -c "sleep 100000000000"
     networks:
       extnetwork:
         ipv4_address: 172.10.0.103
