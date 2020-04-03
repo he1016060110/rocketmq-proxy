@@ -26,8 +26,10 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using Proxy::ProduceRequest;
-using Proxy::ProduceReply;
+using Proxy::ConsumeAckRequest;
+using Proxy::ConsumeRequest;
+using Proxy::ConsumeAckReply;
+using Proxy::ConsumeReply;
 using Proxy::ProxyServer;
 
 class ProduceClient {
@@ -39,18 +41,18 @@ class ProduceClient {
   // from the server.
   std::string Produce(const std::string& user) {
     // Data we are sending to the server.
-    ProduceRequest request;
+    ConsumeAckRequest request;
     request.set_topic(user);
 
     // Container for the data we expect from the server.
-    ProduceReply reply;
+    ConsumeAckReply reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     // The actual RPC.
-    Status status = stub_->Produce(&context, request, &reply);
+    Status status = stub_->ConsumeAck(&context, request, &reply);
 
     // Act upon its status.
     if (status.ok()) {

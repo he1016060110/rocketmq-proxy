@@ -27,7 +27,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 include(FindPkgConfig)
 
-foreach(_target Server ProduceClient)
+foreach(_target Server ProduceClient ConsumeClient)
     add_executable(${_target} ${_target}.cpp proxy.grpc.pb.cc proxy.pb.cc)
     pkg_search_module(PROTOBUF REQUIRED protobuf)
     if(PROTOBUF_FOUND)

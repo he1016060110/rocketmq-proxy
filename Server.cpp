@@ -153,7 +153,7 @@ private:
         }
 
         void process() override {
-          new ProduceCallData(service_, cq_);
+          new ConsumeCallData(service_, cq_);
           std::string prefix("Consume ");
           reply_.set_msg_id(prefix + request_.topic());
 
@@ -186,7 +186,7 @@ private:
         }
 
         void process() override {
-          new ProduceCallData(service_, cq_);
+          new ConsumeAckCallData(service_, cq_);
           std::string prefix("ConsumeAck ");
           reply_.set_msg_id(prefix + request_.topic());
 
