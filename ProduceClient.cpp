@@ -71,7 +71,7 @@ class ProduceClient {
 
 int main(int argc, char** argv) {
   ProduceClient client(grpc::CreateChannel(
-      "localhost:50051", grpc::InsecureChannelCredentials()));
+      "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
   std::string topic("test-topic");
   std::string group("test-topic");
   std::string tag("*");

@@ -69,10 +69,10 @@ enum CallStatus {
 class CallDataBase;
 
 class MsgWorker {
-    string nameServerHost;
-    string accessKey;
-    string secretKey;
-    string accessChannel;
+    string nameServerHost_;
+    string accessKey_;
+    string secretKey_;
+    string accessChannel_;
 
     class ProducerUnit {
     public:
@@ -107,13 +107,13 @@ class MsgWorker {
         return iter->second;
       } else {
         shared_ptr<ProducerUnit> producerUnit(new ProducerUnit(topic));
-        producerUnit->producer.setNamesrvAddr(nameServerHost);
+        producerUnit->producer.setNamesrvAddr(nameServerHost_);
         producerUnit->producer.setGroupName(group);
         producerUnit->producer.setInstanceName(topic);
         producerUnit->producer.setSendMsgTimeout(500);
         producerUnit->producer.setTcpTransportTryLockTimeout(1000);
         producerUnit->producer.setTcpTransportConnectTimeout(400);
-        producerUnit->producer.setSessionCredentials(accessKey, secretKey, accessChannel);
+        producerUnit->producer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         try {
           producerUnit->producer.start();
           producers.insert(pair<string, shared_ptr<ProducerUnit>>(key, producerUnit));
@@ -132,6 +132,13 @@ public:
       msg.setDelayTimeLevel(delayLevel);
       auto producerUnit = getProducer(topic, group);
       producerUnit->producer.send(msg, callback);
+    }
+    void setConfig(string &nameServer, string &accessKey, string & secretKey, string channel)
+    {
+      nameServerHost_ = nameServer;
+      accessKey_ = accessKey;
+      secretKey_ = secretKey;
+      accessChannel_ = channel;
     }
 };
 
@@ -308,7 +315,8 @@ public:
     string accessChannel_;
 
     void Run() {
-      std::string server_address("0.0.0.0:50051");
+      string address = host_ + ":" +to_string(port_);
+      std::string server_address(address);
       ServerBuilder builder;
       builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
       builder.RegisterService(&service_);
@@ -377,6 +385,8 @@ int main(int argc, char *argv[]) {
   }
 
   ServerImpl server(host, port, nameServer, accessKey, secretKey, "channel");
+  CallDataBase::msgWorker->setConfig(nameServer, accessKey, secretKey, "channel");
+
   server.Run();
 
   return 0;
