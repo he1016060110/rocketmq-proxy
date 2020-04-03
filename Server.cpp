@@ -73,6 +73,15 @@ enum CallStatus {
 
 class CallDataBase;
 
+class ConsumerMsgListener : public MessageListenerConcurrently {
+public:
+    ConsumerMsgListener() {}
+    virtual ~ConsumerMsgListener() {}
+    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
+      return RECONSUME_LATER;
+    }
+};
+
 class MsgWorker {
     string nameServerHost_;
     string accessKey_;
@@ -88,6 +97,7 @@ class MsgWorker {
 
     class ConsumerUnit {
     public:
+        ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
         DefaultMQPushConsumer consumer;
         time_t lastActiveAt;
     };
@@ -129,7 +139,34 @@ class MsgWorker {
         }
       }
     }
-
+    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group) {
+      auto key = topic + group;
+      auto iter = consumers.find(key);
+      if (iter != consumers.end()) {
+        return iter->second;
+      } else {
+        shared_ptr<ConsumerUnit> consumerUnit(new ConsumerUnit(group));
+        consumerUnit->consumer.setNamesrvAddr(nameServerHost_);
+        consumerUnit->consumer.setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
+        consumerUnit->consumer.setInstanceName(group);
+        consumerUnit->consumer.subscribe(topic, "*");
+        consumerUnit->consumer.setConsumeThreadCount(3);
+        consumerUnit->consumer.setTcpTransportTryLockTimeout(1000);
+        consumerUnit->consumer.setTcpTransportConnectTimeout(400);
+        consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
+        ConsumerMsgListener *listener = new ConsumerMsgListener();
+        consumerUnit->consumer.registerMessageListener(listener);
+        try {
+          consumerUnit->consumer.start();
+          cout << "connected to "<< nameServerHost_<< " topic is " << topic << endl;
+          consumers.insert(pair<string, shared_ptr<ConsumerUnit>>(key, consumerUnit));
+          return consumerUnit;
+        } catch (MQClientException &e) {
+          cout << e << endl;
+          return nullptr;
+        }
+      }
+    }
 public:
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
