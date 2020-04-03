@@ -201,6 +201,8 @@ private:
 
     void HandleRpcs() {
       new ProduceCallData(&service_, cq_.get());
+      new ConsumeCallData(&service_, cq_.get());
+      new ConsumeAckCallData(&service_, cq_.get());
       void *tag;
       bool ok;
       while (true) {
