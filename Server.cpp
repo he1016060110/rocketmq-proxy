@@ -24,6 +24,7 @@
 #include <grpc/support/log.h>
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
+#include "Const.hpp"
 
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
@@ -34,6 +35,7 @@ using grpc::Status;
 using Proxy::ProduceRequest;
 using Proxy::ProduceReply;
 using Proxy::ProxyServer;
+
 
 class ServerImpl final {
 public:
@@ -56,50 +58,86 @@ public:
     }
 
 private:
-    class CallData {
+    enum RequestType {
+        PRODUCE,
+        CONSUME,
+        CONSUME_ACK
+    };
+
+    class CallDataBase {
     public:
-        CallData(ProxyServer::AsyncService* service, ServerCompletionQueue* cq)
-            : service_(service), cq_(cq), responder_(&ctx_), status_(CREATE) {
+        CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
+            : service_(service), cq_(cq), status_(CREATE), type_(type) {
           Proceed();
         }
-
+        virtual void create();
+        virtual void process();
+        virtual void del();
         void Proceed() {
           if (status_ == CREATE) {
             status_ = PROCESS;
-            service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
-                                      this);
+            create();
           } else if (status_ == PROCESS) {
-            new CallData(service_, cq_);
-            std::string prefix("Hello ");
-            reply_.set_msg_id(prefix + request_.topic());
-
-            status_ = FINISH;
-            responder_.Finish(reply_, Status::OK, this);
+            process();
           } else {
-            GPR_ASSERT(status_ == FINISH);
-            delete this;
+            del();
           }
         }
 
-    private:
-        ProxyServer::AsyncService* service_;
-        ServerCompletionQueue* cq_;
+    protected:
+        ProxyServer::AsyncService *service_;
+        ServerCompletionQueue *cq_;
         ServerContext ctx_;
+        enum CallStatus {
+            CREATE, PROCESS, FINISH
+        };
+        CallStatus status_;
+        RequestType type_;
+    };
+
+    class ProduceCallData : CallDataBase {
+    public:
+        ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type) : CallDataBase(
+            service, cq, type), responder_(&ctx_) {
+          Proceed();
+          CallDataBase(service, cq, type);
+        }
+
+    private:
+        void del()
+        {
+          GPR_ASSERT(status_ == FINISH);
+          delete this;
+        }
+        void create() {
+          service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
+                                   this);
+        }
+
+        void process() {
+          new ProduceCallData(service_, cq_, type_);
+          std::string prefix("Hello ");
+          reply_.set_msg_id(prefix + request_.topic());
+
+          status_ = FINISH;
+          responder_.Finish(reply_, Status::OK, this);
+        }
+
         ProduceRequest request_;
         ProduceReply reply_;
         ServerAsyncResponseWriter<ProduceReply> responder_;
-        enum CallStatus { CREATE, PROCESS, FINISH };
-        CallStatus status_;  // The current serving state.
     };
 
     void HandleRpcs() {
-      new CallData(&service_, cq_.get());
-      void* tag;  // uniquely identifies a request.
+      new ProduceCallData(&service_, cq_.get(), PRODUCE);
+      //new CallData(&service_, cq_.get(), CONSUME);
+      //new CallData(&service_, cq_.get(), CONSUME_ACK);
+      void *tag;  // uniquely identifies a request.
       bool ok;
       while (true) {
         GPR_ASSERT(cq_->Next(&tag, &ok));
         GPR_ASSERT(ok);
-        static_cast<CallData*>(tag)->Proceed();
+        static_cast<CallDataBase *>(tag)->Proceed();
       }
     }
 
@@ -108,7 +146,7 @@ private:
     std::unique_ptr<Server> server_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   ServerImpl server;
   server.Run();
 
