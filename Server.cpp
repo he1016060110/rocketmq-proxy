@@ -34,6 +34,10 @@ using grpc::ServerCompletionQueue;
 using grpc::Status;
 using Proxy::ProduceRequest;
 using Proxy::ProduceReply;
+using Proxy::ConsumeRequest;
+using Proxy::ConsumeReply;
+using Proxy::ConsumeAckRequest;
+using Proxy::ConsumeAckReply;
 using Proxy::ProxyServer;
 
 
@@ -66,8 +70,8 @@ private:
 
     class CallDataBase {
     public:
-        CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
-            : service_(service), cq_(cq), status_(CREATE), type_(type) {
+        CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq)
+            : service_(service), cq_(cq), status_(CREATE) {
           Proceed();
         }
         //virtual todo 为啥需要实现？？？
@@ -97,27 +101,27 @@ private:
 
     class ProduceCallData : CallDataBase {
     public:
-        ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type) : CallDataBase(
-            service, cq, type), responder_(&ctx_) {
+        ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
+            service, cq), responder_(&ctx_) {
           Proceed();
         }
 
     private:
-        void del()
+        void del() override
         {
           GPR_ASSERT(status_ == FINISH);
           delete this;
         }
 
-        void create() {
+        void create() override{
           status_ = PROCESS;
           service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
                                    this);
         }
 
-        void process() {
-          new ProduceCallData(service_, cq_, type_);
-          std::string prefix("Hello ");
+        void process() override {
+          new ProduceCallData(service_, cq_);
+          std::string prefix("Produce ");
           reply_.set_msg_id(prefix + request_.topic());
 
           status_ = FINISH;
@@ -128,12 +132,76 @@ private:
         ProduceReply reply_;
         ServerAsyncResponseWriter<ProduceReply> responder_;
     };
+    class ConsumeCallData : CallDataBase {
+    public:
+        ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
+            service, cq), responder_(&ctx_) {
+          Proceed();
+        }
+
+    private:
+        void del() override
+        {
+          GPR_ASSERT(status_ == FINISH);
+          delete this;
+        }
+
+        void create() override{
+          status_ = PROCESS;
+          service_->RequestConsume(&ctx_, &request_, &responder_, cq_, cq_,
+                                   this);
+        }
+
+        void process() override {
+          new ProduceCallData(service_, cq_);
+          std::string prefix("Consume ");
+          reply_.set_msg_id(prefix + request_.topic());
+
+          status_ = FINISH;
+          responder_.Finish(reply_, Status::OK, this);
+        }
+
+        ConsumeRequest request_;
+        ConsumeReply reply_;
+        ServerAsyncResponseWriter<ConsumeReply> responder_;
+    };
+    class ConsumeAckCallData : CallDataBase {
+    public:
+        ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
+            service, cq), responder_(&ctx_) {
+          Proceed();
+        }
+
+    private:
+        void del() override
+        {
+          GPR_ASSERT(status_ == FINISH);
+          delete this;
+        }
+
+        void create() override{
+          status_ = PROCESS;
+          service_->RequestConsumeAck(&ctx_, &request_, &responder_, cq_, cq_,
+                                   this);
+        }
+
+        void process() override {
+          new ProduceCallData(service_, cq_);
+          std::string prefix("ConsumeAck ");
+          reply_.set_msg_id(prefix + request_.topic());
+
+          status_ = FINISH;
+          responder_.Finish(reply_, Status::OK, this);
+        }
+
+        ConsumeAckRequest request_;
+        ConsumeAckReply reply_;
+        ServerAsyncResponseWriter<ConsumeAckReply> responder_;
+    };
 
     void HandleRpcs() {
-      new ProduceCallData(&service_, cq_.get(), PRODUCE);
-      //new CallData(&service_, cq_.get(), CONSUME);
-      //new CallData(&service_, cq_.get(), CONSUME_ACK);
-      void *tag;  // uniquely identifies a request.
+      new ProduceCallData(&service_, cq_.get());
+      void *tag;
       bool ok;
       while (true) {
         GPR_ASSERT(cq_->Next(&tag, &ok));
