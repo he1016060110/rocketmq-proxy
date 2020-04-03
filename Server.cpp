@@ -28,6 +28,14 @@
 #include "DefaultMQProducer.h"
 #include "DefaultMQPushConsumer.h"
 #include "ProducerCallback.h"
+#include "Arg_helper.h"
+#include <unistd.h>
+#include <fstream>
+
+#define BOOST_SPIRIT_THREADSAFE
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
@@ -118,7 +126,7 @@ class MsgWorker {
     }
 
 public:
-    void produce(ProducerCallback * callback, const string &topic, const string &group,
+    void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
       rocketmq::MQMessage msg(topic, tag, body);
       msg.setDelayTimeLevel(delayLevel);
@@ -134,7 +142,9 @@ public:
         : service_(service), cq_(cq), status_(CREATE) {
       Proceed();
     }
-    static MsgWorker * msgWorker;
+
+    static MsgWorker *msgWorker;
+
     //virtual todo 为啥需要实现？？？
     virtual void create() {};
 
@@ -183,6 +193,15 @@ private:
       new ProduceCallData(service_, cq_);
       auto that = this;
       auto callback = new ProducerCallback();
+
+      if(!request_.topic().size() || !request_.group().size()  || !request_.tag().size()  || !request_.body().size() ) {
+        reply_.set_code(1);
+        reply_.set_err_msg("params error!");
+        status_ = FINISH;
+        responder_.Finish(reply_, Status::OK, that);
+        return;
+      }
+
       callback->successFunc = [&](const string &msgId) {
           reply_.set_code(0);
           reply_.set_msg_id(msgId);
@@ -276,9 +295,20 @@ public:
       cq_->Shutdown();
     }
 
+    ServerImpl(string host, int port, string nameServer, string accessKey, string secretKey, string accessChannel) :
+        host_(host), port_(port), nameServerHost_(nameServer), accessKey_(accessKey), secretKey_(secretKey),
+        accessChannel_(accessChannel) {
+
+    };
+    string host_;
+    int port_;
+    string nameServerHost_;
+    string accessKey_;
+    string secretKey_;
+    string accessChannel_;
+
     void Run() {
       std::string server_address("0.0.0.0:50051");
-
       ServerBuilder builder;
       builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
       builder.RegisterService(&service_);
@@ -309,10 +339,44 @@ private:
     std::unique_ptr<Server> server_;
 };
 
-MsgWorker * CallDataBase::msgWorker = new MsgWorker();
+MsgWorker *CallDataBase::msgWorker = new MsgWorker();
 
-int main(int argc, char **argv) {
-  ServerImpl server;
+int main(int argc, char *argv[]) {
+  rocketmq::Arg_helper arg_help(argc, argv);
+  string file = arg_help.get_option_value("-f");
+  if (file.size() == 0 || access(file.c_str(), F_OK) == -1) {
+    cout << "Server -f [file_name]" << endl;
+    return 0;
+  }
+  string nameServer;
+  string host;
+  string accessKey;
+  string secretKey;
+  string esServer;
+  string logFileName;
+  int port;
+  try {
+    std::ifstream t(file);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    std::string contents(buffer.str());
+    std::istringstream jsonStream;
+    jsonStream.str(contents);
+    boost::property_tree::ptree jsonItem;
+    boost::property_tree::json_parser::read_json(jsonStream, jsonItem);
+    nameServer = jsonItem.get<string>("nameServer");
+    accessKey = jsonItem.get<string>("accessKey");
+    secretKey = jsonItem.get<string>("secretKey");
+    esServer = jsonItem.get<string>("esServer");
+    host = jsonItem.get<string>("host");
+    logFileName = jsonItem.get<string>("logFileName");
+    port = jsonItem.get<int>("port");
+  } catch (exception &e) {
+    cout << e.what() << endl;
+    return 0;
+  }
+
+  ServerImpl server(host, port, nameServer, accessKey, secretKey, "channel");
   server.Run();
 
   return 0;

@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <memory>
-#include <string>
 #include <grpcpp/grpcpp.h>
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
@@ -30,6 +29,8 @@ using Proxy::ProduceRequest;
 using Proxy::ProduceReply;
 using Proxy::ProxyServer;
 
+using namespace std;
+
 class ProduceClient {
  public:
   ProduceClient(std::shared_ptr<Channel> channel)
@@ -37,11 +38,13 @@ class ProduceClient {
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
-  std::string Produce(const std::string& user) {
+  std::string Produce(const std::string& topic, string &group , string &tag, string &body) {
     // Data we are sending to the server.
     ProduceRequest request;
-    request.set_topic(user);
-
+    request.set_topic(topic);
+    request.set_group(group);
+    request.set_tag(tag);
+    request.set_body(body);
     // Container for the data we expect from the server.
     ProduceReply reply;
 
@@ -67,14 +70,13 @@ class ProduceClient {
 };
 
 int main(int argc, char** argv) {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint (in this case,
-  // localhost at port 50051). We indicate that the channel isn't authenticated
-  // (use of InsecureChannelCredentials()).
   ProduceClient client(grpc::CreateChannel(
       "localhost:50051", grpc::InsecureChannelCredentials()));
-  std::string msg_id("test-topic");
-  std::string reply = client.Produce(msg_id);
+  std::string topic("test-topic");
+  std::string group("test-topic");
+  std::string tag("*");
+  std::string body("this is test!");
+  std::string reply = client.Produce(topic, group, tag, body);
   std::cout << "received: " << reply << std::endl;
 
   return 0;
