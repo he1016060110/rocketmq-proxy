@@ -24,6 +24,7 @@ string(REPLACE ";" " " CMAKE_C_FLAGS "${C_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O0 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+set( CMAKE_VERBOSE_MAKEFILE on )
 
 include_directories(include)
 
@@ -46,3 +47,9 @@ foreach(_target Server ProduceClient ConsumeClient)
     endif()
 endforeach()
 
+pkg_search_module(ROCKETMQ REQUIRED rocketmq)
+if(ROCKETMQ_FOUND)
+    include_directories(${ROCKETMQ_INCLUDE_DIRS})
+    target_link_libraries(Server ${ROCKETMQ_LIBRARIES})
+    target_include_directories(Server PRIVATE ${ROCKETMQ_INCLUDE_DIR})
+endif()

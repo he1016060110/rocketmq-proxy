@@ -5,7 +5,11 @@
 #ifndef ROCKETMQ_PROXY_PRODUCERCALLBACK_H
 #define ROCKETMQ_PROXY_PRODUCERCALLBACK_H
 
-#include "common.hpp"
+#include "DefaultMQProducer.h"
+#include <string>
+
+using namespace rocketmq;
+using namespace std;
 
 class ProducerCallback : public AutoDeleteSendCallBack {
     virtual ~ProducerCallback() {}
