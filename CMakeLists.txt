@@ -25,6 +25,8 @@ set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O0 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
+include_directories(include)
+
 include(FindPkgConfig)
 
 foreach(_target Server ProduceClient ConsumeClient)

@@ -25,6 +25,9 @@
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
 #include "Const.hpp"
+#include "DefaultMQProducer.h"
+#include "DefaultMQPushConsumer.h"
+#include "ProducerCallback.h"
 
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
@@ -40,6 +43,10 @@ using Proxy::ConsumeAckRequest;
 using Proxy::ConsumeAckReply;
 using Proxy::ProxyServer;
 
+using namespace std;
+using namespace rocketmq;
+
+#define MAX_PRODUCE_INACTIVE_TIME 100
 
 class ServerImpl final {
 public:
@@ -62,11 +69,88 @@ public:
     }
 
 private:
-    enum RequestType {
-        PRODUCE,
-        CONSUME,
+    enum MsgWorkerConsumeStatus {
+        PROXY_CONSUME,
+        CLIENT_RECEIVE,
         CONSUME_ACK
     };
+
+    class CallDataBase;
+
+    class MsgWorker {
+        string nameServerHost;
+        string accessKey;
+        string secretKey;
+        string accessChannel;
+
+        class ProducerUnit {
+        public:
+            ProducerUnit(string topic) : producer(DefaultMQProducer(topic)), lastActiveAt(time(0)) {};
+            DefaultMQProducer producer;
+            time_t lastActiveAt;
+        };
+
+        class ConsumerUnit {
+        public:
+            DefaultMQPushConsumer consumer;
+            time_t lastActiveAt;
+        };
+
+        class ConsumeMsgUnit {
+        public:
+            CallDataBase *call_data;
+            time_t consumeByProxyAt;
+            time_t sendClientAt;
+            time_t ackAt;
+            MsgWorkerConsumeStatus status;
+        };
+
+        std::map<string, shared_ptr<ProducerUnit>> producers;
+        std::map<string, shared_ptr<ConsumerUnit>> consumers;
+        std::map<string, shared_ptr<ConsumeMsgUnit>> msgs;
+
+        shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
+          auto key = topic + group;
+          auto iter = producers.find(key);
+          if (iter != producers.end()) {
+            return iter->second;
+          } else {
+            shared_ptr<ProducerUnit> producerUnit(new ProducerUnit(topic));
+            producerUnit->producer.setNamesrvAddr(nameServerHost);
+            producerUnit->producer.setGroupName(group);
+            producerUnit->producer.setInstanceName(topic);
+            producerUnit->producer.setSendMsgTimeout(500);
+            producerUnit->producer.setTcpTransportTryLockTimeout(1000);
+            producerUnit->producer.setTcpTransportConnectTimeout(400);
+            producerUnit->producer.setSessionCredentials(accessKey, secretKey, accessChannel);
+            try {
+              producerUnit->producer.start();
+              producers.insert(pair<string, shared_ptr<ProducerUnit>>(key, producerUnit));
+              return producerUnit;
+            } catch (exception &e) {
+              cout << e.what() << endl;
+              return nullptr;
+            }
+          }
+        }
+
+    public:
+        void produce(string &topic, string &group, string &tag, string &body, int delayLevel = 0) {
+          rocketmq::MQMessage msg(topic, tag, body);
+          msg.setDelayTimeLevel(delayLevel);
+          auto producerUnit = getProducer(topic, group);
+          auto callback = new ProducerCallback();
+          //不能传引用，因为都是临时变量
+          callback->successFunc = [=](const string &msgId) {
+              //wp.log.writeLog(ROCKETMQ_PROXY_LOG_TYPE_PRODUCER, msgId, topic, group, body, delayLevel);
+          };
+          callback->failureFunc = [=](const string &msgResp) {
+
+          };
+          producerUnit->producer.send(msg, callback);
+        }
+    };
+
 
     class CallDataBase {
     public:
@@ -74,10 +158,14 @@ private:
             : service_(service), cq_(cq), status_(CREATE) {
           Proceed();
         }
+
         //virtual todo 为啥需要实现？？？
-        virtual void create(){};
-        virtual void process(){};
-        virtual void del(){};
+        virtual void create() {};
+
+        virtual void process() {};
+
+        virtual void del() {};
+
         void Proceed() {
           if (status_ == CREATE) {
             create();
@@ -96,7 +184,6 @@ private:
             CREATE, PROCESS, FINISH
         };
         CallStatus status_;
-        RequestType type_;
     };
 
     class ProduceCallData : CallDataBase {
@@ -107,13 +194,12 @@ private:
         }
 
     private:
-        void del() override
-        {
+        void del() override {
           GPR_ASSERT(status_ == FINISH);
           delete this;
         }
 
-        void create() override{
+        void create() override {
           status_ = PROCESS;
           service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
                                    this);
@@ -132,6 +218,7 @@ private:
         ProduceReply reply_;
         ServerAsyncResponseWriter<ProduceReply> responder_;
     };
+
     class ConsumeCallData : CallDataBase {
     public:
         ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
@@ -140,13 +227,12 @@ private:
         }
 
     private:
-        void del() override
-        {
+        void del() override {
           GPR_ASSERT(status_ == FINISH);
           delete this;
         }
 
-        void create() override{
+        void create() override {
           status_ = PROCESS;
           service_->RequestConsume(&ctx_, &request_, &responder_, cq_, cq_,
                                    this);
@@ -165,6 +251,7 @@ private:
         ConsumeReply reply_;
         ServerAsyncResponseWriter<ConsumeReply> responder_;
     };
+
     class ConsumeAckCallData : CallDataBase {
     public:
         ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
@@ -173,16 +260,15 @@ private:
         }
 
     private:
-        void del() override
-        {
+        void del() override {
           GPR_ASSERT(status_ == FINISH);
           delete this;
         }
 
-        void create() override{
+        void create() override {
           status_ = PROCESS;
           service_->RequestConsumeAck(&ctx_, &request_, &responder_, cq_, cq_,
-                                   this);
+                                      this);
         }
 
         void process() override {
