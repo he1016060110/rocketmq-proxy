@@ -70,12 +70,12 @@ private:
             : service_(service), cq_(cq), status_(CREATE), type_(type) {
           Proceed();
         }
-        virtual void create();
-        virtual void process();
-        virtual void del();
+        //virtual todo 为啥需要实现？？？
+        virtual void create(){};
+        virtual void process(){};
+        virtual void del(){};
         void Proceed() {
           if (status_ == CREATE) {
-            status_ = PROCESS;
             create();
           } else if (status_ == PROCESS) {
             process();
@@ -100,7 +100,6 @@ private:
         ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type) : CallDataBase(
             service, cq, type), responder_(&ctx_) {
           Proceed();
-          CallDataBase(service, cq, type);
         }
 
     private:
@@ -109,7 +108,9 @@ private:
           GPR_ASSERT(status_ == FINISH);
           delete this;
         }
+
         void create() {
+          status_ = PROCESS;
           service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
                                    this);
         }
