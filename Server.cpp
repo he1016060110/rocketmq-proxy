@@ -154,7 +154,7 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportTryLockTimeout(1000);
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
-        ConsumerMsgListener *listener = new ConsumerMsgListener();
+        auto listener = new ConsumerMsgListener();
         consumerUnit->consumer.registerMessageListener(listener);
         try {
           consumerUnit->consumer.start();
