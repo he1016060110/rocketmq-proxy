@@ -5,6 +5,62 @@
 #ifndef ROCKETMQ_PROXY_MSGWORKER_H
 #define ROCKETMQ_PROXY_MSGWORKER_H
 
+#include "ConsumeCallData.h"
+#include "ConsumeAckCallData.h"
+#include <string>
+#include "DefaultMQProducer.h"
+#include "QueueTS.hpp"
+#include "DefaultMQPushConsumer.h"
+#include <iostream>
+#include "ProducerCallback.h"
+
+using namespace std;
+using namespace rocketmq;
+
+
+enum MsgWorkerConsumeStatus {
+    PROXY_CONSUME_INIT,
+    PROXY_CONSUME,
+    CLIENT_RECEIVE,
+    CONSUME_ACK
+};
+
+class ConsumerUnit {
+public:
+    ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
+    DefaultMQPushConsumer consumer;
+    time_t lastActiveAt;
+};
+
+class ConsumeMsgUnit {
+public:
+    ConsumeMsgUnit(ConsumeCallData *paramCallData, string paramTopic, string paramGroup) :
+        callData(paramCallData), topic(paramTopic), group(paramGroup), status(PROXY_CONSUME_INIT),
+        lastActiveAt(time(0)) {
+    };
+    ConsumeCallData *callData;
+    ConsumeAckCallData *ackCallData;
+    string topic;
+    string group;
+    string msgId;
+    time_t consumeByProxyAt;
+    time_t sendClientAt;
+    time_t ackAt;
+    time_t lastActiveAt;
+    MsgWorkerConsumeStatus status;
+};
+
+class ConsumerMsgListener : public MessageListenerConcurrently {
+public:
+    ConsumerMsgListener() {}
+
+    virtual ~ConsumerMsgListener() {}
+
+    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
+      return RECONSUME_LATER;
+    }
+};
+
 class MsgWorker {
     string nameServerHost_;
     string accessKey_;

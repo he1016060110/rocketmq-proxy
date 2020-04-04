@@ -25,16 +25,13 @@
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
 #include "Const.hpp"
-#include "DefaultMQProducer.h"
-#include "DefaultMQPushConsumer.h"
-#include "ProducerCallback.h"
 #include "Arg_helper.h"
 #include <unistd.h>
 #include <fstream>
-#include "QueueTS.hpp"
+#include "CallData.h"
+#include "ServerImpl.h"
 
 #define BOOST_SPIRIT_THREADSAFE
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -55,100 +52,7 @@ using Proxy::ProxyServer;
 using namespace std;
 using namespace rocketmq;
 
-#define MAX_PRODUCE_INACTIVE_TIME 100
 
-enum MsgWorkerConsumeStatus {
-    PROXY_CONSUME_INIT,
-    PROXY_CONSUME,
-    CLIENT_RECEIVE,
-    CONSUME_ACK
-};
-
-enum RequestType {
-    REQUEST_PRODUCE,
-    REQUEST_CONSUME,
-    REQUEST_CONSUME_ACK,
-};
-enum CallStatus {
-    CREATE, PROCESS, FINISH
-};
-
-class MsgWorker;
-class ConsumeCallData;
-class ConsumeAckCallData;
-
-class ConsumerMsgListener : public MessageListenerConcurrently {
-public:
-    ConsumerMsgListener() {}
-
-    virtual ~ConsumerMsgListener() {}
-
-    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
-      return RECONSUME_LATER;
-    }
-};
-class ConsumerUnit {
-public:
-    ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
-    DefaultMQPushConsumer consumer;
-    time_t lastActiveAt;
-};
-
-class ConsumeMsgUnit {
-public:
-    ConsumeMsgUnit(ConsumeCallData *paramCallData, string paramTopic, string paramGroup) :
-        callData(paramCallData), topic(paramTopic), group(paramGroup), status(PROXY_CONSUME_INIT),
-        lastActiveAt(time(0)) {
-    };
-    ConsumeCallData *callData;
-    ConsumeAckCallData *ackCallData;
-    string topic;
-    string group;
-    string msgId;
-    time_t consumeByProxyAt;
-    time_t sendClientAt;
-    time_t ackAt;
-    time_t lastActiveAt;
-    MsgWorkerConsumeStatus status;
-};
-
-class CallDataBase {
-public:
-    CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
-        : service_(service), cq_(cq), status_(CREATE), type_(type) {
-      Proceed();
-    }
-
-    static MsgWorker *msgWorker;
-
-    //virtual todo 为啥需要实现？？？
-    virtual void create() {};
-
-    virtual void process() {};
-
-    virtual void del() {};
-
-    void Proceed() {
-      if (status_ == CREATE) {
-        create();
-      } else if (status_ == PROCESS) {
-        process();
-      } else {
-        del();
-      }
-    }
-
-    RequestType getType() {
-      return type_;
-    }
-
-protected:
-    ProxyServer::AsyncService *service_;
-    ServerCompletionQueue *cq_;
-    ServerContext ctx_;
-    CallStatus status_;
-    RequestType type_;
-};
 
 int main(int argc, char *argv[]) {
   rocketmq::Arg_helper arg_help(argc, argv);

@@ -5,7 +5,7 @@
 #ifndef ROCKETMQ_PROXY_CONSUME_CALL_DATA_H
 #define ROCKETMQ_PROXY_CONSUME_CALL_DATA_H
 
-
+#include "CallData.h"
 class ConsumeCallData : public CallDataBase {
 public:
     ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
