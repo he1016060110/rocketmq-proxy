@@ -31,6 +31,7 @@
 #include "Arg_helper.h"
 #include <unistd.h>
 #include <fstream>
+#include "QueueTS.hpp"
 
 #define BOOST_SPIRIT_THREADSAFE
 
@@ -57,12 +58,13 @@ using namespace rocketmq;
 #define MAX_PRODUCE_INACTIVE_TIME 100
 
 enum MsgWorkerConsumeStatus {
+    PROXY_CONSUME_INIT,
     PROXY_CONSUME,
     CLIENT_RECEIVE,
     CONSUME_ACK
 };
 
-enum RequestType{
+enum RequestType {
     REQUEST_PRODUCE,
     REQUEST_CONSUME,
     REQUEST_CONSUME_ACK,
@@ -72,14 +74,42 @@ enum CallStatus {
 };
 
 class CallDataBase;
+class ConsumeCallData;
+class ConsumeAckCallData;
 
 class ConsumerMsgListener : public MessageListenerConcurrently {
 public:
     ConsumerMsgListener() {}
+
     virtual ~ConsumerMsgListener() {}
+
     virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
       return RECONSUME_LATER;
     }
+};
+class ConsumerUnit {
+public:
+    ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
+    DefaultMQPushConsumer consumer;
+    time_t lastActiveAt;
+};
+
+class ConsumeMsgUnit {
+public:
+    ConsumeMsgUnit(ConsumeCallData *paramCallData, string paramTopic, string paramGroup) :
+        callData(paramCallData), topic(paramTopic), group(paramGroup), status(PROXY_CONSUME_INIT),
+        lastActiveAt(time(0)) {
+    };
+    ConsumeCallData *callData;
+    ConsumeAckCallData *ackCallData;
+    string topic;
+    string group;
+    string msgId;
+    time_t consumeByProxyAt;
+    time_t sendClientAt;
+    time_t ackAt;
+    time_t lastActiveAt;
+    MsgWorkerConsumeStatus status;
 };
 
 class MsgWorker {
@@ -93,22 +123,6 @@ class MsgWorker {
         ProducerUnit(string topic) : producer(DefaultMQProducer(topic)), lastActiveAt(time(0)) {};
         DefaultMQProducer producer;
         time_t lastActiveAt;
-    };
-
-    class ConsumerUnit {
-    public:
-        ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
-        DefaultMQPushConsumer consumer;
-        time_t lastActiveAt;
-    };
-
-    class ConsumeMsgUnit {
-    public:
-        CallDataBase *call_data;
-        time_t consumeByProxyAt;
-        time_t sendClientAt;
-        time_t ackAt;
-        MsgWorkerConsumeStatus status;
     };
 
     std::map<string, shared_ptr<ProducerUnit>> producers;
@@ -139,6 +153,14 @@ class MsgWorker {
         }
       }
     }
+
+    bool getConsumerExist(const string &topic, const string &group)
+    {
+      auto key = topic + group;
+
+      return consumers.find(key) != consumers.end();
+    }
+
     shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group) {
       auto key = topic + group;
       auto iter = consumers.find(key);
@@ -158,7 +180,7 @@ class MsgWorker {
         consumerUnit->consumer.registerMessageListener(listener);
         try {
           consumerUnit->consumer.start();
-          cout << "connected to "<< nameServerHost_<< " topic is " << topic << endl;
+          cout << "connected to " << nameServerHost_ << " topic is " << topic << endl;
           consumers.insert(pair<string, shared_ptr<ConsumerUnit>>(key, consumerUnit));
           return consumerUnit;
         } catch (MQClientException &e) {
@@ -167,7 +189,52 @@ class MsgWorker {
         }
       }
     }
+
+    QueueTS<vector<string>> msgConsumerCreateQueue;
+    map<string, QueueTS<MQMessageExt>> msgPool;
+    void resourceManager()
+    {
+      for(;;) {
+        vector<string> v = msgConsumerCreateQueue.wait_and_pop();
+        string topic = v[0];
+        string group = v[1];
+        getConsumer(topic, group);
+      }
+    }
+
+    bool getMsgPoolExist(const string &topic, const string &group)
+    {
+      auto key = topic + group;
+
+      return msgPool.find(key) != msgPool.end();
+    }
+
+    void loopMatch()
+    {
+      auto iter = consumeMsgPool.begin();
+      while(iter != consumeMsgPool.end()) {
+        auto unit = iter->get();
+        if (unit->status == PROXY_CONSUME_INIT) {
+          //consumer不存在的时候创建consumer
+          if (!getConsumerExist(unit->topic, unit->group)) {
+            vector<string> v;
+            v.push_back(unit->topic);
+            v.push_back(unit->group);
+            msgConsumerCreateQueue.push(v);
+          }
+          //检查消息队列pool里面有没有消息
+          if (getMsgPoolExist(unit->topic, unit->group)) {
+            auto key = unit->topic + unit->group;
+            MQMessageExt msg;
+            if (msgPool[key].try_pop(msg)) {
+
+            }
+          }
+        }
+      }
+    }
 public:
+    vector<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
       rocketmq::MQMessage msg(topic, tag, body);
@@ -175,8 +242,8 @@ public:
       auto producerUnit = getProducer(topic, group);
       producerUnit->producer.send(msg, callback);
     }
-    void setConfig(string &nameServer, string &accessKey, string & secretKey, string channel)
-    {
+
+    void setConfig(string &nameServer, string &accessKey, string &secretKey, string channel) {
       nameServerHost_ = nameServer;
       accessKey_ = accessKey;
       secretKey_ = secretKey;
@@ -211,8 +278,7 @@ public:
       }
     }
 
-    RequestType getType()
-    {
+    RequestType getType() {
       return type_;
     }
 
@@ -249,7 +315,7 @@ private:
       auto that = this;
       auto callback = new ProducerCallback();
 
-      if(!request_.topic().size() || !request_.group().size()  || !request_.tag().size()  || !request_.body().size() ) {
+      if (!request_.topic().size() || !request_.group().size() || !request_.tag().size() || !request_.body().size()) {
         reply_.set_code(1);
         reply_.set_err_msg("params error!");
         status_ = FINISH;
@@ -300,11 +366,8 @@ private:
 
     void process() override {
       new ConsumeCallData(service_, cq_);
-      std::string prefix("Consume ");
-      reply_.set_msg_id(prefix + request_.topic());
-
-      status_ = FINISH;
-      responder_.Finish(reply_, Status::OK, this);
+      shared_ptr<ConsumeMsgUnit> unit(new ConsumeMsgUnit(this, request_.topic(), request_.consumer_group()));
+      msgWorker->consumeMsgPool.push_back(unit);
     }
 
     ConsumeRequest request_;
@@ -365,7 +428,7 @@ public:
     string accessChannel_;
 
     void Run() {
-      string address = host_ + ":" +to_string(port_);
+      string address = host_ + ":" + to_string(port_);
       std::string server_address(address);
       ServerBuilder builder;
       builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
