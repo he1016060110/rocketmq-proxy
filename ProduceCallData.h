@@ -5,7 +5,9 @@
 #ifndef ROCKETMQ_PROXY_PRODUCE_CALL_DATA_H
 #define ROCKETMQ_PROXY_PRODUCE_CALL_DATA_H
 
+#include "ProducerCallback.h"
 #include "CallData.h"
+#include "MsgWorker.h"
 
 class ProduceCallData : public CallDataBase {
 public:

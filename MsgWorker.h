@@ -5,18 +5,17 @@
 #ifndef ROCKETMQ_PROXY_MSGWORKER_H
 #define ROCKETMQ_PROXY_MSGWORKER_H
 
+#include "ProducerCallback.h"
 #include "ConsumeCallData.h"
 #include "ConsumeAckCallData.h"
-#include <string>
 #include "DefaultMQProducer.h"
 #include "QueueTS.hpp"
 #include "DefaultMQPushConsumer.h"
 #include <iostream>
-#include "ProducerCallback.h"
+#include <string>
 
 using namespace std;
 using namespace rocketmq;
-
 
 enum MsgWorkerConsumeStatus {
     PROXY_CONSUME_INIT,
@@ -49,6 +48,7 @@ public:
     time_t lastActiveAt;
     MsgWorkerConsumeStatus status;
 };
+
 
 class ConsumerMsgListener : public MessageListenerConcurrently {
 public:

@@ -5,7 +5,6 @@
 #ifndef ROCKETMQ_PROXY_CALL_DATA_H
 #define ROCKETMQ_PROXY_CALL_DATA_H
 
-#include "MsgWorker.h"
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
 #include "Proxy.pb.h"
@@ -35,7 +34,7 @@ enum RequestType {
 enum CallStatus {
     CREATE, PROCESS, FINISH
 };
-
+class MsgWorker;
 class CallDataBase {
 public:
     CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)

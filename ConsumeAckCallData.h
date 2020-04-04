@@ -4,6 +4,7 @@
 
 #ifndef ROCKETMQ_PROXY_CONSUME_ACK_CALL_DATA_H
 #define ROCKETMQ_PROXY_CONSUME_ACK_CALL_DATA_H
+
 #include "CallData.h"
 
 class ConsumeAckCallData : public CallDataBase {
