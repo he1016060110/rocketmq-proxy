@@ -7,6 +7,7 @@
 
 #include "DefaultMQProducer.h"
 #include <string>
+#include <functional>
 
 using namespace rocketmq;
 using namespace std;

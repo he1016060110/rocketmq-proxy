@@ -176,7 +176,7 @@ class MsgWorker {
             auto key = unit->topic + unit->group;
             MQMessageExt msg;
             if (msgPool[key].try_pop(msg)) {
-              unit->callData->responseMsg(0, "", msg.getQueueId(), msg.getBody());
+              unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
             }
           }
         }

@@ -24,7 +24,6 @@
 #include <grpc/support/log.h>
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
-#include "Const.hpp"
 #include "Arg_helper.h"
 #include <unistd.h>
 #include <fstream>

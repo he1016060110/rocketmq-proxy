@@ -6,7 +6,6 @@
 #define ROCKETMQ_PROXY_CONSUME_CALL_DATA_H
 
 #include "CallData.h"
-#include "MsgWorker.h"
 
 class ConsumeCallData : public CallDataBase {
 public:
@@ -15,7 +14,7 @@ public:
       Proceed();
     }
 
-    bool responseMsg(int code, string errMsg, string &msgId, string &body)
+    bool responseMsg(int code, string errMsg, string msgId, string body)
     {
       reply_.set_msg_id(msgId);
       reply_.set_body(body);
@@ -36,13 +35,7 @@ private:
       service_->RequestConsume(&ctx_, &request_, &responder_, cq_, cq_,
                                this);
     }
-
-    void process() override {
-      new ConsumeCallData(service_, cq_);
-      shared_ptr<ConsumeMsgUnit> unit(new ConsumeMsgUnit(this, request_.topic(), request_.consumer_group()));
-      msgWorker->consumeMsgPool.push_back(unit);
-    }
-
+    void process() override;
     ConsumeRequest request_;
     ConsumeReply reply_;
     ServerAsyncResponseWriter<ConsumeReply> responder_;
