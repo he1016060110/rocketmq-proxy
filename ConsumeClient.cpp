@@ -32,27 +32,28 @@ using Proxy::ConsumeAckReply;
 using Proxy::ConsumeReply;
 using Proxy::ProxyServer;
 
-class ProduceClient {
+class ConsumeClient {
  public:
-  ProduceClient(std::shared_ptr<Channel> channel)
+    ConsumeClient(std::shared_ptr<Channel> channel)
       : stub_(ProxyServer::NewStub(channel)) {}
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
-  std::string Produce(const std::string& user) {
+  std::string Consume(const std::string& topic, const std::string& group) {
     // Data we are sending to the server.
-    ConsumeAckRequest request;
-    request.set_topic(user);
+    ConsumeRequest request;
+    request.set_topic(topic);
+    request.set_consumer_group(group);
 
     // Container for the data we expect from the server.
-    ConsumeAckReply reply;
+    ConsumeReply reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     // The actual RPC.
-    Status status = stub_->ConsumeAck(&context, request, &reply);
+    Status status = stub_->Consume(&context, request, &reply);
 
     // Act upon its status.
     if (status.ok()) {
@@ -69,14 +70,9 @@ class ProduceClient {
 };
 
 int main(int argc, char** argv) {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint (in this case,
-  // localhost at port 50051). We indicate that the channel isn't authenticated
-  // (use of InsecureChannelCredentials()).
-  ProduceClient client(grpc::CreateChannel(
-      "localhost:50051", grpc::InsecureChannelCredentials()));
-  std::string msg_id("test-topic");
-  std::string reply = client.Produce(msg_id);
+  ConsumeClient client(grpc::CreateChannel(
+      "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
+  std::string reply = client.Consume("test-topic", "test-topic");
   std::cout << "received: " << reply << std::endl;
 
   return 0;

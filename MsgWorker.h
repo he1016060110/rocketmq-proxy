@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include "boost/thread.hpp"
+#include <memory>
 
 using namespace std;
 using namespace rocketmq;
@@ -58,8 +59,16 @@ public:
     virtual ~ConsumerMsgListener() {}
 
     virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
-      return RECONSUME_LATER;
+      callback(msgs);
     }
+
+    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> paramCallback)
+    {
+      callback = paramCallback;
+    }
+
+private:
+    std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> callback;
 };
 
 class MsgWorker {
@@ -127,6 +136,21 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
+        auto callback = [=](const std::vector<MQMessageExt> &msgs){
+          auto msg = msgs[0];
+          auto key = topic + group;
+          if (getMsgPoolExist(topic, group)) {
+            msgPool[key]->push(msg);
+          } else {
+            shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
+            msgP->push(msg);
+            msgPool[key] = msgP;
+          }
+          boost::this_thread::sleep(boost::posix_time::seconds(1));
+          //todo 等待消息被消费
+          return CONSUME_SUCCESS;
+        };
+        listener->setMsgCallback(callback);
         consumerUnit->consumer.registerMessageListener(listener);
         try {
           consumerUnit->consumer.start();
@@ -141,7 +165,7 @@ class MsgWorker {
     }
 
     QueueTS<vector<string>> msgConsumerCreateQueue;
-    map<string, QueueTS<MQMessageExt>> msgPool;
+    map<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
     void resourceManager()
     {
       for(;;) {
@@ -176,7 +200,7 @@ class MsgWorker {
           if (getMsgPoolExist(unit->topic, unit->group)) {
             auto key = unit->topic + unit->group;
             MQMessageExt msg;
-            if (msgPool[key].try_pop(msg)) {
+            if (msgPool[key]->try_pop(msg)) {
               unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
             }
           }
