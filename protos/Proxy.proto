@@ -33,7 +33,7 @@ message ConsumeReply
     int32 code = 1;
     string msg_id = 2;
     string body = 3;
-    string type = 4;
+    string error_msg = 4;
 }
 
 message ConsumeAckRequest
@@ -47,5 +47,5 @@ message ConsumeAckReply
 {
     int32 code = 1;
     string msg_id = 2;
-    string consumer_group = 3;
+    string error_msg = 4;
 }

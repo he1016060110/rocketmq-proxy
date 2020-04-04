@@ -1,0 +1,148 @@
+//
+// Created by hexi on 2020/4/4.
+//
+
+#ifndef ROCKETMQ_PROXY_MSGWORKER_H
+#define ROCKETMQ_PROXY_MSGWORKER_H
+
+class MsgWorker {
+    string nameServerHost_;
+    string accessKey_;
+    string secretKey_;
+    string accessChannel_;
+
+    class ProducerUnit {
+    public:
+        ProducerUnit(string topic) : producer(DefaultMQProducer(topic)), lastActiveAt(time(0)) {};
+        DefaultMQProducer producer;
+        time_t lastActiveAt;
+    };
+
+    std::map<string, shared_ptr<ProducerUnit>> producers;
+    std::map<string, shared_ptr<ConsumerUnit>> consumers;
+    std::map<string, shared_ptr<ConsumeMsgUnit>> msgs;
+
+    shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
+      auto key = topic + group;
+      auto iter = producers.find(key);
+      if (iter != producers.end()) {
+        return iter->second;
+      } else {
+        shared_ptr<ProducerUnit> producerUnit(new ProducerUnit(topic));
+        producerUnit->producer.setNamesrvAddr(nameServerHost_);
+        producerUnit->producer.setGroupName(group);
+        producerUnit->producer.setInstanceName(topic);
+        producerUnit->producer.setSendMsgTimeout(500);
+        producerUnit->producer.setTcpTransportTryLockTimeout(1000);
+        producerUnit->producer.setTcpTransportConnectTimeout(400);
+        producerUnit->producer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
+        try {
+          producerUnit->producer.start();
+          producers.insert(pair<string, shared_ptr<ProducerUnit>>(key, producerUnit));
+          return producerUnit;
+        } catch (exception &e) {
+          cout << e.what() << endl;
+          return nullptr;
+        }
+      }
+    }
+
+    bool getConsumerExist(const string &topic, const string &group)
+    {
+      auto key = topic + group;
+
+      return consumers.find(key) != consumers.end();
+    }
+
+    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group) {
+      auto key = topic + group;
+      auto iter = consumers.find(key);
+      if (iter != consumers.end()) {
+        return iter->second;
+      } else {
+        shared_ptr<ConsumerUnit> consumerUnit(new ConsumerUnit(group));
+        consumerUnit->consumer.setNamesrvAddr(nameServerHost_);
+        consumerUnit->consumer.setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
+        consumerUnit->consumer.setInstanceName(group);
+        consumerUnit->consumer.subscribe(topic, "*");
+        consumerUnit->consumer.setConsumeThreadCount(3);
+        consumerUnit->consumer.setTcpTransportTryLockTimeout(1000);
+        consumerUnit->consumer.setTcpTransportConnectTimeout(400);
+        consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
+        auto listener = new ConsumerMsgListener();
+        consumerUnit->consumer.registerMessageListener(listener);
+        try {
+          consumerUnit->consumer.start();
+          cout << "connected to " << nameServerHost_ << " topic is " << topic << endl;
+          consumers.insert(pair<string, shared_ptr<ConsumerUnit>>(key, consumerUnit));
+          return consumerUnit;
+        } catch (MQClientException &e) {
+          cout << e << endl;
+          return nullptr;
+        }
+      }
+    }
+
+    QueueTS<vector<string>> msgConsumerCreateQueue;
+    map<string, QueueTS<MQMessageExt>> msgPool;
+    void resourceManager()
+    {
+      for(;;) {
+        vector<string> v = msgConsumerCreateQueue.wait_and_pop();
+        string topic = v[0];
+        string group = v[1];
+        getConsumer(topic, group);
+      }
+    }
+
+    bool getMsgPoolExist(const string &topic, const string &group)
+    {
+      auto key = topic + group;
+
+      return msgPool.find(key) != msgPool.end();
+    }
+
+    void loopMatch()
+    {
+      auto iter = consumeMsgPool.begin();
+      while(iter != consumeMsgPool.end()) {
+        auto unit = iter->get();
+        if (unit->status == PROXY_CONSUME_INIT) {
+          //consumer不存在的时候创建consumer
+          if (!getConsumerExist(unit->topic, unit->group)) {
+            vector<string> v;
+            v.push_back(unit->topic);
+            v.push_back(unit->group);
+            msgConsumerCreateQueue.push(v);
+          }
+          //检查消息队列pool里面有没有消息
+          if (getMsgPoolExist(unit->topic, unit->group)) {
+            auto key = unit->topic + unit->group;
+            MQMessageExt msg;
+            if (msgPool[key].try_pop(msg)) {
+              unit->callData->responseMsg(0, "", msg.getQueueId(), msg.getBody());
+            }
+          }
+        }
+      }
+    }
+public:
+    vector<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+    void produce(ProducerCallback *callback, const string &topic, const string &group,
+                 const string &tag, const string &body, const int delayLevel = 0) {
+      rocketmq::MQMessage msg(topic, tag, body);
+      msg.setDelayTimeLevel(delayLevel);
+      auto producerUnit = getProducer(topic, group);
+      producerUnit->producer.send(msg, callback);
+    }
+
+    void setConfig(string &nameServer, string &accessKey, string &secretKey, string channel) {
+      nameServerHost_ = nameServer;
+      accessKey_ = accessKey;
+      secretKey_ = secretKey;
+      accessChannel_ = channel;
+    }
+};
+
+
+#endif //ROCKETMQ_PROXY_MSGWORKER_H

@@ -694,17 +694,17 @@ class ConsumeReply :
   std::string* release_body();
   void set_allocated_body(std::string* body);
 
-  // string type = 4;
-  void clear_type();
-  static const int kTypeFieldNumber = 4;
-  const std::string& type() const;
-  void set_type(const std::string& value);
-  void set_type(std::string&& value);
-  void set_type(const char* value);
-  void set_type(const char* value, size_t size);
-  std::string* mutable_type();
-  std::string* release_type();
-  void set_allocated_type(std::string* type);
+  // string error_msg = 4;
+  void clear_error_msg();
+  static const int kErrorMsgFieldNumber = 4;
+  const std::string& error_msg() const;
+  void set_error_msg(const std::string& value);
+  void set_error_msg(std::string&& value);
+  void set_error_msg(const char* value);
+  void set_error_msg(const char* value, size_t size);
+  std::string* mutable_error_msg();
+  std::string* release_error_msg();
+  void set_allocated_error_msg(std::string* error_msg);
 
   // int32 code = 1;
   void clear_code();
@@ -719,7 +719,7 @@ class ConsumeReply :
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr msg_id_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr body_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr type_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr error_msg_;
   ::PROTOBUF_NAMESPACE_ID::int32 code_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_Proxy_2eproto;
@@ -1005,17 +1005,17 @@ class ConsumeAckReply :
   std::string* release_msg_id();
   void set_allocated_msg_id(std::string* msg_id);
 
-  // string consumer_group = 3;
-  void clear_consumer_group();
-  static const int kConsumerGroupFieldNumber = 3;
-  const std::string& consumer_group() const;
-  void set_consumer_group(const std::string& value);
-  void set_consumer_group(std::string&& value);
-  void set_consumer_group(const char* value);
-  void set_consumer_group(const char* value, size_t size);
-  std::string* mutable_consumer_group();
-  std::string* release_consumer_group();
-  void set_allocated_consumer_group(std::string* consumer_group);
+  // string error_msg = 4;
+  void clear_error_msg();
+  static const int kErrorMsgFieldNumber = 4;
+  const std::string& error_msg() const;
+  void set_error_msg(const std::string& value);
+  void set_error_msg(std::string&& value);
+  void set_error_msg(const char* value);
+  void set_error_msg(const char* value, size_t size);
+  std::string* mutable_error_msg();
+  std::string* release_error_msg();
+  void set_allocated_error_msg(std::string* error_msg);
 
   // int32 code = 1;
   void clear_code();
@@ -1029,7 +1029,7 @@ class ConsumeAckReply :
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr msg_id_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr consumer_group_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr error_msg_;
   ::PROTOBUF_NAMESPACE_ID::int32 code_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_Proxy_2eproto;
@@ -1609,55 +1609,55 @@ inline void ConsumeReply::set_allocated_body(std::string* body) {
   // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeReply.body)
 }
 
-// string type = 4;
-inline void ConsumeReply::clear_type() {
-  type_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// string error_msg = 4;
+inline void ConsumeReply::clear_error_msg() {
+  error_msg_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline const std::string& ConsumeReply::type() const {
-  // @@protoc_insertion_point(field_get:Proxy.ConsumeReply.type)
-  return type_.GetNoArena();
+inline const std::string& ConsumeReply::error_msg() const {
+  // @@protoc_insertion_point(field_get:Proxy.ConsumeReply.error_msg)
+  return error_msg_.GetNoArena();
 }
-inline void ConsumeReply::set_type(const std::string& value) {
+inline void ConsumeReply::set_error_msg(const std::string& value) {
   
-  type_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:Proxy.ConsumeReply.type)
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:Proxy.ConsumeReply.error_msg)
 }
-inline void ConsumeReply::set_type(std::string&& value) {
+inline void ConsumeReply::set_error_msg(std::string&& value) {
   
-  type_.SetNoArena(
+  error_msg_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:Proxy.ConsumeReply.type)
+  // @@protoc_insertion_point(field_set_rvalue:Proxy.ConsumeReply.error_msg)
 }
-inline void ConsumeReply::set_type(const char* value) {
+inline void ConsumeReply::set_error_msg(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  type_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:Proxy.ConsumeReply.type)
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:Proxy.ConsumeReply.error_msg)
 }
-inline void ConsumeReply::set_type(const char* value, size_t size) {
+inline void ConsumeReply::set_error_msg(const char* value, size_t size) {
   
-  type_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:Proxy.ConsumeReply.type)
+  // @@protoc_insertion_point(field_set_pointer:Proxy.ConsumeReply.error_msg)
 }
-inline std::string* ConsumeReply::mutable_type() {
+inline std::string* ConsumeReply::mutable_error_msg() {
   
-  // @@protoc_insertion_point(field_mutable:Proxy.ConsumeReply.type)
-  return type_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  // @@protoc_insertion_point(field_mutable:Proxy.ConsumeReply.error_msg)
+  return error_msg_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* ConsumeReply::release_type() {
-  // @@protoc_insertion_point(field_release:Proxy.ConsumeReply.type)
+inline std::string* ConsumeReply::release_error_msg() {
+  // @@protoc_insertion_point(field_release:Proxy.ConsumeReply.error_msg)
   
-  return type_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return error_msg_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void ConsumeReply::set_allocated_type(std::string* type) {
-  if (type != nullptr) {
+inline void ConsumeReply::set_allocated_error_msg(std::string* error_msg) {
+  if (error_msg != nullptr) {
     
   } else {
     
   }
-  type_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), type);
-  // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeReply.type)
+  error_msg_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), error_msg);
+  // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeReply.error_msg)
 }
 
 // -------------------------------------------------------------------
@@ -1886,55 +1886,55 @@ inline void ConsumeAckReply::set_allocated_msg_id(std::string* msg_id) {
   // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeAckReply.msg_id)
 }
 
-// string consumer_group = 3;
-inline void ConsumeAckReply::clear_consumer_group() {
-  consumer_group_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// string error_msg = 4;
+inline void ConsumeAckReply::clear_error_msg() {
+  error_msg_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline const std::string& ConsumeAckReply::consumer_group() const {
-  // @@protoc_insertion_point(field_get:Proxy.ConsumeAckReply.consumer_group)
-  return consumer_group_.GetNoArena();
+inline const std::string& ConsumeAckReply::error_msg() const {
+  // @@protoc_insertion_point(field_get:Proxy.ConsumeAckReply.error_msg)
+  return error_msg_.GetNoArena();
 }
-inline void ConsumeAckReply::set_consumer_group(const std::string& value) {
+inline void ConsumeAckReply::set_error_msg(const std::string& value) {
   
-  consumer_group_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:Proxy.ConsumeAckReply.consumer_group)
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:Proxy.ConsumeAckReply.error_msg)
 }
-inline void ConsumeAckReply::set_consumer_group(std::string&& value) {
+inline void ConsumeAckReply::set_error_msg(std::string&& value) {
   
-  consumer_group_.SetNoArena(
+  error_msg_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:Proxy.ConsumeAckReply.consumer_group)
+  // @@protoc_insertion_point(field_set_rvalue:Proxy.ConsumeAckReply.error_msg)
 }
-inline void ConsumeAckReply::set_consumer_group(const char* value) {
+inline void ConsumeAckReply::set_error_msg(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  consumer_group_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:Proxy.ConsumeAckReply.consumer_group)
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:Proxy.ConsumeAckReply.error_msg)
 }
-inline void ConsumeAckReply::set_consumer_group(const char* value, size_t size) {
+inline void ConsumeAckReply::set_error_msg(const char* value, size_t size) {
   
-  consumer_group_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  error_msg_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:Proxy.ConsumeAckReply.consumer_group)
+  // @@protoc_insertion_point(field_set_pointer:Proxy.ConsumeAckReply.error_msg)
 }
-inline std::string* ConsumeAckReply::mutable_consumer_group() {
+inline std::string* ConsumeAckReply::mutable_error_msg() {
   
-  // @@protoc_insertion_point(field_mutable:Proxy.ConsumeAckReply.consumer_group)
-  return consumer_group_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  // @@protoc_insertion_point(field_mutable:Proxy.ConsumeAckReply.error_msg)
+  return error_msg_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* ConsumeAckReply::release_consumer_group() {
-  // @@protoc_insertion_point(field_release:Proxy.ConsumeAckReply.consumer_group)
+inline std::string* ConsumeAckReply::release_error_msg() {
+  // @@protoc_insertion_point(field_release:Proxy.ConsumeAckReply.error_msg)
   
-  return consumer_group_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return error_msg_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void ConsumeAckReply::set_allocated_consumer_group(std::string* consumer_group) {
-  if (consumer_group != nullptr) {
+inline void ConsumeAckReply::set_allocated_error_msg(std::string* error_msg) {
+  if (error_msg != nullptr) {
     
   } else {
     
   }
-  consumer_group_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), consumer_group);
-  // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeAckReply.consumer_group)
+  error_msg_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), error_msg);
+  // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeAckReply.error_msg)
 }
 
 #ifdef __GNUC__

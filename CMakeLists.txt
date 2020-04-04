@@ -30,8 +30,12 @@ include_directories(include)
 
 include(FindPkgConfig)
 
+add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
+        ConsumeCallData.cpp ConsumeCallData.cpp ProduceCallData.cpp MsgWorker.cpp ServerImpl.cpp)
+add_executable(ConsumeClient ConsumeClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
+add_executable(ProduceClient ProduceClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
+
 foreach(_target Server ProduceClient ConsumeClient)
-    add_executable(${_target} ${_target}.cpp proxy.grpc.pb.cc proxy.pb.cc)
     pkg_search_module(PROTOBUF REQUIRED protobuf)
     if(PROTOBUF_FOUND)
         include_directories(${PROTOBUF_INCLUDE_DIRS})

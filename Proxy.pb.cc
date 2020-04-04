@@ -163,7 +163,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_Proxy_2eproto::offsets[] PROTO
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeReply, code_),
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeReply, msg_id_),
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeReply, body_),
-  PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeReply, type_),
+  PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeReply, error_msg_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -179,7 +179,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_Proxy_2eproto::offsets[] PROTO
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckReply, code_),
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckReply, msg_id_),
-  PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckReply, consumer_group_),
+  PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckReply, error_msg_),
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::Proxy::ProduceRequest)},
@@ -205,13 +205,13 @@ const char descriptor_table_protodef_Proxy_2eproto[] =
   "\t\022\014\n\004body\030\004 \001(\t\022\022\n\ndelayLevel\030\005 \001(\005\"=\n\014P"
   "roduceReply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001("
   "\t\022\017\n\007err_msg\030\003 \001(\t\"7\n\016ConsumeRequest\022\r\n\005"
-  "topic\030\001 \001(\t\022\026\n\016consumer_group\030\002 \001(\t\"H\n\014C"
+  "topic\030\001 \001(\t\022\026\n\016consumer_group\030\002 \001(\t\"M\n\014C"
   "onsumeReply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001("
-  "\t\022\014\n\004body\030\003 \001(\t\022\014\n\004type\030\004 \001(\t\"J\n\021Consume"
-  "AckRequest\022\r\n\005topic\030\001 \001(\t\022\016\n\006msg_id\030\002 \001("
-  "\t\022\026\n\016consumer_group\030\003 \001(\t\"G\n\017ConsumeAckR"
-  "eply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001(\t\022\026\n\016co"
-  "nsumer_group\030\003 \001(\t2\301\001\n\013ProxyServer\0227\n\007Pr"
+  "\t\022\014\n\004body\030\003 \001(\t\022\021\n\terror_msg\030\004 \001(\t\"J\n\021Co"
+  "nsumeAckRequest\022\r\n\005topic\030\001 \001(\t\022\016\n\006msg_id"
+  "\030\002 \001(\t\022\026\n\016consumer_group\030\003 \001(\t\"B\n\017Consum"
+  "eAckReply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001(\t\022"
+  "\021\n\terror_msg\030\004 \001(\t2\301\001\n\013ProxyServer\0227\n\007Pr"
   "oduce\022\025.Proxy.ProduceRequest\032\023.Proxy.Pro"
   "duceReply\"\000\0227\n\007Consume\022\025.Proxy.ConsumeRe"
   "quest\032\023.Proxy.ConsumeReply\"\000\022@\n\nConsumeA"
@@ -1494,7 +1494,7 @@ class ConsumeReply::HasBitSetters {
 const int ConsumeReply::kCodeFieldNumber;
 const int ConsumeReply::kMsgIdFieldNumber;
 const int ConsumeReply::kBodyFieldNumber;
-const int ConsumeReply::kTypeFieldNumber;
+const int ConsumeReply::kErrorMsgFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 ConsumeReply::ConsumeReply()
@@ -1514,9 +1514,9 @@ ConsumeReply::ConsumeReply(const ConsumeReply& from)
   if (from.body().size() > 0) {
     body_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.body_);
   }
-  type_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (from.type().size() > 0) {
-    type_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.type_);
+  error_msg_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.error_msg().size() > 0) {
+    error_msg_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.error_msg_);
   }
   code_ = from.code_;
   // @@protoc_insertion_point(copy_constructor:Proxy.ConsumeReply)
@@ -1526,7 +1526,7 @@ void ConsumeReply::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_ConsumeReply_Proxy_2eproto.base);
   msg_id_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   body_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  type_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   code_ = 0;
 }
 
@@ -1538,7 +1538,7 @@ ConsumeReply::~ConsumeReply() {
 void ConsumeReply::SharedDtor() {
   msg_id_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   body_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  type_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void ConsumeReply::SetCachedSize(int size) const {
@@ -1558,7 +1558,7 @@ void ConsumeReply::Clear() {
 
   msg_id_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   body_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  type_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   code_ = 0;
   _internal_metadata_.Clear();
 }
@@ -1592,10 +1592,10 @@ const char* ConsumeReply::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_I
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // string type = 4;
+      // string error_msg = 4;
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_type(), ptr, ctx, "Proxy.ConsumeReply.type");
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_error_msg(), ptr, ctx, "Proxy.ConsumeReply.error_msg");
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1672,15 +1672,15 @@ bool ConsumeReply::MergePartialFromCodedStream(
         break;
       }
 
-      // string type = 4;
+      // string error_msg = 4;
       case 4: {
         if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (34 & 0xFF)) {
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
-                input, this->mutable_type()));
+                input, this->mutable_error_msg()));
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-            this->type().data(), static_cast<int>(this->type().length()),
+            this->error_msg().data(), static_cast<int>(this->error_msg().length()),
             ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
-            "Proxy.ConsumeReply.type"));
+            "Proxy.ConsumeReply.error_msg"));
         } else {
           goto handle_unusual;
         }
@@ -1739,14 +1739,14 @@ void ConsumeReply::SerializeWithCachedSizes(
       3, this->body(), output);
   }
 
-  // string type = 4;
-  if (this->type().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->type().data(), static_cast<int>(this->type().length()),
+      this->error_msg().data(), static_cast<int>(this->error_msg().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "Proxy.ConsumeReply.type");
+      "Proxy.ConsumeReply.error_msg");
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
-      4, this->type(), output);
+      4, this->error_msg(), output);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1789,15 +1789,15 @@ void ConsumeReply::SerializeWithCachedSizes(
         3, this->body(), target);
   }
 
-  // string type = 4;
-  if (this->type().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->type().data(), static_cast<int>(this->type().length()),
+      this->error_msg().data(), static_cast<int>(this->error_msg().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "Proxy.ConsumeReply.type");
+      "Proxy.ConsumeReply.error_msg");
     target =
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
-        4, this->type(), target);
+        4, this->error_msg(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1835,11 +1835,11 @@ size_t ConsumeReply::ByteSizeLong() const {
         this->body());
   }
 
-  // string type = 4;
-  if (this->type().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->type());
+        this->error_msg());
   }
 
   // int32 code = 1;
@@ -1884,9 +1884,9 @@ void ConsumeReply::MergeFrom(const ConsumeReply& from) {
 
     body_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.body_);
   }
-  if (from.type().size() > 0) {
+  if (from.error_msg().size() > 0) {
 
-    type_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.type_);
+    error_msg_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.error_msg_);
   }
   if (from.code() != 0) {
     set_code(from.code());
@@ -1922,7 +1922,7 @@ void ConsumeReply::InternalSwap(ConsumeReply* other) {
     GetArenaNoVirtual());
   body_.Swap(&other->body_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
-  type_.Swap(&other->type_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  error_msg_.Swap(&other->error_msg_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
   swap(code_, other->code_);
 }
@@ -2348,7 +2348,7 @@ class ConsumeAckReply::HasBitSetters {
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int ConsumeAckReply::kCodeFieldNumber;
 const int ConsumeAckReply::kMsgIdFieldNumber;
-const int ConsumeAckReply::kConsumerGroupFieldNumber;
+const int ConsumeAckReply::kErrorMsgFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 ConsumeAckReply::ConsumeAckReply()
@@ -2364,9 +2364,9 @@ ConsumeAckReply::ConsumeAckReply(const ConsumeAckReply& from)
   if (from.msg_id().size() > 0) {
     msg_id_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.msg_id_);
   }
-  consumer_group_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (from.consumer_group().size() > 0) {
-    consumer_group_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.consumer_group_);
+  error_msg_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.error_msg().size() > 0) {
+    error_msg_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.error_msg_);
   }
   code_ = from.code_;
   // @@protoc_insertion_point(copy_constructor:Proxy.ConsumeAckReply)
@@ -2375,7 +2375,7 @@ ConsumeAckReply::ConsumeAckReply(const ConsumeAckReply& from)
 void ConsumeAckReply::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_ConsumeAckReply_Proxy_2eproto.base);
   msg_id_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  consumer_group_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   code_ = 0;
 }
 
@@ -2386,7 +2386,7 @@ ConsumeAckReply::~ConsumeAckReply() {
 
 void ConsumeAckReply::SharedDtor() {
   msg_id_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  consumer_group_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void ConsumeAckReply::SetCachedSize(int size) const {
@@ -2405,7 +2405,7 @@ void ConsumeAckReply::Clear() {
   (void) cached_has_bits;
 
   msg_id_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  consumer_group_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  error_msg_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   code_ = 0;
   _internal_metadata_.Clear();
 }
@@ -2432,10 +2432,10 @@ const char* ConsumeAckReply::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPAC
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // string consumer_group = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_consumer_group(), ptr, ctx, "Proxy.ConsumeAckReply.consumer_group");
+      // string error_msg = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_error_msg(), ptr, ctx, "Proxy.ConsumeAckReply.error_msg");
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -2497,15 +2497,15 @@ bool ConsumeAckReply::MergePartialFromCodedStream(
         break;
       }
 
-      // string consumer_group = 3;
-      case 3: {
-        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
+      // string error_msg = 4;
+      case 4: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (34 & 0xFF)) {
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
-                input, this->mutable_consumer_group()));
+                input, this->mutable_error_msg()));
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-            this->consumer_group().data(), static_cast<int>(this->consumer_group().length()),
+            this->error_msg().data(), static_cast<int>(this->error_msg().length()),
             ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
-            "Proxy.ConsumeAckReply.consumer_group"));
+            "Proxy.ConsumeAckReply.error_msg"));
         } else {
           goto handle_unusual;
         }
@@ -2554,14 +2554,14 @@ void ConsumeAckReply::SerializeWithCachedSizes(
       2, this->msg_id(), output);
   }
 
-  // string consumer_group = 3;
-  if (this->consumer_group().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->consumer_group().data(), static_cast<int>(this->consumer_group().length()),
+      this->error_msg().data(), static_cast<int>(this->error_msg().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "Proxy.ConsumeAckReply.consumer_group");
+      "Proxy.ConsumeAckReply.error_msg");
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
-      3, this->consumer_group(), output);
+      4, this->error_msg(), output);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -2593,15 +2593,15 @@ void ConsumeAckReply::SerializeWithCachedSizes(
         2, this->msg_id(), target);
   }
 
-  // string consumer_group = 3;
-  if (this->consumer_group().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->consumer_group().data(), static_cast<int>(this->consumer_group().length()),
+      this->error_msg().data(), static_cast<int>(this->error_msg().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "Proxy.ConsumeAckReply.consumer_group");
+      "Proxy.ConsumeAckReply.error_msg");
     target =
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
-        3, this->consumer_group(), target);
+        4, this->error_msg(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -2632,11 +2632,11 @@ size_t ConsumeAckReply::ByteSizeLong() const {
         this->msg_id());
   }
 
-  // string consumer_group = 3;
-  if (this->consumer_group().size() > 0) {
+  // string error_msg = 4;
+  if (this->error_msg().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->consumer_group());
+        this->error_msg());
   }
 
   // int32 code = 1;
@@ -2677,9 +2677,9 @@ void ConsumeAckReply::MergeFrom(const ConsumeAckReply& from) {
 
     msg_id_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.msg_id_);
   }
-  if (from.consumer_group().size() > 0) {
+  if (from.error_msg().size() > 0) {
 
-    consumer_group_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.consumer_group_);
+    error_msg_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.error_msg_);
   }
   if (from.code() != 0) {
     set_code(from.code());
@@ -2713,7 +2713,7 @@ void ConsumeAckReply::InternalSwap(ConsumeAckReply* other) {
   _internal_metadata_.Swap(&other->_internal_metadata_);
   msg_id_.Swap(&other->msg_id_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
-  consumer_group_.Swap(&other->consumer_group_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  error_msg_.Swap(&other->error_msg_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
   swap(code_, other->code_);
 }
