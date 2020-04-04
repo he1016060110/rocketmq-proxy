@@ -90,7 +90,8 @@ int main(int argc, char *argv[]) {
 
   ServerImpl server(host, port, nameServer, accessKey, secretKey, "channel");
   CallDataBase::msgWorker->setConfig(nameServer, accessKey, secretKey, "channel");
-
+  CallDataBase::msgWorker->startMatcher();
+  CallDataBase::msgWorker->startResourceManager();
   server.Run();
 
   return 0;

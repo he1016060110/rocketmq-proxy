@@ -13,6 +13,7 @@
 #include "DefaultMQPushConsumer.h"
 #include <iostream>
 #include <string>
+#include "boost/thread.hpp"
 
 using namespace std;
 using namespace rocketmq;
@@ -182,7 +183,18 @@ class MsgWorker {
         }
       }
     }
+
 public:
+    void startMatcher()
+    {
+      boost::thread(boost::bind(&MsgWorker::loopMatch, this));
+    }
+
+    void startResourceManager()
+    {
+      boost::thread(boost::bind(&MsgWorker::resourceManager, this));
+    }
+
     vector<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {

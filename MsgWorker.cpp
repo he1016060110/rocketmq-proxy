@@ -4,4 +4,4 @@
 
 #include "MsgWorker.h"
 
-MsgWorker *CallDataBase::msgWorker = new MsgWorker();
+MsgWorker *  CallDataBase::msgWorker = new MsgWorker();

@@ -31,7 +31,7 @@ include_directories(include)
 include(FindPkgConfig)
 
 add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
-        ConsumeCallData.cpp ConsumeCallData.cpp ProduceCallData.cpp MsgWorker.cpp ServerImpl.cpp)
+        ConsumeCallData.cpp ConsumeCallData.cpp ProduceCallData.cpp MsgWorker.cpp)
 add_executable(ConsumeClient ConsumeClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 add_executable(ProduceClient ProduceClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 
@@ -56,4 +56,14 @@ if(ROCKETMQ_FOUND)
     include_directories(${ROCKETMQ_INCLUDE_DIRS})
     target_link_libraries(Server ${ROCKETMQ_LIBRARIES})
     target_include_directories(Server PRIVATE ${ROCKETMQ_INCLUDE_DIR})
+endif()
+
+find_package(Boost 1.58.0 COMPONENTS system thread REQUIRED)
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    MESSAGE( STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}.")
+    MESSAGE( STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}.")
+    MESSAGE( STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}.")
+    target_link_libraries(Server ${Boost_LIBRARIES})
+    target_include_directories(Server PRIVATE ${Boost_INCLUDE_DIR})
 endif()
