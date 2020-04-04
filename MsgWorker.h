@@ -10,6 +10,7 @@
 #include "ConsumeAckCallData.h"
 #include "DefaultMQProducer.h"
 #include "QueueTS.hpp"
+#include "MapTS.hpp"
 #include "DefaultMQPushConsumer.h"
 #include <iostream>
 #include <string>
@@ -83,9 +84,9 @@ class MsgWorker {
         time_t lastActiveAt;
     };
 
-    std::map<string, shared_ptr<ProducerUnit>> producers;
-    std::map<string, shared_ptr<ConsumerUnit>> consumers;
-    std::map<string, shared_ptr<ConsumeMsgUnit>> msgs;
+    map<string, shared_ptr<ProducerUnit>> producers;
+    MapTS<string, shared_ptr<ConsumerUnit>> consumers;
+    map<string, shared_ptr<ConsumeMsgUnit>> msgs;
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
       auto key = topic + group;
@@ -114,15 +115,15 @@ class MsgWorker {
 
     bool getConsumerExist(const string &topic, const string &group) {
       auto key = topic + group;
-
-      return consumers.find(key) != consumers.end();
+      shared_ptr<ConsumerUnit> unit;
+      return consumers.try_get(key, unit);
     }
 
     shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group) {
       auto key = topic + group;
-      auto iter = consumers.find(key);
-      if (iter != consumers.end()) {
-        return iter->second;
+      shared_ptr<ConsumerUnit> unit;
+      if (consumers.try_get(key, unit)) {
+        return unit;
       } else {
         shared_ptr<ConsumerUnit> consumerUnit(new ConsumerUnit(group));
         consumerUnit->consumer.setNamesrvAddr(nameServerHost_);
@@ -137,12 +138,13 @@ class MsgWorker {
         auto callback = [=](const std::vector<MQMessageExt> &msgs) {
             auto msg = msgs[0];
             auto key = topic + group;
-            if (getMsgPoolExist(topic, group)) {
-              msgPool[key]->push(msg);
+            shared_ptr<QueueTS<MQMessageExt>> pool;
+            if (msgPool.try_get(key, pool)) {
+              pool->push(msg);
             } else {
               shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
               msgP->push(msg);
-              msgPool[key] = msgP;
+              msgPool.insert(key, msgP);
             }
             boost::this_thread::sleep(boost::posix_time::seconds(1));
             //todo 等待消息被消费
@@ -153,7 +155,7 @@ class MsgWorker {
         try {
           consumerUnit->consumer.start();
           cout << "connected to " << nameServerHost_ << " topic is " << topic << endl;
-          consumers.insert(pair<string, shared_ptr<ConsumerUnit>>(key, consumerUnit));
+          consumers.insert(key, consumerUnit);
           return consumerUnit;
         } catch (MQClientException &e) {
           cout << e << endl;
@@ -163,7 +165,7 @@ class MsgWorker {
     }
 
     QueueTS<vector<string>> msgConsumerCreateQueue;
-    map<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
+    MapTS<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
 
     void resourceManager() {
       for (;;) {
@@ -176,7 +178,8 @@ class MsgWorker {
 
     bool getMsgPoolExist(const string &topic, const string &group) {
       auto key = topic + group;
-      return msgPool.find(key) != msgPool.end();
+      shared_ptr<QueueTS<MQMessageExt>> pool;
+      return msgPool.try_get(key, pool);
     }
 
     void loopMatch() {
@@ -194,11 +197,12 @@ class MsgWorker {
               v.push_back(unit->group);
               msgConsumerCreateQueue.push(v);
             }
+            auto key = unit->topic + unit->group;
             //检查消息队列pool里面有没有消息
-            if (getMsgPoolExist(unit->topic, unit->group)) {
-              auto key = unit->topic + unit->group;
+            shared_ptr<QueueTS<MQMessageExt>> pool;
+            if (msgPool.try_get(key, pool)) {
               MQMessageExt msg;
-              if (msgPool[key]->try_pop(msg)) {
+              if (pool->try_pop(msg)) {
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
               }
             }
