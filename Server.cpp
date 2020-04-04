@@ -188,7 +188,7 @@ public:
 class CallDataBase {
 public:
     CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
-        : service_(service), cq_(cq), status_(CREATE) {
+        : service_(service), cq_(cq), status_(CREATE), type_(type) {
       Proceed();
     }
 
