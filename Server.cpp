@@ -18,15 +18,8 @@
 
 #include <memory>
 #include <iostream>
-#include <string>
-#include <thread>
-#include <grpcpp/grpcpp.h>
-#include <grpc/support/log.h>
-#include "Proxy.pb.h"
-#include "Proxy.grpc.pb.h"
 #include "Arg_helper.h"
 #include <unistd.h>
-#include <fstream>
 #include "CallData.h"
 #include "ServerImpl.h"
 
