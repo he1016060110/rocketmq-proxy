@@ -62,8 +62,7 @@ public:
       callback(msgs);
     }
 
-    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> paramCallback)
-    {
+    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> paramCallback) {
       callback = paramCallback;
     }
 
@@ -113,8 +112,7 @@ class MsgWorker {
       }
     }
 
-    bool getConsumerExist(const string &topic, const string &group)
-    {
+    bool getConsumerExist(const string &topic, const string &group) {
       auto key = topic + group;
 
       return consumers.find(key) != consumers.end();
@@ -136,19 +134,19 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
-        auto callback = [=](const std::vector<MQMessageExt> &msgs){
-          auto msg = msgs[0];
-          auto key = topic + group;
-          if (getMsgPoolExist(topic, group)) {
-            msgPool[key]->push(msg);
-          } else {
-            shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
-            msgP->push(msg);
-            msgPool[key] = msgP;
-          }
-          boost::this_thread::sleep(boost::posix_time::seconds(1));
-          //todo 等待消息被消费
-          return CONSUME_SUCCESS;
+        auto callback = [=](const std::vector<MQMessageExt> &msgs) {
+            auto msg = msgs[0];
+            auto key = topic + group;
+            if (getMsgPoolExist(topic, group)) {
+              msgPool[key]->push(msg);
+            } else {
+              shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
+              msgP->push(msg);
+              msgPool[key] = msgP;
+            }
+            boost::this_thread::sleep(boost::posix_time::seconds(1));
+            //todo 等待消息被消费
+            return CONSUME_SUCCESS;
         };
         listener->setMsgCallback(callback);
         consumerUnit->consumer.registerMessageListener(listener);
@@ -166,9 +164,9 @@ class MsgWorker {
 
     QueueTS<vector<string>> msgConsumerCreateQueue;
     map<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
-    void resourceManager()
-    {
-      for(;;) {
+
+    void resourceManager() {
+      for (;;) {
         vector<string> v = msgConsumerCreateQueue.wait_and_pop();
         string topic = v[0];
         string group = v[1];
@@ -176,21 +174,20 @@ class MsgWorker {
       }
     }
 
-    bool getMsgPoolExist(const string &topic, const string &group)
-    {
+    bool getMsgPoolExist(const string &topic, const string &group) {
       auto key = topic + group;
-
       return msgPool.find(key) != msgPool.end();
     }
 
-    void loopMatch()
-    {
+    void loopMatch() {
       auto iter = consumeMsgPool.begin();
-      while(iter != consumeMsgPool.end()) {
+      while (iter != consumeMsgPool.end()) {
+        cout << "loopMatch enter!" << endl;
         auto unit = iter->get();
         if (unit->status == PROXY_CONSUME_INIT) {
           //consumer不存在的时候创建consumer
           if (!getConsumerExist(unit->topic, unit->group)) {
+            cout << "getConsumerExist enter!" << endl;
             vector<string> v;
             v.push_back(unit->topic);
             v.push_back(unit->group);
@@ -209,17 +206,16 @@ class MsgWorker {
     }
 
 public:
-    void startMatcher()
-    {
+    void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
 
-    void startResourceManager()
-    {
+    void startResourceManager() {
       boost::thread(boost::bind(&MsgWorker::resourceManager, this));
     }
 
     vector<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
       rocketmq::MQMessage msg(topic, tag, body);
