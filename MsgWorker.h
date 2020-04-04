@@ -59,8 +59,8 @@ public:
 
     virtual ~ConsumerMsgListener() {}
 
-    virtual ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
-      callback(msgs);
+    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
+      return callback(msgs);
     }
 
     void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> paramCallback) {
@@ -192,10 +192,11 @@ class MsgWorker {
             //consumer不存在的时候创建consumer
             if (!getConsumerExist(unit->topic, unit->group)) {
               cout << "getConsumerExist enter!" << endl;
-              vector<string> v;
+              /*vector<string> v;
               v.push_back(unit->topic);
               v.push_back(unit->group);
-              msgConsumerCreateQueue.push(v);
+              msgConsumerCreateQueue.push(v);*/
+              getConsumer(unit->topic, unit->group);
             }
             auto key = unit->topic + unit->group;
             //检查消息队列pool里面有没有消息
