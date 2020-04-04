@@ -180,25 +180,27 @@ class MsgWorker {
     }
 
     void loopMatch() {
-      auto iter = consumeMsgPool.begin();
-      while (iter != consumeMsgPool.end()) {
-        cout << "loopMatch enter!" << endl;
-        auto unit = iter->get();
-        if (unit->status == PROXY_CONSUME_INIT) {
-          //consumer不存在的时候创建consumer
-          if (!getConsumerExist(unit->topic, unit->group)) {
-            cout << "getConsumerExist enter!" << endl;
-            vector<string> v;
-            v.push_back(unit->topic);
-            v.push_back(unit->group);
-            msgConsumerCreateQueue.push(v);
-          }
-          //检查消息队列pool里面有没有消息
-          if (getMsgPoolExist(unit->topic, unit->group)) {
-            auto key = unit->topic + unit->group;
-            MQMessageExt msg;
-            if (msgPool[key]->try_pop(msg)) {
-              unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+      while (true) {
+        auto iter = consumeMsgPool.begin();
+        while (iter != consumeMsgPool.end()) {
+          cout << "loopMatch enter!" << endl;
+          auto unit = iter->get();
+          if (unit->status == PROXY_CONSUME_INIT) {
+            //consumer不存在的时候创建consumer
+            if (!getConsumerExist(unit->topic, unit->group)) {
+              cout << "getConsumerExist enter!" << endl;
+              vector<string> v;
+              v.push_back(unit->topic);
+              v.push_back(unit->group);
+              msgConsumerCreateQueue.push(v);
+            }
+            //检查消息队列pool里面有没有消息
+            if (getMsgPoolExist(unit->topic, unit->group)) {
+              auto key = unit->topic + unit->group;
+              MQMessageExt msg;
+              if (msgPool[key]->try_pop(msg)) {
+                unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+              }
             }
           }
         }
