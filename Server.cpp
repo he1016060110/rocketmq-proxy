@@ -257,13 +257,15 @@ private:
         return;
       }
 
-      callback->successFunc = [&](const string &msgId) {
+      //必须拷贝一份，不用引用
+      callback->successFunc = [=](const string &msgId) {
           reply_.set_code(0);
           reply_.set_msg_id(msgId);
           status_ = FINISH;
           responder_.Finish(reply_, Status::OK, that);
       };
-      callback->failureFunc = [&](const string &msgResp) {
+      //必须拷贝一份，不用引用
+      callback->failureFunc = [=](const string &msgResp) {
           reply_.set_code(1);
           reply_.set_err_msg(msgResp);
           status_ = FINISH;
