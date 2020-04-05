@@ -6,6 +6,7 @@
 #define ROCKETMQ_PROXY_CONSUME_ACK_CALL_DATA_H
 
 #include "CallData.h"
+#include "MsgWorker.h"
 
 class ConsumeAckCallData : public CallDataBase {
 public:
@@ -28,9 +29,7 @@ private:
 
     void process() override {
       new ConsumeAckCallData(service_, cq_);
-      std::string prefix("ConsumeAck ");
-      reply_.set_msg_id(prefix + request_.topic());
-
+      auto msg_id = request_.msg_id();
       status_ = FINISH;
       responder_.Finish(reply_, Status::OK, this);
     }

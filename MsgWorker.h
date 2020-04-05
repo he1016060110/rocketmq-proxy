@@ -20,6 +20,8 @@
 using namespace std;
 using namespace rocketmq;
 
+#define MAX_MSG_WAIT_CONSUME_TIME 10
+
 enum MsgWorkerConsumeStatus {
     PROXY_CONSUME_INIT,
     PROXY_CONSUME,
@@ -168,6 +170,8 @@ class MsgWorker {
             {
               std::unique_lock<std::mutex> lk(unit->mtx);
               msgMatchUnits.insert(msg.getMsgId(), unit);
+              std::unique_lock<std::mutex> lk1(this->notifyMtx);
+              this->notifyCV.notify_all();
               unit->cv.wait(lk, [&]{return unit->status == MSG_CONSUME_ACK;});
             }
             //todo
@@ -191,26 +195,36 @@ class MsgWorker {
 
     void loopMatch() {
       shared_ptr<ConsumeMsgUnit> unit;
-      while (unit = consumeMsgPool.wait_and_pop()) {
-        if (unit->status == PROXY_CONSUME_INIT) {
-          //consumer不存在的时候创建consumer
-          if (!getConsumerExist(unit->topic, unit->group)) {
-            getConsumer(unit->topic, unit->group);
-          }
-          auto key = unit->topic + unit->group;
-          //检查消息队列pool里面有没有消息
-          shared_ptr<QueueTS<MQMessageExt>> pool;
-          if (msgPool.try_get(key, pool)) {
-            MQMessageExt msg;
-            if (pool->try_pop(msg)) {
-              unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
-              //todo 修改消息状态
-              continue;
+      while (true)
+      {
+        QueueTS<shared_ptr<ConsumeMsgUnit>> tmp;
+        while (consumeMsgPool.try_pop(unit)) {
+          if (unit->status == PROXY_CONSUME_INIT) {
+            //consumer不存在的时候创建consumer
+            if (!getConsumerExist(unit->topic, unit->group)) {
+              getConsumer(unit->topic, unit->group);
+            }
+            auto key = unit->topic + unit->group;
+            //检查消息队列pool里面有没有消息
+            shared_ptr<QueueTS<MQMessageExt>> pool;
+            if (msgPool.try_get(key, pool)) {
+              MQMessageExt msg;
+              if (pool->try_pop(msg)) {
+                idUnitMap.insert_or_update(msg.getMsgId(), unit);
+                unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+                //todo 修改消息状态
+                continue;
+              }
             }
           }
+          tmp.push(unit);
         }
-        //没有处理重新推回队列
-        consumeMsgPool.push(unit);
+        //没有处理掉的重新推进去
+        while (tmp.try_pop(unit)) {
+          consumeMsgPool.push(unit);
+        }
+        std::unique_lock<std::mutex> lk(notifyMtx);
+        notifyCV.wait(lk);
       }
     }
 
@@ -219,6 +233,10 @@ public:
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+    MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
+    std::mutex notifyMtx;
+    std::condition_variable notifyCV;
+
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
       rocketmq::MQMessage msg(topic, tag, body);
