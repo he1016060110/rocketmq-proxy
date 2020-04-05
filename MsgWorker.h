@@ -93,10 +93,9 @@ class MsgWorker {
         time_t lastActiveAt;
     };
 
-    class msgMatchUnit
-    {
+    class msgMatchUnit {
     public:
-        msgMatchUnit(): status(MSG_FETCH_FROM_BROKER){};
+        msgMatchUnit() : status(MSG_FETCH_FROM_BROKER) {};
         ConsumeCallData *callData;
         ConsumeAckCallData *ackCallData;
         MsgConsumeStatus status;
@@ -155,24 +154,25 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
-        auto callback = [=](const std::vector<MQMessageExt> &msgs) {
+        auto callback = [this, &topic, &group](const std::vector<MQMessageExt> &msgs) {
             auto msg = msgs[0];
             auto key = topic + group;
             shared_ptr<QueueTS<MQMessageExt>> pool;
-            if (msgPool.try_get(key, pool)) {
+            if (this->msgPool.try_get(key, pool)) {
               pool->push(msg);
             } else {
               shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
               msgP->push(msg);
-              msgPool.insert(key, msgP);
+              this->msgPool.insert(key, msgP);
             }
             shared_ptr<msgMatchUnit> unit(new msgMatchUnit);
             {
               std::unique_lock<std::mutex> lk(unit->mtx);
               msgMatchUnits.insert(msg.getMsgId(), unit);
-              std::unique_lock<std::mutex> lk1(this->notifyMtx);
+              cout << msg.getMsgId() << ":consumed!" << endl;
               this->notifyCV.notify_all();
-              unit->cv.wait(lk, [&]{return unit->status == MSG_CONSUME_ACK;});
+              cout << msg.getMsgId() << ":notified!" << endl;
+              unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
             //todo
             return CONSUME_SUCCESS;
@@ -195,8 +195,7 @@ class MsgWorker {
 
     void loopMatch() {
       shared_ptr<ConsumeMsgUnit> unit;
-      while (true)
-      {
+      while (true) {
         QueueTS<shared_ptr<ConsumeMsgUnit>> tmp;
         while (consumeMsgPool.try_pop(unit)) {
           if (unit->status == PROXY_CONSUME_INIT) {
@@ -212,6 +211,7 @@ class MsgWorker {
               if (pool->try_pop(msg)) {
                 idUnitMap.insert_or_update(msg.getMsgId(), unit);
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+                cout << msg.getMsgId() << msg.getBody() << endl;
                 //todo 修改消息状态
                 continue;
               }
@@ -225,6 +225,7 @@ class MsgWorker {
         }
         std::unique_lock<std::mutex> lk(notifyMtx);
         notifyCV.wait(lk);
+        cout << "unlocked" << endl;
       }
     }
 
@@ -232,6 +233,7 @@ public:
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
+
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
     std::mutex notifyMtx;
