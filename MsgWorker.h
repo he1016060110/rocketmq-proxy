@@ -191,7 +191,7 @@ class MsgWorker {
 
     void loopMatch() {
       shared_ptr<ConsumeMsgUnit> unit;
-      while (consumeMsgPool.try_pop(unit)) {
+      while (unit = consumeMsgPool.wait_and_pop()) {
         if (unit->status == PROXY_CONSUME_INIT) {
           //consumer不存在的时候创建consumer
           if (!getConsumerExist(unit->topic, unit->group)) {
