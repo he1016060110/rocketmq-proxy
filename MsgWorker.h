@@ -187,51 +187,30 @@ class MsgWorker {
       }
     }
 
-    QueueTS<vector<string>> msgConsumerCreateQueue;
     MapTS<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
 
-    void resourceManager() {
-      for (;;) {
-        vector<string> v = msgConsumerCreateQueue.wait_and_pop();
-        string topic = v[0];
-        string group = v[1];
-        getConsumer(topic, group);
-      }
-    }
-
-    bool getMsgPoolExist(const string &topic, const string &group) {
-      auto key = topic + group;
-      shared_ptr<QueueTS<MQMessageExt>> pool;
-      return msgPool.try_get(key, pool);
-    }
-
     void loopMatch() {
-      while (true) {
-        auto iter = consumeMsgPool.begin();
-        while (iter != consumeMsgPool.end()) {
-          cout << "loopMatch enter!" << endl;
-          auto unit = iter->get();
-          if (unit->status == PROXY_CONSUME_INIT) {
-            //consumer不存在的时候创建consumer
-            if (!getConsumerExist(unit->topic, unit->group)) {
-              cout << "getConsumerExist enter!" << endl;
-              /*vector<string> v;
-              v.push_back(unit->topic);
-              v.push_back(unit->group);
-              msgConsumerCreateQueue.push(v);*/
-              getConsumer(unit->topic, unit->group);
-            }
-            auto key = unit->topic + unit->group;
-            //检查消息队列pool里面有没有消息
-            shared_ptr<QueueTS<MQMessageExt>> pool;
-            if (msgPool.try_get(key, pool)) {
-              MQMessageExt msg;
-              if (pool->try_pop(msg)) {
-                unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
-              }
+      shared_ptr<ConsumeMsgUnit> unit;
+      while (consumeMsgPool.try_pop(unit)) {
+        if (unit->status == PROXY_CONSUME_INIT) {
+          //consumer不存在的时候创建consumer
+          if (!getConsumerExist(unit->topic, unit->group)) {
+            getConsumer(unit->topic, unit->group);
+          }
+          auto key = unit->topic + unit->group;
+          //检查消息队列pool里面有没有消息
+          shared_ptr<QueueTS<MQMessageExt>> pool;
+          if (msgPool.try_get(key, pool)) {
+            MQMessageExt msg;
+            if (pool->try_pop(msg)) {
+              unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+              //todo 修改消息状态
+              continue;
             }
           }
         }
+        //没有处理重新推回队列
+        consumeMsgPool.push(unit);
       }
     }
 
@@ -239,13 +218,7 @@ public:
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
-
-    void startResourceManager() {
-      boost::thread(boost::bind(&MsgWorker::resourceManager, this));
-    }
-
-    vector<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
-
+    QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     void produce(ProducerCallback *callback, const string &topic, const string &group,
                  const string &tag, const string &body, const int delayLevel = 0) {
       rocketmq::MQMessage msg(topic, tag, body);
