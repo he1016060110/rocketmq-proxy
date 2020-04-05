@@ -27,6 +27,13 @@ enum MsgWorkerConsumeStatus {
     CONSUME_ACK
 };
 
+enum MsgConsumeStatus {
+    MSG_FETCH_FROM_BROKER,
+    MSG_DISTRIBUTED,
+    MSG_CONSUME_ACK
+};
+
+
 class ConsumerUnit {
 public:
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
@@ -84,9 +91,20 @@ class MsgWorker {
         time_t lastActiveAt;
     };
 
+    class msgMatchUnit
+    {
+    public:
+        msgMatchUnit(): status(MSG_FETCH_FROM_BROKER){};
+        ConsumeCallData *callData;
+        ConsumeAckCallData *ackCallData;
+        MsgConsumeStatus status;
+        std::mutex mtx;
+        std::condition_variable cv;
+    };
+
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
-    map<string, shared_ptr<ConsumeMsgUnit>> msgs;
+    MapTS<string, shared_ptr<msgMatchUnit>> msgMatchUnits;
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
       auto key = topic + group;
@@ -146,8 +164,13 @@ class MsgWorker {
               msgP->push(msg);
               msgPool.insert(key, msgP);
             }
-            boost::this_thread::sleep(boost::posix_time::seconds(1));
-            //todo 等待消息被消费
+            shared_ptr<msgMatchUnit> unit(new msgMatchUnit);
+            {
+              std::unique_lock<std::mutex> lk(unit->mtx);
+              msgMatchUnits.insert(msg.getMsgId(), unit);
+              unit->cv.wait(lk, [&]{return unit->status == MSG_CONSUME_ACK;});
+            }
+            //todo
             return CONSUME_SUCCESS;
         };
         listener->setMsgCallback(callback);
