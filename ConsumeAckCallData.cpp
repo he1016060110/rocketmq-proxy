@@ -15,6 +15,7 @@ void ConsumeAckCallData::process() {
     matchUnit->cv.notify_one();
     reply_.set_code(0);
     reply_.set_error_msg("msg ack succ!");
+    status_ = FINISH;
     responder_.Finish(reply_, Status::OK, this);
   } else {
     status_ = FINISH;

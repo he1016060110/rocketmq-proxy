@@ -42,18 +42,18 @@ private:
       }
 
       //必须拷贝一份，不用引用
-      callback->successFunc = [=](const string &msgId) {
+      callback->successFunc = [this](const string &msgId) {
           reply_.set_code(0);
           reply_.set_msg_id(msgId);
           status_ = FINISH;
-          responder_.Finish(reply_, Status::OK, that);
+          responder_.Finish(reply_, Status::OK, this);
       };
       //必须拷贝一份，不用引用
-      callback->failureFunc = [=](const string &msgResp) {
+      callback->failureFunc = [this](const string &msgResp) {
           reply_.set_code(1);
           reply_.set_err_msg(msgResp);
           status_ = FINISH;
-          responder_.Finish(reply_, Status::OK, that);
+          responder_.Finish(reply_, Status::OK, this);
       };
       msgWorker->produce(callback, request_.topic(), request_.group(), request_.tag(), request_.body());
     }
