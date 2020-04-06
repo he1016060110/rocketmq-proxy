@@ -31,6 +31,7 @@ using Proxy::ConsumeRequest;
 using Proxy::ConsumeAckReply;
 using Proxy::ConsumeReply;
 using Proxy::ProxyServer;
+using namespace std;
 
 class ConsumeClient {
  public:
@@ -64,7 +65,32 @@ class ConsumeClient {
       return "RPC failed";
     }
   }
+  int ConsumeAck(const std::string& topic, const std::string& group, const std::string & msg_id) {
+      // Data we are sending to the server.
+      ConsumeAckRequest request;
+      request.set_topic(topic);
+      request.set_consumer_group(group);
+      request.set_msg_id(msg_id);
 
+      // Container for the data we expect from the server.
+      ConsumeAckReply reply;
+
+      // Context for the client. It could be used to convey extra information to
+      // the server and/or tweak certain RPC behaviors.
+      ClientContext context;
+
+      // The actual RPC.
+      Status status = stub_->ConsumeAck(&context, request, &reply);
+
+      // Act upon its status.
+      if (status.ok()) {
+        return reply.code();
+      } else {
+        std::cout << status.error_code() << ": " << status.error_message()
+                  << std::endl;
+        return -1;
+      }
+    }
  private:
   std::unique_ptr<ProxyServer::Stub> stub_;
 };
@@ -72,8 +98,11 @@ class ConsumeClient {
 int main(int argc, char** argv) {
   ConsumeClient client(grpc::CreateChannel(
       "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
-  std::string reply = client.Consume("test-topic", "test-topic");
-  std::cout << "received: " << reply << std::endl;
-
+  std::string id = client.Consume("test-topic", "test-topic");
+  std::cout << "received: " << id << std::endl;
+  if (id != "RPC failed") {
+    int code = client.ConsumeAck("test-topic", "test-topic", id);
+    cout << "code:" << code << endl;
+  }
   return 0;
 }
