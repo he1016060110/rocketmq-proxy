@@ -104,7 +104,7 @@ class MsgWorker {
 
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
-    MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
+
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
       auto key = topic + group;
@@ -232,7 +232,7 @@ public:
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
-
+    MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
     std::mutex notifyMtx;

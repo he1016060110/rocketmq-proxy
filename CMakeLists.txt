@@ -31,7 +31,7 @@ include_directories(include)
 include(FindPkgConfig)
 
 add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
-        ConsumeCallData.cpp ConsumeCallData.cpp ProduceCallData.cpp MsgWorker.cpp)
+        ConsumeCallData.cpp ConsumeAckCallData.cpp ProduceCallData.cpp MsgWorker.cpp)
 add_executable(ConsumeClient ConsumeClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 add_executable(ProduceClient ProduceClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 
