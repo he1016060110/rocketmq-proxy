@@ -2,8 +2,8 @@
 // Created by hexi on 2020/4/4.
 //
 
-#ifndef ROCKETMQ_PROXY_MSGWORKER_H
-#define ROCKETMQ_PROXY_MSGWORKER_H
+#ifndef ROCKETMQ_PROXY_MSG_WORKER_H
+#define ROCKETMQ_PROXY_MSG_WORKER_H
 
 #include "ProducerCallback.h"
 #include "ConsumeCallData.h"
@@ -43,6 +43,16 @@ public:
     time_t lastActiveAt;
 };
 
+class MsgMatchUnit {
+public:
+    MsgMatchUnit() : status(MSG_FETCH_FROM_BROKER) {};
+    MsgConsumeStatus status;
+    //rocketmq status
+    ConsumeStatus consumeStatus;
+    std::mutex mtx;
+    std::condition_variable cv;
+};
+
 class ConsumeMsgUnit {
 public:
     ConsumeMsgUnit(ConsumeCallData *paramCallData, string paramTopic, string paramGroup) :
@@ -50,7 +60,6 @@ public:
         lastActiveAt(time(0)) {
     };
     ConsumeCallData *callData;
-    ConsumeAckCallData *ackCallData;
     string topic;
     string group;
     string msgId;
@@ -93,19 +102,9 @@ class MsgWorker {
         time_t lastActiveAt;
     };
 
-    class msgMatchUnit {
-    public:
-        msgMatchUnit() : status(MSG_FETCH_FROM_BROKER) {};
-        ConsumeCallData *callData;
-        ConsumeAckCallData *ackCallData;
-        MsgConsumeStatus status;
-        std::mutex mtx;
-        std::condition_variable cv;
-    };
-
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
-    MapTS<string, shared_ptr<msgMatchUnit>> msgMatchUnits;
+    MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) {
       auto key = topic + group;
@@ -165,10 +164,10 @@ class MsgWorker {
               msgP->push(msg);
               this->msgPool.insert(key, msgP);
             }
-            shared_ptr<msgMatchUnit> unit(new msgMatchUnit);
+            shared_ptr<MsgMatchUnit> unit(new MsgMatchUnit);
             {
               std::unique_lock<std::mutex> lk(unit->mtx);
-              msgMatchUnits.insert(msg.getMsgId(), unit);
+              MsgMatchUnits.insert(msg.getMsgId(), unit);
               cout << msg.getMsgId() << ":consumed!" << endl;
               this->notifyCV.notify_all();
               cout << msg.getMsgId() << ":notified!" << endl;
@@ -210,9 +209,9 @@ class MsgWorker {
               MQMessageExt msg;
               if (pool->try_pop(msg)) {
                 idUnitMap.insert_or_update(msg.getMsgId(), unit);
+                unit->msgId = msg.getMsgId();
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
                 cout << msg.getMsgId() << msg.getBody() << endl;
-                //todo 修改消息状态
                 continue;
               }
             }
@@ -256,4 +255,4 @@ public:
 };
 
 
-#endif //ROCKETMQ_PROXY_MSGWORKER_H
+#endif //ROCKETMQ_PROXY_MSG_WORKER_H

@@ -172,6 +172,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_Proxy_2eproto::offsets[] PROTO
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckRequest, topic_),
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckRequest, msg_id_),
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckRequest, consumer_group_),
+  PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckRequest, status_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Proxy::ConsumeAckReply, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -187,7 +188,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 18, -1, sizeof(::Proxy::ConsumeRequest)},
   { 25, -1, sizeof(::Proxy::ConsumeReply)},
   { 34, -1, sizeof(::Proxy::ConsumeAckRequest)},
-  { 42, -1, sizeof(::Proxy::ConsumeAckReply)},
+  { 43, -1, sizeof(::Proxy::ConsumeAckReply)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -207,16 +208,16 @@ const char descriptor_table_protodef_Proxy_2eproto[] =
   "\t\022\017\n\007err_msg\030\003 \001(\t\"7\n\016ConsumeRequest\022\r\n\005"
   "topic\030\001 \001(\t\022\026\n\016consumer_group\030\002 \001(\t\"M\n\014C"
   "onsumeReply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001("
-  "\t\022\014\n\004body\030\003 \001(\t\022\021\n\terror_msg\030\004 \001(\t\"J\n\021Co"
+  "\t\022\014\n\004body\030\003 \001(\t\022\021\n\terror_msg\030\004 \001(\t\"Z\n\021Co"
   "nsumeAckRequest\022\r\n\005topic\030\001 \001(\t\022\016\n\006msg_id"
-  "\030\002 \001(\t\022\026\n\016consumer_group\030\003 \001(\t\"B\n\017Consum"
-  "eAckReply\022\014\n\004code\030\001 \001(\005\022\016\n\006msg_id\030\002 \001(\t\022"
-  "\021\n\terror_msg\030\004 \001(\t2\301\001\n\013ProxyServer\0227\n\007Pr"
-  "oduce\022\025.Proxy.ProduceRequest\032\023.Proxy.Pro"
-  "duceReply\"\000\0227\n\007Consume\022\025.Proxy.ConsumeRe"
-  "quest\032\023.Proxy.ConsumeReply\"\000\022@\n\nConsumeA"
-  "ck\022\030.Proxy.ConsumeAckRequest\032\026.Proxy.Con"
-  "sumeAckReply\"\000b\006proto3"
+  "\030\002 \001(\t\022\026\n\016consumer_group\030\003 \001(\t\022\016\n\006status"
+  "\030\004 \001(\005\"B\n\017ConsumeAckReply\022\014\n\004code\030\001 \001(\005\022"
+  "\016\n\006msg_id\030\002 \001(\t\022\021\n\terror_msg\030\004 \001(\t2\301\001\n\013P"
+  "roxyServer\0227\n\007Produce\022\025.Proxy.ProduceReq"
+  "uest\032\023.Proxy.ProduceReply\"\000\0227\n\007Consume\022\025"
+  ".Proxy.ConsumeRequest\032\023.Proxy.ConsumeRep"
+  "ly\"\000\022@\n\nConsumeAck\022\030.Proxy.ConsumeAckReq"
+  "uest\032\026.Proxy.ConsumeAckReply\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_Proxy_2eproto_deps[1] = {
 };
@@ -231,7 +232,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_Pro
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_Proxy_2eproto_once;
 static bool descriptor_table_Proxy_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_Proxy_2eproto = {
-  &descriptor_table_Proxy_2eproto_initialized, descriptor_table_protodef_Proxy_2eproto, "Proxy.proto", 662,
+  &descriptor_table_Proxy_2eproto_initialized, descriptor_table_protodef_Proxy_2eproto, "Proxy.proto", 678,
   &descriptor_table_Proxy_2eproto_once, descriptor_table_Proxy_2eproto_sccs, descriptor_table_Proxy_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_Proxy_2eproto::offsets,
   file_level_metadata_Proxy_2eproto, 6, file_level_enum_descriptors_Proxy_2eproto, file_level_service_descriptors_Proxy_2eproto,
@@ -1944,6 +1945,7 @@ class ConsumeAckRequest::HasBitSetters {
 const int ConsumeAckRequest::kTopicFieldNumber;
 const int ConsumeAckRequest::kMsgIdFieldNumber;
 const int ConsumeAckRequest::kConsumerGroupFieldNumber;
+const int ConsumeAckRequest::kStatusFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 ConsumeAckRequest::ConsumeAckRequest()
@@ -1967,6 +1969,7 @@ ConsumeAckRequest::ConsumeAckRequest(const ConsumeAckRequest& from)
   if (from.consumer_group().size() > 0) {
     consumer_group_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.consumer_group_);
   }
+  status_ = from.status_;
   // @@protoc_insertion_point(copy_constructor:Proxy.ConsumeAckRequest)
 }
 
@@ -1975,6 +1978,7 @@ void ConsumeAckRequest::SharedCtor() {
   topic_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   msg_id_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   consumer_group_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  status_ = 0;
 }
 
 ConsumeAckRequest::~ConsumeAckRequest() {
@@ -2006,6 +2010,7 @@ void ConsumeAckRequest::Clear() {
   topic_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   msg_id_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   consumer_group_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  status_ = 0;
   _internal_metadata_.Clear();
 }
 
@@ -2035,6 +2040,13 @@ const char* ConsumeAckRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESP
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_consumer_group(), ptr, ctx, "Proxy.ConsumeAckRequest.consumer_group");
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // int32 status = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+          status_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -2113,6 +2125,19 @@ bool ConsumeAckRequest::MergePartialFromCodedStream(
         break;
       }
 
+      // int32 status = 4;
+      case 4: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (32 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &status_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0) {
@@ -2170,6 +2195,11 @@ void ConsumeAckRequest::SerializeWithCachedSizes(
       3, this->consumer_group(), output);
   }
 
+  // int32 status = 4;
+  if (this->status() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(4, this->status(), output);
+  }
+
   if (_internal_metadata_.have_unknown_fields()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
@@ -2216,6 +2246,11 @@ void ConsumeAckRequest::SerializeWithCachedSizes(
         3, this->consumer_group(), target);
   }
 
+  // int32 status = 4;
+  if (this->status() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(4, this->status(), target);
+  }
+
   if (_internal_metadata_.have_unknown_fields()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields(), target);
@@ -2258,6 +2293,13 @@ size_t ConsumeAckRequest::ByteSizeLong() const {
         this->consumer_group());
   }
 
+  // int32 status = 4;
+  if (this->status() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->status());
+  }
+
   int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
   SetCachedSize(cached_size);
   return total_size;
@@ -2297,6 +2339,9 @@ void ConsumeAckRequest::MergeFrom(const ConsumeAckRequest& from) {
 
     consumer_group_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.consumer_group_);
   }
+  if (from.status() != 0) {
+    set_status(from.status());
+  }
 }
 
 void ConsumeAckRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -2330,6 +2375,7 @@ void ConsumeAckRequest::InternalSwap(ConsumeAckRequest* other) {
     GetArenaNoVirtual());
   consumer_group_.Swap(&other->consumer_group_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
+  swap(status_, other->status_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata ConsumeAckRequest::GetMetadata() const {

@@ -871,6 +871,12 @@ class ConsumeAckRequest :
   std::string* release_consumer_group();
   void set_allocated_consumer_group(std::string* consumer_group);
 
+  // int32 status = 4;
+  void clear_status();
+  static const int kStatusFieldNumber = 4;
+  ::PROTOBUF_NAMESPACE_ID::int32 status() const;
+  void set_status(::PROTOBUF_NAMESPACE_ID::int32 value);
+
   // @@protoc_insertion_point(class_scope:Proxy.ConsumeAckRequest)
  private:
   class HasBitSetters;
@@ -879,6 +885,7 @@ class ConsumeAckRequest :
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr topic_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr msg_id_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr consumer_group_;
+  ::PROTOBUF_NAMESPACE_ID::int32 status_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_Proxy_2eproto;
 };
@@ -1815,6 +1822,20 @@ inline void ConsumeAckRequest::set_allocated_consumer_group(std::string* consume
   }
   consumer_group_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), consumer_group);
   // @@protoc_insertion_point(field_set_allocated:Proxy.ConsumeAckRequest.consumer_group)
+}
+
+// int32 status = 4;
+inline void ConsumeAckRequest::clear_status() {
+  status_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 ConsumeAckRequest::status() const {
+  // @@protoc_insertion_point(field_get:Proxy.ConsumeAckRequest.status)
+  return status_;
+}
+inline void ConsumeAckRequest::set_status(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  status_ = value;
+  // @@protoc_insertion_point(field_set:Proxy.ConsumeAckRequest.status)
 }
 
 // -------------------------------------------------------------------

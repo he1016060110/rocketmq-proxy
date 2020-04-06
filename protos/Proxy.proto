@@ -41,6 +41,7 @@ message ConsumeAckRequest
     string topic = 1;
     string msg_id = 2;
     string consumer_group = 3;
+    int32 status = 4;
 }
 
 message ConsumeAckReply

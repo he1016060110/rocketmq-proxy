@@ -8,6 +8,9 @@
 #include "CallData.h"
 #include "MsgWorker.h"
 
+class ConsumeMsgUnit;
+class MsgMatchUnit;
+
 class ConsumeAckCallData : public CallDataBase {
 public:
     ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
@@ -30,8 +33,22 @@ private:
     void process() override {
       new ConsumeAckCallData(service_, cq_);
       auto msg_id = request_.msg_id();
-      status_ = FINISH;
-      responder_.Finish(reply_, Status::OK, this);
+      shared_ptr<MsgMatchUnit> matchUnit;
+      if (msgWorker->MsgMatchUnits.try_get(matchUnit)) {
+        matchUnit->status = MSG_CONSUME_ACK;
+        matchUnit->consumeStatus = (ConsumeStatus) request_.status();
+        matchUnit->ackCallData = this;
+        std::unique_lock<std::mutex> lk(matchUnit->mtx);
+        matchUnit->cv.notify_one();
+        reply_.set_code(0);
+        reply_.set_error_msg("msg ack succ!");
+        responder_.Finish(reply_, Status::OK, this);
+      } else {
+        status_ = FINISH;
+        reply_.set_code(1);
+        reply_.set_error_msg("msg cannot be found!");
+        responder_.Finish(reply_, Status::OK, this);
+      }
     }
 
     ConsumeAckRequest request_;
