@@ -172,9 +172,7 @@ class MsgWorker {
             {
               std::unique_lock<std::mutex> lk(unit->mtx);
               MsgMatchUnits.insert(msg.getMsgId(), unit);
-              cout << msg.getMsgId() << ":consumed!" << endl;
               this->notifyCV.notify_all();
-              cout << msg.getMsgId() << ":notified!" << endl;
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
             return unit->consumeStatus;
@@ -183,7 +181,6 @@ class MsgWorker {
         consumerUnit->consumer.registerMessageListener(listener);
         try {
           consumerUnit->consumer.start();
-          cout << "connected to " << nameServerHost_ << " topic is " << topic << endl;
           consumers.insert(key, consumerUnit);
           return consumerUnit;
         } catch (MQClientException &e) {
@@ -240,7 +237,6 @@ class MsgWorker {
         }
         std::unique_lock<std::mutex> lk(notifyMtx);
         notifyCV.wait(lk);
-        cout << "unlocked" << endl;
       }
     }
 
