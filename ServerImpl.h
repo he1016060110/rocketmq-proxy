@@ -71,6 +71,9 @@ private:
       bool ok;
       while (true) {
         GPR_ASSERT(cq_->Next(&tag, &ok));
+        if (!ok) {
+          cout << "connection closed!" <<endl;
+        }
         //如果不ok，是客户端取消了，或者网络不通这些原因，应该取消
         switch (static_cast<CallDataBase *>(tag)->getType()) {
           case REQUEST_PRODUCE:
