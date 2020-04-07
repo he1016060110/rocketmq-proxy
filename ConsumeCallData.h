@@ -24,6 +24,15 @@ public:
       responder_.Finish(reply_, Status::OK, this);
     }
 
+    void responseTimeOut() {
+      reply_.set_msg_id("");
+      reply_.set_body("");
+      reply_.set_code(1);
+      reply_.set_error_msg("get msg timeout");
+      status_ = FINISH;
+      responder_.Finish(reply_, Status::OK, this);
+    }
+
 private:
     void del() override {
       GPR_ASSERT(status_ == FINISH);

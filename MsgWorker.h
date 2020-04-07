@@ -67,6 +67,10 @@ public:
     time_t sendClientAt;
     time_t ackAt;
     time_t lastActiveAt;
+    bool getIsTimeout()
+    {
+      time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
+    }
     MsgWorkerConsumeStatus status;
 };
 
@@ -216,7 +220,11 @@ class MsgWorker {
               }
             }
           }
-          tmp.push(unit);
+          if (unit->getIsTimeout()) {
+            unit->callData->responseTimeOut();
+          } else {
+            tmp.push(unit);
+          }
         }
         //没有处理掉的重新推进去
         while (tmp.try_pop(unit)) {

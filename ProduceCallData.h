@@ -30,14 +30,13 @@ private:
 
     void process() override {
       new ProduceCallData(service_, cq_);
-      auto that = this;
       auto callback = new ProducerCallback();
 
       if (!request_.topic().size() || !request_.group().size() || !request_.tag().size() || !request_.body().size()) {
         reply_.set_code(1);
         reply_.set_err_msg("params error!");
         status_ = FINISH;
-        responder_.Finish(reply_, Status::OK, that);
+        responder_.Finish(reply_, Status::OK, this);
         return;
       }
 
