@@ -70,7 +70,7 @@ public:
     }
 
     bool getIsAckTimeout() {
-      return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
+      return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_ACK_TIME;
     }
 
     MsgWorkerConsumeStatus status;
@@ -227,22 +227,24 @@ class MsgWorker {
               }
             }
           }
-        }
-        if (unit->getIsFetchMsgTimeout()) {
-          resetConsumerActive(unit->topic, unit->group);
-          unit->callData->responseTimeOut();
-        } else if (unit->getIsAckTimeout()) {
-          shared_ptr<MsgMatchUnit>  matchUnit;
-          //如果超时，设置为reconsume later
-          if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
-            std::unique_lock<std::mutex> lk(matchUnit->mtx);
-            matchUnit->status = MSG_CONSUME_ACK;
-            matchUnit->consumeStatus = RECONSUME_LATER;
-            matchUnit->cv.notify_all();
+
+          if (unit->getIsFetchMsgTimeout()) {
+            resetConsumerActive(unit->topic, unit->group);
+            unit->callData->responseTimeOut();
+          } else if (unit->getIsAckTimeout()) {
+            shared_ptr<MsgMatchUnit>  matchUnit;
+            //如果超时，设置为reconsume later
+            if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
+              std::unique_lock<std::mutex> lk(matchUnit->mtx);
+              matchUnit->status = MSG_CONSUME_ACK;
+              matchUnit->consumeStatus = RECONSUME_LATER;
+              matchUnit->cv.notify_all();
+            }
+          } else {
+            tmp.push(unit);
           }
-        } else {
-          tmp.push(unit);
         }
+
         //没有处理掉的重新推进去
         while (tmp.try_pop(unit)) {
           consumeMsgPool.push(unit);
