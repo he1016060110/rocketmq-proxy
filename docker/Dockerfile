@@ -26,5 +26,15 @@ RUN wget https://github.com/he1016060110/rocketmq-client-cpp/archive/xhj-2.0.1.t
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
-RUN git clone https://github.com/he1016060110/rocketmq-proxy.git && cd rocketmq-proxy && cmake . && make -j4 \
-    && make install && rm -rf /root/rocketmq-proxy
+RUN git clone -b v1.25.0 https://github.com/grpc/grpc \
+    && cd grpc \
+    && git submodule update --init \
+    && mkdir -p cmake/build \
+    && cd cmake/build \
+    && cmake ../.. \
+    && make -j4 && make install
+
+RUN cd grpc/third_party/protobuf
+
+#RUN git clone https://github.com/he1016060110/rocketmq-proxy.git && cd rocketmq-proxy && cmake . && make -j4 \
+#    && make install && rm -rf /root/rocketmq-proxy
