@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
   while (true) {
     client.Consume("test-topic", "test-topic");
     //测试超时
-    //boost::this_thread::sleep(boost::posix_time::seconds(20));
+    boost::this_thread::sleep(boost::posix_time::seconds(20));
     if (client.msgId.size()) {
       client.ConsumeAck("test-topic", "test-topic");
     }
