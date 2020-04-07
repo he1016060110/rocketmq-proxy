@@ -228,11 +228,9 @@ class MsgWorker {
                 unit->status = CLIENT_RECEIVE;
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
                 resetConsumerActive(unit->topic, unit->group);
-                continue;
               }
             }
           }
-
           if (unit->getIsFetchMsgTimeout()) {
             resetConsumerActive(unit->topic, unit->group);
             unit->callData->responseTimeOut();
