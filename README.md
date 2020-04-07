@@ -18,6 +18,7 @@ rocketmq在性能和功能上非常优秀，我们选择了rocketmq作为享换�
 
 - [rocketmq-client-cpp](https://github.com/apache/rocketmq-client-cpp)
 - [grpc](https://github.com/grpc/grpc)
+- [protobuf](https://github.com/protocolbuffers/protobuf)
 - [boost-1.58.0](https://www.boost.org/)
 
 #### 安装
