@@ -56,7 +56,7 @@ private:
           responder_.Finish(reply_, Status::OK, this);
       };
       //必须拷贝一份，不用引用
-      callback->failureFunc = [this, callback](const string &msgResp) {
+      callback->failureFunc = [this](const string &msgResp) {
           retryCount++;
           if (retryCount > ROCKETMQ_PROXY_PRODUCE_MAX_RETRY_COUNT) {
             reply_.set_code(1);
@@ -65,8 +65,7 @@ private:
             responder_.Finish(reply_, Status::OK, this);
           } else {
             //produce失败应该重新发送消息
-            msgWorker->produce(callback, request_.topic(), request_.group(),
-                request_.tag(), request_.body());
+            process();
           }
       };
       msgWorker->produce(callback, request_.topic(), request_.group(), request_.tag(), request_.body());
