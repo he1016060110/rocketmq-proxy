@@ -160,6 +160,10 @@ class MsgWorker {
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
         auto callback = [this, &topic, &group](const std::vector<MQMessageExt> &msgs) {
+            if (msgs.size() != 1) {
+              cout << "msg batch size is not eq 1" << endl;
+              exit(1);
+            }
             auto msg = msgs[0];
             auto key = topic + group;
             shared_ptr<QueueTS<MQMessageExt>> pool;
@@ -232,7 +236,7 @@ class MsgWorker {
             resetConsumerActive(unit->topic, unit->group);
             unit->callData->responseTimeOut();
           } else if (unit->getIsAckTimeout()) {
-            shared_ptr<MsgMatchUnit>  matchUnit;
+            shared_ptr<MsgMatchUnit> matchUnit;
             //如果超时，设置为reconsume later
             if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
               std::unique_lock<std::mutex> lk(matchUnit->mtx);
@@ -268,7 +272,7 @@ public:
 
     void resetConsumerActive(const string &topic, const string &group) {
       auto key = topic + group;
-      shared_ptr <ConsumerUnit> unit;
+      shared_ptr<ConsumerUnit> unit;
       if (consumers.try_get(key, unit)) {
         unit->lastActiveAt = time(0);
       }
