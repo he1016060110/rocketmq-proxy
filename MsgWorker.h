@@ -69,7 +69,7 @@ public:
     time_t lastActiveAt;
     bool getIsTimeout()
     {
-      time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
+      return time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
     }
     MsgWorkerConsumeStatus status;
 };
@@ -177,8 +177,7 @@ class MsgWorker {
               cout << msg.getMsgId() << ":notified!" << endl;
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
-            //todo
-            return CONSUME_SUCCESS;
+            return unit->consumeStatus;
         };
         listener->setMsgCallback(callback);
         consumerUnit->consumer.registerMessageListener(listener);
@@ -195,6 +194,15 @@ class MsgWorker {
     }
 
     MapTS<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
+
+    void notifyTimeout()
+    {
+      for(;;) {
+        boost::this_thread::sleep(boost::posix_time::seconds (1));
+        std::unique_lock<std::mutex> lk(notifyMtx);
+        notifyCV.notify_all();
+      }
+    }
 
     void loopMatch() {
       shared_ptr<ConsumeMsgUnit> unit;
@@ -240,6 +248,12 @@ public:
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
+
+    void startNotifyTimeout()
+    {
+      boost::thread(boost::bind(&MsgWorker::notifyTimeout, this));
+    }
+
     MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
