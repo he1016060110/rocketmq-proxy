@@ -8,6 +8,7 @@ void ConsumeAckCallData::process() {
   new ConsumeAckCallData(service_, cq_);
   auto msg_id = request_.msg_id();
   shared_ptr<MsgMatchUnit> matchUnit;
+  msgWorker->resetConsumerActive(request_.topic(), request_.consumer_group());
   if (msgWorker->MsgMatchUnits.try_get(msg_id, matchUnit)) {
     matchUnit->status = MSG_CONSUME_ACK;
     matchUnit->consumeStatus = (ConsumeStatus) request_.status();

@@ -21,10 +21,10 @@ using namespace std;
 using namespace rocketmq;
 
 #define MAX_MSG_WAIT_CONSUME_TIME 10
+#define MAX_MSG_WAIT_CONSUME_ACK_TIME 10
 
 enum MsgWorkerConsumeStatus {
     PROXY_CONSUME_INIT,
-    PROXY_CONSUME,
     CLIENT_RECEIVE,
     CONSUME_ACK
 };
@@ -67,10 +67,15 @@ public:
     time_t sendClientAt;
     time_t ackAt;
     time_t lastActiveAt;
-    bool getIsTimeout()
-    {
-      return time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
+
+    bool getIsFetchMsgTimeout() {
+      return status == PROXY_CONSUME_INIT && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
     }
+
+    bool getIsAckTimeout() {
+      return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_TIME;
+    }
+
     MsgWorkerConsumeStatus status;
 };
 
@@ -192,10 +197,9 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
 
-    void notifyTimeout()
-    {
-      for(;;) {
-        boost::this_thread::sleep(boost::posix_time::seconds (1));
+    void notifyTimeout() {
+      for (;;) {
+        boost::this_thread::sleep(boost::posix_time::seconds(1));
         std::unique_lock<std::mutex> lk(notifyMtx);
         notifyCV.notify_all();
       }
@@ -219,17 +223,28 @@ class MsgWorker {
               if (pool->try_pop(msg)) {
                 idUnitMap.insert_or_update(msg.getMsgId(), unit);
                 unit->msgId = msg.getMsgId();
+                unit->status = CLIENT_RECEIVE;
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
-                cout << msg.getMsgId() << msg.getBody() << endl;
+                resetConsumerActive(unit->topic, unit->group);
                 continue;
               }
             }
           }
-          if (unit->getIsTimeout()) {
-            unit->callData->responseTimeOut();
-          } else {
-            tmp.push(unit);
+        }
+        if (unit->getIsFetchMsgTimeout()) {
+          resetConsumerActive(unit->topic, unit->group);
+          unit->callData->responseTimeOut();
+        } else if (unit->getIsAckTimeout()) {
+          shared_ptr<MsgMatchUnit>  matchUnit;
+          //如果超时，设置为reconsume later
+          if (idUnitMap.try_get(unit->msgId, matchUnit)) {
+            std::unique_lock<std::mutex> lk(matchUnit->mtx);
+            matchUnit->status = MSG_CONSUME_ACK;
+            matchUnit->consumeStatus = RECONSUME_LATER;
+            matchUnit->cv.notify_all();
           }
+        } else {
+          tmp.push(unit);
         }
         //没有处理掉的重新推进去
         while (tmp.try_pop(unit)) {
@@ -245,13 +260,21 @@ public:
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
 
-    void startNotifyTimeout()
-    {
+    void startNotifyTimeout() {
       boost::thread(boost::bind(&MsgWorker::notifyTimeout, this));
     }
 
     MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+
+    void resetConsumerActive(const string &topic, const string &group) {
+      auto key = topic + group;
+      shared_pt <ConsumerUnit> unit;
+      if (consumers.try_get(key, unit)) {
+        unit->lastActiveAt = time(0);
+      }
+    }
+
     MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
     std::mutex notifyMtx;
     std::condition_variable notifyCV;

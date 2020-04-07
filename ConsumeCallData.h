@@ -14,15 +14,7 @@ public:
       Proceed();
     }
 
-    bool responseMsg(int code, string errMsg, string msgId, string body)
-    {
-      reply_.set_msg_id(msgId);
-      reply_.set_body(body);
-      reply_.set_code(code);
-      reply_.set_error_msg(errMsg);
-      status_ = FINISH;
-      responder_.Finish(reply_, Status::OK, this);
-    }
+    bool responseMsg(int code, string errMsg, string msgId, string body);
 
     void responseTimeOut() {
       reply_.set_msg_id("");
