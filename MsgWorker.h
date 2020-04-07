@@ -181,6 +181,7 @@ class MsgWorker {
               this->notifyCV.notify_all();
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
+            MsgMatchUnits.erase(msg.getMsgId());
             return unit->consumeStatus;
         };
         listener->setMsgCallback(callback);
@@ -278,6 +279,7 @@ public:
       }
     }
 
+    //msgId 与消息消费对应关系
     MapTS<string, shared_ptr<ConsumeMsgUnit>> idUnitMap;
     std::mutex notifyMtx;
     std::condition_variable notifyCV;

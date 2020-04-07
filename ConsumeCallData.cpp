@@ -24,3 +24,9 @@ bool ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string 
   status_ = FINISH;
   responder_.Finish(reply_, Status::OK, this);
 }
+
+void ConsumeCallData::del() {
+  msgWorker->idUnitMap.erase(reply_.msg_id());
+  GPR_ASSERT(status_ == FINISH);
+  delete this;
+}
