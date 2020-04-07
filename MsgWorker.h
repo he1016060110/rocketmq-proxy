@@ -63,9 +63,6 @@ public:
     string topic;
     string group;
     string msgId;
-    time_t consumeByProxyAt;
-    time_t sendClientAt;
-    time_t ackAt;
     time_t lastActiveAt;
 
     bool getIsFetchMsgTimeout() {
@@ -237,7 +234,7 @@ class MsgWorker {
         } else if (unit->getIsAckTimeout()) {
           shared_ptr<MsgMatchUnit>  matchUnit;
           //如果超时，设置为reconsume later
-          if (idUnitMap.try_get(unit->msgId, matchUnit)) {
+          if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
             std::unique_lock<std::mutex> lk(matchUnit->mtx);
             matchUnit->status = MSG_CONSUME_ACK;
             matchUnit->consumeStatus = RECONSUME_LATER;
@@ -269,7 +266,7 @@ public:
 
     void resetConsumerActive(const string &topic, const string &group) {
       auto key = topic + group;
-      shared_pt <ConsumerUnit> unit;
+      shared_ptr <ConsumerUnit> unit;
       if (consumers.try_get(key, unit)) {
         unit->lastActiveAt = time(0);
       }
