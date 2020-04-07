@@ -159,7 +159,7 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
-        auto callback = [this, &topic, &group](const std::vector<MQMessageExt> &msgs) {
+        auto callback = [this, topic, group](const std::vector<MQMessageExt> &msgs) {
             if (msgs.size() != 1) {
               cout << "msg batch size is not eq 1" << endl;
               exit(1);
