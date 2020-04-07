@@ -11,15 +11,13 @@ rocketmq在性能和功能上非常优秀，我们选择了rocketmq作为享换�
 经过权衡，我们采用了第三种方法。
 
 ##### server协议
-http协议会有大量的包传header信息，没有长连接，用http做通信协议效率不高。  
-经过权衡，我们决定使用websocket协议作为server和服务端的通信协议，主要由于它足够common并且简单。  
-使用开源 [Simple-WebSocket-Server](https://gitlab.com/eidheim/Simple-WebSocket-Server) 作为server框架。
-没有使用grpc、thrift或brpc等是因为它足够简单，遇到问题好修改，而且也足够稳定（这也很重要）。
+
+使用grpc作为底层rpc框架，因为它成熟且稳定。
 
 #### 使用软件
 
 - [rocketmq-client-cpp](https://github.com/apache/rocketmq-client-cpp)
-- [Simple-WebSocket-Server](https://gitlab.com/eidheim/Simple-WebSocket-Server)
+- [grpc](https://github.com/grpc/grpc)
 - [boost-1.58.0](https://www.boost.org/)
 
 #### 安装
