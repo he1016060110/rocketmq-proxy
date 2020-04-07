@@ -39,7 +39,7 @@ class MsgWorker;
 class CallDataBase {
 public:
     CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
-        : service_(service), cq_(cq), status_(CREATE), type_(type) {
+        : service_(service), cq_(cq), status_(CREATE), type_(type), retryCount(0){
       Proceed();
     }
 
@@ -51,6 +51,8 @@ public:
     virtual void process() {};
 
     virtual void del() {};
+
+    virtual void cancel () {};
 
     void Proceed() {
       if (status_ == CREATE) {
@@ -67,6 +69,7 @@ public:
     }
 
 protected:
+    int retryCount;
     ProxyServer::AsyncService *service_;
     ServerCompletionQueue *cq_;
     ServerContext ctx_;

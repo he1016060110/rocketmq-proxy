@@ -14,12 +14,16 @@
 class ProduceCallData : public CallDataBase {
 public:
     ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq, REQUEST_PRODUCE), responder_(&ctx_), retryCount(0) {
+        service, cq, REQUEST_PRODUCE), responder_(&ctx_) {
+      Proceed();
+    }
+
+    void cancel() override {
+      status_ = FINISH;
       Proceed();
     }
 
 private:
-    int retryCount;
     void del() override {
       GPR_ASSERT(status_ == FINISH);
       delete this;
@@ -30,6 +34,7 @@ private:
       service_->RequestProduce(&ctx_, &request_, &responder_, cq_, cq_,
                                this);
     }
+
 
     void process() override {
       new ProduceCallData(service_, cq_);

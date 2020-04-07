@@ -72,19 +72,27 @@ private:
       while (true) {
         GPR_ASSERT(cq_->Next(&tag, &ok));
         //如果不ok，是客户端取消了，或者网络不通这些原因，应该取消
-        if (!ok) {
-          cout << "completion queue not ok!" << endl;
-          continue;
-        }
         switch (static_cast<CallDataBase *>(tag)->getType()) {
           case REQUEST_PRODUCE:
-            static_cast<ProduceCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ProduceCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ProduceCallData *>(tag)->cancel();
+            }
             break;
           case REQUEST_CONSUME:
-            static_cast<ConsumeCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ConsumeCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ConsumeCallData *>(tag)->cancel();
+            }
             break;
           case REQUEST_CONSUME_ACK:
-            static_cast<ConsumeAckCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ConsumeAckCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ConsumeAckCallData *>(tag)->cancel();
+            }
             break;
         }
       }

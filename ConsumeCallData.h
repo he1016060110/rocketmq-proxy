@@ -14,6 +14,8 @@ public:
       Proceed();
     }
 
+    void cancel() override ;
+
     bool responseMsg(int code, string errMsg, string msgId, string body);
 
     void responseTimeOut() {

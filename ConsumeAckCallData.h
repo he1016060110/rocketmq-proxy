@@ -15,6 +15,11 @@ public:
       Proceed();
     }
 
+    void cancel() override {
+      status_ = FINISH;
+      Proceed();
+    }
+
 private:
     void del() override {
       GPR_ASSERT(status_ == FINISH);
@@ -28,6 +33,7 @@ private:
     }
 
     void process() override;
+
 
     ConsumeAckRequest request_;
     ConsumeAckReply reply_;

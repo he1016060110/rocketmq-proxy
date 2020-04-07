@@ -30,3 +30,15 @@ void ConsumeCallData::del() {
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }
+
+void ConsumeCallData::cancel() {
+  shared_ptr<MsgMatchUnit> matchUnit;
+  if (msgWorker->MsgMatchUnits.try_get(reply_.msg_id(), matchUnit)) {
+    std::unique_lock<std::mutex> lk(matchUnit->mtx);
+    matchUnit->status = MSG_CONSUME_ACK;
+    matchUnit->consumeStatus = RECONSUME_LATER;
+    matchUnit->cv.notify_one();
+  }
+  status_ = FINISH;
+  Proceed();
+}
