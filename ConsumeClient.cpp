@@ -36,7 +36,7 @@ using namespace std;
 class ConsumeClient {
 public:
     ConsumeClient(std::shared_ptr<Channel> channel)
-        : stub_(ProxyServer::NewStub(channel)) {}
+        : stub_(ProxyServer::NewStub(channel)), msgId("") {}
 
     // Assembles the client's payload, sends it and presents the response back
     // from the server.
@@ -112,9 +112,13 @@ private:
 int main(int argc, char **argv) {
   ConsumeClient client(grpc::CreateChannel(
       "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
-  client.Consume("test-topic", "test-topic");
-  if (client.msgId.size()) {
-    client.ConsumeAck("test-topic", "test-topic");
+  while (true) {
+    client.Consume("test-topic", "test-topic");
+    if (client.msgId.size()) {
+      client.ConsumeAck("test-topic", "test-topic");
+    }
+    client.emptyMsgId();
   }
+
   return 0;
 }
