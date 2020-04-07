@@ -223,11 +223,13 @@ class MsgWorker {
             if (msgPool.try_get(key, pool)) {
               MQMessageExt msg;
               if (pool->try_pop(msg)) {
-                idUnitMap.insert_or_update(msg.getMsgId(), unit);
                 unit->msgId = msg.getMsgId();
                 unit->status = CLIENT_RECEIVE;
+                idUnitMap.insert_or_update(msg.getMsgId(), unit);
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
                 resetConsumerActive(unit->topic, unit->group);
+                //todo 为什么影响性能
+                continue;
               }
             }
           }
