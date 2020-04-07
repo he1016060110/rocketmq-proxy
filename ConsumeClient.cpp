@@ -72,6 +72,7 @@ public:
       } else {
         std::cout << status.error_code() << ": " << status.error_message()
                   << std::endl;
+        exit(1);
       }
     }
 
@@ -97,11 +98,12 @@ public:
         if (!reply.code()) {
           cout << msgId << " ack success!" << endl;
         } else {
-
+          cout << reply.error_msg() << endl;
         }
       } else {
         std::cout << status.error_code() << ": " << status.error_message()
                   << std::endl;
+        exit(1);
       }
     }
 
