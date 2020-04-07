@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
   std::string tag("*");
   std::string body("this is test!");
 
-  for(int i = 0; i < 1000; i++) {
+  for(int i = 0; i < 100000; i++) {
     std::string reply = client.Produce(topic, group, tag, body);
     std::cout << "received: " << reply << std::endl;
   }
