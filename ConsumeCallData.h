@@ -19,8 +19,6 @@ public:
     bool responseMsg(int code, string errMsg, string msgId, string body);
 
     void responseTimeOut() {
-      reply_.set_msg_id("");
-      reply_.set_body("");
       reply_.set_code(1);
       reply_.set_error_msg("get msg timeout");
       status_ = FINISH;

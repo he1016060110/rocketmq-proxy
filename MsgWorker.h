@@ -175,8 +175,8 @@ class MsgWorker {
               cout << "msg batch size is not eq 1" << endl;
               exit(1);
             }
-            cout << "thread id[" << std::this_thread::get_id() << "]" << endl;
             auto msg = msgs[0];
+            cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "]" << endl;
             shared_ptr<QueueTS<MQMessageExt>> pool;
             if (this->msgPool.try_get(key, pool)) {
               pool->push(msg);
@@ -190,6 +190,7 @@ class MsgWorker {
               this->notifyCV.notify_all();
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
+            cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "] unlock!" << endl;
             return unit->consumeStatus;
         };
         listener->setMsgCallback(callback);
@@ -244,7 +245,8 @@ class MsgWorker {
             if (unit->getIsFetchMsgTimeout()) {
               resetConsumerActive(unit->topic, unit->group);
               unit->callData->responseTimeOut();
-            } else if (unit->getIsAckTimeout()) {
+            }
+/*            else if (unit->getIsAckTimeout()) {
               shared_ptr<MsgMatchUnit> matchUnit;
               //如果超时，设置为reconsume later
               if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
@@ -253,7 +255,7 @@ class MsgWorker {
                 matchUnit->consumeStatus = RECONSUME_LATER;
                 matchUnit->cv.notify_all();
               }
-            }
+            }*/
             tmp.push(unit);
           }
           //没有处理掉的重新推进去

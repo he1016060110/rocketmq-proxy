@@ -25,13 +25,13 @@ void ConsumeAckCallData::process() {
   } else {
     status_ = FINISH;
     reply_.set_code(1);
-    reply_.set_error_msg("msg cannot be found!");
+    string errMsg = "msg[" + msgId + "] cannot be found!";
+    reply_.set_error_msg(errMsg);
     responder_.Finish(reply_, Status::OK, this);
   }
 }
 
-void ConsumeAckCallData::del()
-{
+void ConsumeAckCallData::del() {
   msgWorker->idUnitMap.erase(request_.msg_id());
   msgWorker->MsgMatchUnits.erase(request_.msg_id());
   GPR_ASSERT(status_ == FINISH);

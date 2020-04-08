@@ -70,32 +70,21 @@ private:
       void *tag;
       bool ok;
       while (true) {
-        GPR_ASSERT(cq_->Next(&tag, &ok));
-        if (!ok) {
-          cout << "connection closed!" <<endl;
+        if(!cq_->Next(&tag, &ok) || !ok) {
+          cout << "Next failed!" <<endl;
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          continue;
         }
         //如果不ok，是客户端取消了，或者网络不通这些原因，应该取消
         switch (static_cast<CallDataBase *>(tag)->getType()) {
           case REQUEST_PRODUCE:
-            if (ok) {
-              static_cast<ProduceCallData *>(tag)->Proceed();
-            } else {
-              static_cast<ProduceCallData *>(tag)->cancel();
-            }
+            static_cast<ProduceCallData *>(tag)->Proceed();
             break;
           case REQUEST_CONSUME:
-            if (ok) {
-              static_cast<ConsumeCallData *>(tag)->Proceed();
-            } else {
-              static_cast<ConsumeCallData *>(tag)->cancel();
-            }
+            static_cast<ConsumeCallData *>(tag)->Proceed();
             break;
           case REQUEST_CONSUME_ACK:
-            if (ok) {
-              static_cast<ConsumeAckCallData *>(tag)->Proceed();
-            } else {
-              static_cast<ConsumeAckCallData *>(tag)->cancel();
-            }
+            static_cast<ConsumeAckCallData *>(tag)->Proceed();
             break;
         }
       }
