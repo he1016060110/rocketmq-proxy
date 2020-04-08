@@ -176,17 +176,18 @@ class MsgWorker {
               exit(1);
             }
             auto msg = msgs[0];
-            cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "]" << endl;
-            shared_ptr<QueueTS<MQMessageExt>> pool;
-            if (this->msgPool.try_get(key, pool)) {
-              pool->push(msg);
-            } else {
-              //不应该出现这种情况
-            }
             shared_ptr<MsgMatchUnit> unit(new MsgMatchUnit);
             {
               std::unique_lock<std::mutex> lk(unit->mtx);
+              //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
               MsgMatchUnits.insert(msg.getMsgId(), unit);
+              cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "]" << endl;
+              shared_ptr<QueueTS<MQMessageExt>> pool;
+              if (this->msgPool.try_get(key, pool)) {
+                pool->push(msg);
+              } else {
+                //不应该出现这种情况
+              }
               this->notifyCV.notify_all();
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
