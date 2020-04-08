@@ -10,7 +10,7 @@
 class ConsumeCallData : public CallDataBase {
 public:
     ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq, REQUEST_CONSUME), responder_(&ctx_) {
+        service, cq, REQUEST_CONSUME), responder_(&ctx_) ,msgId("") {
       Proceed();
     }
 
@@ -38,6 +38,7 @@ private:
     ConsumeRequest request_;
     ConsumeReply reply_;
     ServerAsyncResponseWriter<ConsumeReply> responder_;
+    string msgId;
 };
 
 

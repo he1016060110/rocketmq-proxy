@@ -22,6 +22,7 @@ void ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string 
   reply_.set_code(code);
   reply_.set_error_msg(errMsg);
   status_ = FINISH;
+  this->msgId = msgId;
   responder_.Finish(reply_, Status::OK, this);
 }
 
@@ -32,11 +33,15 @@ void ConsumeCallData::del() {
 
 void ConsumeCallData::cancel() {
   shared_ptr<MsgMatchUnit> matchUnit;
-  if (msgWorker->MsgMatchUnits.try_get(reply_.msg_id(), matchUnit)) {
+  if (msgId.size() && msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
     std::unique_lock<std::mutex> lk(matchUnit->mtx);
     matchUnit->status = MSG_CONSUME_ACK;
     matchUnit->consumeStatus = RECONSUME_LATER;
     matchUnit->cv.notify_one();
+  }
+  if (msgId.size()) {
+    msgWorker->idUnitMap.erase(msgId);
+    msgWorker->MsgMatchUnits.erase(msgId);
   }
   status_ = FINISH;
   Proceed();
