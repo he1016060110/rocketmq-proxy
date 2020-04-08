@@ -16,6 +16,7 @@
 #include <string>
 #include "boost/thread.hpp"
 #include <memory>
+#include <thread>
 
 using namespace std;
 using namespace rocketmq;
@@ -141,8 +142,7 @@ class MsgWorker {
       }
     }
 
-    void initMsgQueue(const string &key)
-    {
+    void initMsgQueue(const string &key) {
       shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
       msgPool.insert(key, msgP);
     }
@@ -175,6 +175,7 @@ class MsgWorker {
               cout << "msg batch size is not eq 1" << endl;
               exit(1);
             }
+            cout << "thread id[" << std::this_thread::get_id() << "]" << endl;
             auto msg = msgs[0];
             shared_ptr<QueueTS<MQMessageExt>> pool;
             if (this->msgPool.try_get(key, pool)) {
@@ -239,19 +240,20 @@ class MsgWorker {
               }
             }
           }
-          if (unit->getIsFetchMsgTimeout()) {
-            resetConsumerActive(unit->topic, unit->group);
-            unit->callData->responseTimeOut();
-          } else if (unit->getIsAckTimeout()) {
-            shared_ptr<MsgMatchUnit> matchUnit;
-            //如果超时，设置为reconsume later
-            if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
-              std::unique_lock<std::mutex> lk(matchUnit->mtx);
-              matchUnit->status = MSG_CONSUME_ACK;
-              matchUnit->consumeStatus = RECONSUME_LATER;
-              matchUnit->cv.notify_all();
+          if (!unit->getIsAck()) {
+            if (unit->getIsFetchMsgTimeout()) {
+              resetConsumerActive(unit->topic, unit->group);
+              unit->callData->responseTimeOut();
+            } else if (unit->getIsAckTimeout()) {
+              shared_ptr<MsgMatchUnit> matchUnit;
+              //如果超时，设置为reconsume later
+              if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
+                std::unique_lock<std::mutex> lk(matchUnit->mtx);
+                matchUnit->status = MSG_CONSUME_ACK;
+                matchUnit->consumeStatus = RECONSUME_LATER;
+                matchUnit->cv.notify_all();
+              }
             }
-          } else if(!unit->getIsAck()){
             tmp.push(unit);
           }
           //没有处理掉的重新推进去
