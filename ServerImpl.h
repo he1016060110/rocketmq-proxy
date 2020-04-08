@@ -70,7 +70,7 @@ private:
       void *tag;
       bool ok;
       while (true) {
-        if(!cq_->Next(&tag, &ok) || !ok) {
+        if(!cq_->Next(&tag, &ok)) {
           cout << "Next failed!" <<endl;
           std::this_thread::sleep_for(std::chrono::seconds(1));
           continue;
@@ -78,13 +78,25 @@ private:
         //如果不ok，是客户端取消了，或者网络不通这些原因，应该取消
         switch (static_cast<CallDataBase *>(tag)->getType()) {
           case REQUEST_PRODUCE:
-            static_cast<ProduceCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ProduceCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ProduceCallData *>(tag)->cancel();
+            }
             break;
           case REQUEST_CONSUME:
-            static_cast<ConsumeCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ConsumeCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ConsumeCallData *>(tag)->cancel();
+            }
             break;
           case REQUEST_CONSUME_ACK:
-            static_cast<ConsumeAckCallData *>(tag)->Proceed();
+            if (ok) {
+              static_cast<ConsumeAckCallData *>(tag)->Proceed();
+            } else {
+              static_cast<ConsumeAckCallData *>(tag)->cancel();
+            }
             break;
         }
       }

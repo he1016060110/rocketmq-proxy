@@ -213,7 +213,7 @@ class MsgWorker {
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::seconds(1));
-        std::unique_lock<std::mutex> lk(notifyMtx);
+        cout << "notifyTimeout" << endl;
         notifyCV.notify_all();
       }
     }
