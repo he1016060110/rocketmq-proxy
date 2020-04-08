@@ -141,6 +141,12 @@ class MsgWorker {
       }
     }
 
+    void initMsgQueue(const string &key)
+    {
+      shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
+      msgPool.insert(key, msgP);
+    }
+
     bool getConsumerExist(const string &topic, const string &group) {
       auto key = topic + group;
       shared_ptr<ConsumerUnit> unit;
@@ -163,20 +169,18 @@ class MsgWorker {
         consumerUnit->consumer.setTcpTransportConnectTimeout(400);
         consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
         auto listener = new ConsumerMsgListener();
-        auto callback = [this, topic, group](const std::vector<MQMessageExt> &msgs) {
+        auto key = topic + group;
+        auto callback = [this, topic, group, key](const std::vector<MQMessageExt> &msgs) {
             if (msgs.size() != 1) {
               cout << "msg batch size is not eq 1" << endl;
               exit(1);
             }
             auto msg = msgs[0];
-            auto key = topic + group;
             shared_ptr<QueueTS<MQMessageExt>> pool;
             if (this->msgPool.try_get(key, pool)) {
               pool->push(msg);
             } else {
-              shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
-              msgP->push(msg);
-              this->msgPool.insert(key, msgP);
+              //不应该出现这种情况
             }
             shared_ptr<MsgMatchUnit> unit(new MsgMatchUnit);
             {
@@ -189,6 +193,7 @@ class MsgWorker {
         };
         listener->setMsgCallback(callback);
         consumerUnit->consumer.registerMessageListener(listener);
+        initMsgQueue(key);
         try {
           consumerUnit->consumer.start();
           consumers.insert(key, consumerUnit);
