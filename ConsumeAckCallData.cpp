@@ -32,8 +32,8 @@ void ConsumeAckCallData::process() {
 
 void ConsumeAckCallData::del()
 {
-  msgWorker->idUnitMap.erase(reply_.msg_id());
-  msgWorker->MsgMatchUnits.erase(reply_.msg_id());
+  msgWorker->idUnitMap.erase(request_.msg_id());
+  msgWorker->MsgMatchUnits.erase(request_.msg_id());
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }

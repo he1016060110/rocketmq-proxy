@@ -62,6 +62,7 @@ class ProduceClient {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
       return "RPC failed";
+      exit(1);
     }
   }
 

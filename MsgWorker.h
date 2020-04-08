@@ -185,7 +185,6 @@ class MsgWorker {
               this->notifyCV.notify_all();
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
-            MsgMatchUnits.erase(msg.getMsgId());
             return unit->consumeStatus;
         };
         listener->setMsgCallback(callback);
