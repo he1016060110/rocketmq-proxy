@@ -54,6 +54,8 @@ public:
 
     virtual void cancel () {};
 
+    virtual ~CallDataBase() {};
+
     void Proceed() {
       if (status_ == CREATE) {
         create();
@@ -69,12 +71,12 @@ public:
     }
 
 protected:
-    int retryCount;
     ProxyServer::AsyncService *service_;
     ServerCompletionQueue *cq_;
     ServerContext ctx_;
     CallStatus status_;
     RequestType type_;
+    int retryCount;
 };
 
 #endif //ROCKETMQ_PROXY_CALL_DATA_H

@@ -57,8 +57,8 @@ public:
 class ConsumeMsgUnit {
 public:
     ConsumeMsgUnit(ConsumeCallData *paramCallData, string paramTopic, string paramGroup) :
-        callData(paramCallData), topic(paramTopic), group(paramGroup), status(PROXY_CONSUME_INIT),
-        lastActiveAt(time(0)) {
+        callData(paramCallData), topic(paramTopic), group(paramGroup), lastActiveAt(time(0)),
+        status(PROXY_CONSUME_INIT) {
     };
     ConsumeCallData *callData;
     string topic;
@@ -181,7 +181,7 @@ class MsgWorker {
               std::unique_lock<std::mutex> lk(unit->mtx);
               //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
               MsgMatchUnits.insert(msg.getMsgId(), unit);
-              cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "]" << endl;
+              cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "]" << endl;
               shared_ptr<QueueTS<MQMessageExt>> pool;
               if (this->msgPool.try_get(key, pool)) {
                 pool->push(msg);
@@ -191,7 +191,7 @@ class MsgWorker {
               this->notifyCV.notify_all();
               unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
             }
-            cout << "thread id[" << std::this_thread::get_id() << "] msg id["<< msg.getMsgId() << "] unlock!" << endl;
+            cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
             return unit->consumeStatus;
         };
         listener->setMsgCallback(callback);

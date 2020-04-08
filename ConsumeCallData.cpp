@@ -16,7 +16,7 @@ void ConsumeCallData::process() {
     }
 }
 
-bool ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string body){
+void ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string body){
   reply_.set_msg_id(msgId);
   reply_.set_body(body);
   reply_.set_code(code);

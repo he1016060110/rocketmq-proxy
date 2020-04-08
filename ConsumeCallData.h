@@ -16,11 +16,12 @@ public:
 
     void cancel() override ;
 
-    bool responseMsg(int code, string errMsg, string msgId, string body);
+    void responseMsg(int code, string errMsg, string msgId, string body);
 
     void responseTimeOut() {
       reply_.set_code(1);
-      reply_.set_error_msg("get msg timeout");
+      string errMsg = "get msg timeout";
+      reply_.set_error_msg(errMsg);
       status_ = FINISH;
       responder_.Finish(reply_, Status::OK, this);
     }
