@@ -73,6 +73,10 @@ public:
       return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_ACK_TIME;
     }
 
+    bool getIsAck() {
+      return status == CONSUME_ACK;
+    }
+
     MsgWorkerConsumeStatus status;
 };
 
@@ -228,8 +232,6 @@ class MsgWorker {
                 idUnitMap.insert_or_update(msg.getMsgId(), unit);
                 unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
                 resetConsumerActive(unit->topic, unit->group);
-                //todo 为什么影响性能
-                continue;
               }
             }
           }
@@ -245,15 +247,15 @@ class MsgWorker {
               matchUnit->consumeStatus = RECONSUME_LATER;
               matchUnit->cv.notify_all();
             }
-          } else {
+          } else if(!unit->getIsAck()){
             tmp.push(unit);
+          }
+          //没有处理掉的重新推进去
+          while (tmp.try_pop(unit)) {
+            consumeMsgPool.push(unit);
           }
         }
 
-        //没有处理掉的重新推进去
-        while (tmp.try_pop(unit)) {
-          consumeMsgPool.push(unit);
-        }
         std::unique_lock<std::mutex> lk(notifyMtx);
         notifyCV.wait(lk);
       }

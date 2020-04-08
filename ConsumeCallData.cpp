@@ -26,7 +26,6 @@ bool ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string 
 }
 
 void ConsumeCallData::del() {
-  msgWorker->idUnitMap.erase(reply_.msg_id());
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }

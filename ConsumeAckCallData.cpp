@@ -6,12 +6,16 @@
 
 void ConsumeAckCallData::process() {
   new ConsumeAckCallData(service_, cq_);
-  auto msg_id = request_.msg_id();
+  auto msgId = request_.msg_id();
   shared_ptr<MsgMatchUnit> matchUnit;
   msgWorker->resetConsumerActive(request_.topic(), request_.consumer_group());
-  if (msgWorker->MsgMatchUnits.try_get(msg_id, matchUnit)) {
+  if (msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
     matchUnit->status = MSG_CONSUME_ACK;
     matchUnit->consumeStatus = (ConsumeStatus) request_.status();
+    shared_ptr<ConsumeMsgUnit> unit;
+    if (msgWorker->idUnitMap.try_get(msgId, unit)) {
+      unit->status = CONSUME_ACK;
+    }
     std::unique_lock<std::mutex> lk(matchUnit->mtx);
     matchUnit->cv.notify_one();
     reply_.set_code(0);
@@ -24,4 +28,12 @@ void ConsumeAckCallData::process() {
     reply_.set_error_msg("msg cannot be found!");
     responder_.Finish(reply_, Status::OK, this);
   }
+}
+
+void ConsumeAckCallData::del()
+{
+  msgWorker->idUnitMap.erase(reply_.msg_id());
+  msgWorker->MsgMatchUnits.erase(reply_.msg_id());
+  GPR_ASSERT(status_ == FINISH);
+  delete this;
 }

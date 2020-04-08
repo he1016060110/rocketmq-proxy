@@ -21,10 +21,7 @@ public:
     }
 
 private:
-    void del() override {
-      GPR_ASSERT(status_ == FINISH);
-      delete this;
-    }
+    void del() override;
 
     void create() override {
       status_ = PROCESS;
