@@ -38,8 +38,11 @@ void MsgWorker::loopMatch() {
         shared_ptr<MsgMatchUnit> matchUnit;
         if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
           if (unit->getIsAckTimeout()) {
-            matchUnit->status = MSG_CONSUME_ACK;
-            matchUnit->consumeStatus = RECONSUME_LATER;
+            {
+              std::unique_lock<std::mutex> lk(matchUnit->mtx);
+              matchUnit->status = MSG_CONSUME_ACK;
+              matchUnit->consumeStatus = RECONSUME_LATER;
+            }
             matchUnit->cv.notify_all();
             continue;
           }

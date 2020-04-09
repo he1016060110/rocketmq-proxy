@@ -10,13 +10,16 @@ void ConsumeAckCallData::process() {
   shared_ptr<MsgMatchUnit> matchUnit;
   msgWorker->resetConsumerActive(request_.topic(), request_.consumer_group());
   if (msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
-    matchUnit->status = MSG_CONSUME_ACK;
-    matchUnit->consumeStatus = (ConsumeStatus) request_.status();
+    {
+      std::unique_lock<std::mutex> lk(matchUnit->mtx);
+      matchUnit->status = MSG_CONSUME_ACK;
+      matchUnit->consumeStatus = (ConsumeStatus) request_.status();
+    }
+    matchUnit->cv.notify_all();
     shared_ptr<ConsumeMsgUnit> unit;
     if (msgWorker->idUnitMap.try_get(msgId, unit)) {
       unit->status = CONSUME_ACK;
     }
-    matchUnit->cv.notify_all();
     reply_.set_code(0);
     reply_.set_error_msg("msg ack succ!");
     status_ = FINISH;
