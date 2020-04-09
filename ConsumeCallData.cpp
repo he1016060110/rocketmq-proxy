@@ -34,7 +34,6 @@ void ConsumeCallData::del() {
 void ConsumeCallData::cancel() {
   shared_ptr<MsgMatchUnit> matchUnit;
   if (msgId.size() && msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
-    std::unique_lock<std::mutex> lk(matchUnit->mtx);
     matchUnit->status = MSG_CONSUME_ACK;
     matchUnit->consumeStatus = RECONSUME_LATER;
     matchUnit->cv.notify_all();
