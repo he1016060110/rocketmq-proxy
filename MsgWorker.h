@@ -241,23 +241,30 @@ class MsgWorker {
                 resetConsumerActive(unit->topic, unit->group);
               }
             }
-          }
-          if (!unit->getIsAck()) {
             if (unit->getIsFetchMsgTimeout()) {
               resetConsumerActive(unit->topic, unit->group);
               unit->callData->responseTimeOut();
+              continue;
             }
-/*            else if (unit->getIsAckTimeout()) {
-              shared_ptr<MsgMatchUnit> matchUnit;
-              //如果超时，设置为reconsume later
-              if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
+            tmp.push(unit);
+          } else if (unit->status == CLIENT_RECEIVE) {
+            shared_ptr<MsgMatchUnit> matchUnit;
+            if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
+              if (unit->getIsAckTimeout()) {
                 std::unique_lock<std::mutex> lk(matchUnit->mtx);
                 matchUnit->status = MSG_CONSUME_ACK;
                 matchUnit->consumeStatus = RECONSUME_LATER;
                 matchUnit->cv.notify_all();
+                continue;
               }
-            }*/
-            tmp.push(unit);
+              tmp.push(unit);
+            } else {
+              //如果找不到了，说明已经删除msg和请求绑定关系，需要删除掉
+              continue;
+            }
+          } else {
+            //CONSUME_ACK
+            continue;
           }
           //没有处理掉的重新推进去
           while (tmp.try_pop(unit)) {
