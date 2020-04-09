@@ -127,7 +127,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
             //不应该出现这种情况
           }
           this->notifyCV.notify_all();
-          unit->cv.wait(lk);
+          unit->cv.wait(lk, [&]{return unit->status ==  MSG_CONSUME_ACK;});
         }
         cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
         return unit->consumeStatus;
