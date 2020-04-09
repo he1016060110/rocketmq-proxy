@@ -32,52 +32,57 @@ using Proxy::ProxyServer;
 using namespace std;
 
 class ProduceClient {
- public:
-  ProduceClient(std::shared_ptr<Channel> channel)
-      : stub_(ProxyServer::NewStub(channel)) {}
+public:
+    ProduceClient(std::shared_ptr<Channel> channel)
+        : stub_(ProxyServer::NewStub(channel)) {}
 
-  // Assembles the client's payload, sends it and presents the response back
-  // from the server.
-  std::string Produce(const std::string& topic, string &group , string &tag, string &body) {
-    // Data we are sending to the server.
-    ProduceRequest request;
-    request.set_topic(topic);
-    request.set_group(group);
-    request.set_tag(tag);
-    request.set_body(body);
-    // Container for the data we expect from the server.
-    ProduceReply reply;
+    // Assembles the client's payload, sends it and presents the response back
+    // from the server.
+    std::string Produce(const std::string &topic, string &group, string &tag, string &body) {
+      // Data we are sending to the server.
+      ProduceRequest request;
+      request.set_topic(topic);
+      request.set_group(group);
+      request.set_tag(tag);
+      request.set_body(body);
+      // Container for the data we expect from the server.
+      ProduceReply reply;
 
-    // Context for the client. It could be used to convey extra information to
-    // the server and/or tweak certain RPC behaviors.
-    ClientContext context;
+      // Context for the client. It could be used to convey extra information to
+      // the server and/or tweak certain RPC behaviors.
+      ClientContext context;
 
-    // The actual RPC.
-    Status status = stub_->Produce(&context, request, &reply);
+      // The actual RPC.
+      Status status = stub_->Produce(&context, request, &reply);
 
-    // Act upon its status.
-    if (status.ok()) {
-      return reply.msg_id();
-    } else {
-      std::cout << status.error_code() << ": " << status.error_message()
-                << std::endl;
-      exit(1);
+      // Act upon its status.
+      if (status.ok()) {
+        return reply.msg_id();
+      } else {
+        std::cout << status.error_code() << ": " << status.error_message()
+                  << std::endl;
+        exit(1);
+      }
     }
-  }
 
- private:
-  std::unique_ptr<ProxyServer::Stub> stub_;
+private:
+    std::unique_ptr<ProxyServer::Stub> stub_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    cout << "输入host！" << endl;
+    exit(1);
+  }
+  string host(*(argv + 1));
   ProduceClient client(grpc::CreateChannel(
-      "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
+      host, grpc::InsecureChannelCredentials()));
   std::string topic("test-topic");
   std::string group("test-topic");
   std::string tag("*");
   std::string body("this is test!");
 
-  for(int i = 0; i < 100000; i++) {
+  for (int i = 0; i < 100000; i++) {
     std::string reply = client.Produce(topic, group, tag, body);
     std::cout << "received: " << reply << std::endl;
   }

@@ -114,8 +114,13 @@ private:
 };
 
 int main(int argc, char **argv) {
+  if (argc < 2) {
+    cout << "输入host！" << endl;
+    exit(1);
+  }
+  string host(*(argv + 1));
   ConsumeClient client(grpc::CreateChannel(
-      "127.0.0.1:8090", grpc::InsecureChannelCredentials()));
+      host, grpc::InsecureChannelCredentials()));
   while (true) {
     client.Consume("test-topic", "test-topic");
     //测试超时
