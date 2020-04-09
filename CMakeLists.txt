@@ -68,3 +68,7 @@ if(ROCKETMQ_FOUND)
     target_link_libraries(Server ${ROCKETMQ_LIBRARIES})
     target_include_directories(Server PRIVATE ${ROCKETMQ_INCLUDE_DIR})
 endif()
+
+install(TARGETS Server DESTINATION bin)
+install(TARGETS ProduceClient DESTINATION bin)
+install(TARGETS ConsumeClient DESTINATION bin)
