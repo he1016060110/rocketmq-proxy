@@ -16,8 +16,7 @@ void ConsumeAckCallData::process() {
     if (msgWorker->idUnitMap.try_get(msgId, unit)) {
       unit->status = CONSUME_ACK;
     }
-    std::unique_lock<std::mutex> lk(matchUnit->mtx);
-    matchUnit->cv.notify_one();
+    matchUnit->cv.notify_all();
     reply_.set_code(0);
     reply_.set_error_msg("msg ack succ!");
     status_ = FINISH;

@@ -37,7 +37,7 @@ void ConsumeCallData::cancel() {
     std::unique_lock<std::mutex> lk(matchUnit->mtx);
     matchUnit->status = MSG_CONSUME_ACK;
     matchUnit->consumeStatus = RECONSUME_LATER;
-    matchUnit->cv.notify_one();
+    matchUnit->cv.notify_all();
   }
   if (msgId.size()) {
     msgWorker->idUnitMap.erase(msgId);
