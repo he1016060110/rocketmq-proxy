@@ -170,7 +170,7 @@ class MsgWorker {
           MsgUnit msg;
           if (pool->try_pop(msg)) {
             shared_ptr<MsgMatchUnit> matchUnit;
-            if (MsgMatchUnits.try_get(msg.msgId, matchUnit)) {
+            while (MsgMatchUnits.try_get(msg.msgId, matchUnit)) {
               {
                 std::unique_lock<std::mutex> lk(matchUnit->mtx);
                 matchUnit->status = MSG_CONSUME_ACK;
