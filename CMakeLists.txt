@@ -1,6 +1,6 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.0)
 
-project (rocketmq-proxy)
+project(rocketmq-proxy)
 
 set(C_FLAGS
         -g
@@ -21,57 +21,61 @@ set(CXX_FLAGS
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 string(REPLACE ";" " " CMAKE_C_FLAGS "${C_FLAGS}")
 
-set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-set( CMAKE_VERBOSE_MAKEFILE on )
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
-
-execute_process(COMMAND protoc -I protos --cpp_out=. protos/Proxy.proto)
-execute_process(COMMAND protoc -I protos --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` protos/Proxy.proto)
 
 include(FindPkgConfig)
 
 add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
         ConsumeCallData.cpp ConsumeAckCallData.cpp MsgWorker.cpp)
+add_custom_command(
+        TARGET Server PRE_BUILD
+        COMMAND bash protoc -I ${CMAKE_SOURCE_DIR}/protos --cpp_out=${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/protos/Proxy.proto
+        COMMAND bash protoc -I ${CMAKE_SOURCE_DIR}/protos --grpc_out=${CMAKE_SOURCE_DIR}
+        --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` ${CMAKE_SOURCE_DIR}/protos/Proxy.proto
+)
+
 add_executable(ConsumeClient ConsumeClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 add_executable(ConsumeClientSleep ConsumeClientSleep.cpp proxy.grpc.pb.cc proxy.pb.cc)
 add_executable(ProduceClient ProduceClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
 
-foreach(_target Server ProduceClient ConsumeClient ConsumeClientSleep)
+foreach (_target Server ProduceClient ConsumeClient ConsumeClientSleep)
     pkg_search_module(PROTOBUF REQUIRED protobuf)
-    if(PROTOBUF_FOUND)
+    if (PROTOBUF_FOUND)
         include_directories(${PROTOBUF_INCLUDE_DIRS})
         target_link_libraries(${_target} ${PROTOBUF_LIBRARIES})
         target_include_directories(${_target} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-    endif()
+    endif ()
 
     pkg_search_module(GRPCPP REQUIRED grpc++)
-    if(GRPCPP_FOUND)
+    if (GRPCPP_FOUND)
         include_directories(${GRPCPP_INCLUDE_DIRS})
         target_link_libraries(${_target} ${GRPCPP_LIBRARIES})
         target_include_directories(${_target} PRIVATE ${GRPCPP_INCLUDE_DIR})
-    endif()
+    endif ()
 
     find_package(Boost 1.58.0 COMPONENTS system thread REQUIRED)
-    if(Boost_FOUND)
+    if (Boost_FOUND)
         include_directories(${Boost_INCLUDE_DIRS})
-        MESSAGE( STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}.")
-        MESSAGE( STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}.")
-        MESSAGE( STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}.")
+        MESSAGE(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}.")
+        MESSAGE(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}.")
+        MESSAGE(STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}.")
         target_link_libraries(${_target} ${Boost_LIBRARIES})
         target_include_directories(${_target} PRIVATE ${Boost_INCLUDE_DIR})
-    endif()
-endforeach()
+    endif ()
+endforeach ()
 
 pkg_search_module(ROCKETMQ REQUIRED rocketmq)
-if(ROCKETMQ_FOUND)
+if (ROCKETMQ_FOUND)
     include_directories(${ROCKETMQ_INCLUDE_DIRS})
     target_link_libraries(Server ${ROCKETMQ_LIBRARIES})
     target_include_directories(Server PRIVATE ${ROCKETMQ_INCLUDE_DIR})
-endif()
+endif ()
 
 install(TARGETS Server DESTINATION bin)
 install(TARGETS ProduceClient DESTINATION bin)
