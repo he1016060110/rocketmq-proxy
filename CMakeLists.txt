@@ -29,6 +29,9 @@ set( CMAKE_VERBOSE_MAKEFILE on )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+execute_process(COMMAND protoc -I protos --cpp_out=. protos/Proxy.proto)
+execute_process(COMMAND protoc -I protos --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` protos/Proxy.proto)
+
 include(FindPkgConfig)
 
 add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
