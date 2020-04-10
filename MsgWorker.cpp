@@ -117,9 +117,27 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
         }
         auto msg = msgs[0];
         shared_ptr<MsgMatchUnit> unit;
+
+        auto pushMsg = [msg, group, key, this] {
+            shared_ptr<QueueTS<MsgUnit>> pool;
+            MsgUnit msgUnit;
+            msgUnit.msgId = msg.getMsgId();
+            msgUnit.type = 1;
+            msgUnit.delayLevel = msg.getDelayTimeLevel();
+            msgUnit.body = msg.getBody();
+            msgUnit.topic = msg.getTopic();
+            msgUnit.group = group;
+            if (this->msgPool.try_get(key, pool)) {
+              pool->push(msgUnit);
+            } else {
+              //不应该出现这种情况
+            }
+        };
+
         //找到了，就直接wait
         if (MsgMatchUnits.try_get(msg.getMsgId(), unit)) {
           std::unique_lock<std::mutex> lk(unit->mtx);
+          pushMsg();
           this->notifyCV.notify_all();
           unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
         } else {
@@ -131,19 +149,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           cout << "thread id[" << std::this_thread::get_id() << "] msg id[" <<
                msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
 #endif
-          shared_ptr<QueueTS<MsgUnit>> pool;
-          MsgUnit msgUnit;
-          msgUnit.msgId = msg.getMsgId();
-          msgUnit.type = 1;
-          msgUnit.delayLevel = msg.getDelayTimeLevel();
-          msgUnit.body = msg.getBody();
-          msgUnit.topic = msg.getTopic();
-          msgUnit.group = group;
-          if (this->msgPool.try_get(key, pool)) {
-            pool->push(msgUnit);
-          } else {
-            //不应该出现这种情况
-          }
+          pushMsg();
           this->notifyCV.notify_all();
           unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
         }
