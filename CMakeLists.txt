@@ -27,7 +27,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 set( CMAKE_VERBOSE_MAKEFILE on )
 
-include_directories(include)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 include(FindPkgConfig)
 
