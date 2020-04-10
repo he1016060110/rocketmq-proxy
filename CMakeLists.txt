@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(rocketmq-proxy)
+project(rocketmq-Proxy)
 
 set(C_FLAGS
         -g
@@ -31,7 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 include(FindPkgConfig)
 
-add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
+add_executable(Server Server.cpp Proxy.grpc.pb.cc Proxy.pb.cc
         ConsumeCallData.cpp ConsumeAckCallData.cpp MsgWorker.cpp)
 #add_custom_command(
 #        TARGET Server PRE_BUILD
@@ -40,9 +40,9 @@ add_executable(Server Server.cpp proxy.grpc.pb.cc proxy.pb.cc
 #        --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` ${CMAKE_SOURCE_DIR}/protos/Proxy.proto
 #)
 
-add_executable(ConsumeClient ConsumeClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
-add_executable(ConsumeClientSleep ConsumeClientSleep.cpp proxy.grpc.pb.cc proxy.pb.cc)
-add_executable(ProduceClient ProduceClient.cpp proxy.grpc.pb.cc proxy.pb.cc)
+add_executable(ConsumeClient ConsumeClient.cpp Proxy.grpc.pb.cc Proxy.pb.cc)
+add_executable(ConsumeClientSleep ConsumeClientSleep.cpp Proxy.grpc.pb.cc Proxy.pb.cc)
+add_executable(ProduceClient ProduceClient.cpp Proxy.grpc.pb.cc Proxy.pb.cc)
 
 foreach (_target Server ProduceClient ConsumeClient ConsumeClientSleep)
     pkg_search_module(PROTOBUF REQUIRED protobuf)
