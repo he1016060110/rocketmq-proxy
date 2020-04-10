@@ -114,13 +114,19 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           exit(1);
         }
         auto msg = msgs[0];
-        shared_ptr<MsgMatchUnit> unit(new MsgMatchUnit);
-        {
+        shared_ptr<MsgMatchUnit> unit;
+        //找到了，就直接wait
+        if (MsgMatchUnits.try_get(msg.getMsgId(), unit)) {
+          std::unique_lock<std::mutex> lk(unit->mtx);
+          this->notifyCV.notify_all();
+          unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
+        } else {
+          unit = shared_ptr<MsgMatchUnit>(new MsgMatchUnit);
           std::unique_lock<std::mutex> lk(unit->mtx);
           //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
           MsgMatchUnits.insert(msg.getMsgId(), unit);
           cout << "thread id[" << std::this_thread::get_id() << "] msg id[" <<
-          msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
+               msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
           shared_ptr<QueueTS<MQMessageExt>> pool;
           if (this->msgPool.try_get(key, pool)) {
             pool->push(msg);
@@ -128,7 +134,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
             //不应该出现这种情况
           }
           this->notifyCV.notify_all();
-          unit->cv.wait(lk, [&]{return unit->status ==  MSG_CONSUME_ACK;});
+          unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
         }
         cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
         return unit->consumeStatus;
