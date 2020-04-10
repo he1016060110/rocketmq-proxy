@@ -17,6 +17,7 @@
 #include "boost/thread.hpp"
 #include <memory>
 #include <thread>
+#include "common.h"
 
 using namespace std;
 using namespace rocketmq;
@@ -155,59 +156,8 @@ class MsgWorker {
     std::condition_variable processMsgCV;
     string clearConsumerKey;
 
-    void clearMsgForConsumer() {
-      while (true) {
-        //等待shutdown 处理程序通知
-        std::unique_lock<std::mutex> lk1(clearMtx);
-        clearCV.wait(lk1);
-        //获取到锁之后立即通知
-        std::unique_lock<std::mutex> lk2(processMsgMtx);
-        processMsgCV.notify_one();
-        //可以过滤消息了
-
-        shared_ptr<QueueTS<MsgUnit>> pool;
-        if (msgPool.try_get(clearConsumerKey, pool)) {
-          MsgUnit msg;
-          while (pool->try_pop(msg)) {
-            shared_ptr<MsgMatchUnit> matchUnit;
-            if (MsgMatchUnits.try_get(msg.msgId, matchUnit)) {
-              {
-                std::unique_lock<std::mutex> lk(matchUnit->mtx);
-                matchUnit->status = MSG_CONSUME_ACK;
-                matchUnit->consumeStatus = RECONSUME_LATER;
-              }
-              matchUnit->cv.notify_all();
-            }
-          }
-        }
-      }
-    }
-
-    void shutdownConsumer() {
-      shared_ptr<ConsumerUnit> unit;
-      std::vector<string> keys;
-      while (true) {
-        consumers.getAllKeys(keys);
-        for (size_t i = 0; i < keys.size(); i++) {
-          if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
-#ifdef DEBUG
-            cout << keys[i] << " is going to shutdown!" << endl;
-#endif
-            clearCV.notify_one();
-            std::unique_lock<std::mutex> lk(processMsgMtx);
-            clearConsumerKey = keys[i];
-            processMsgCV.wait(lk);
-            unit->consumer.shutdown();
-#ifdef DEBUG
-            cout << keys[i] << " shutdown success!" << endl;
-#endif
-            consumers.erase(keys[i]);
-          }
-        }
-        boost::this_thread::sleep(boost::posix_time::seconds(1));
-      }
-    }
-
+    void shutdownConsumer();
+    void clearMsgForConsumer();
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::seconds(1));

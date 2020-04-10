@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     logFileName = jsonItem.get<string>("logFileName");
     port = jsonItem.get<int>("port");
   } catch (exception &e) {
-    cout << e.what() << endl;
+    PRINT_ERROR(e);
     return 0;
   }
 
