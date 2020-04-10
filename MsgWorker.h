@@ -183,11 +183,6 @@ class MsgWorker {
     void loopMatch();
 
 public:
-    void pushConsumerShutdown(const string  key)
-    {
-      consumerShutdownQueue.push(key);
-    }
-
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
