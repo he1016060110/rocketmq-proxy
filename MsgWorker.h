@@ -149,6 +149,40 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
+    std::mutex clearMtx;
+    std::mutex processMsgMtx;
+    std::condition_variable clearCV;
+    std::condition_variable processMsgCV;
+    string clearConsumerKey;
+
+    void clearMsgForConsumer() {
+      while (true) {
+        //等待shutdown 处理程序通知
+        std::unique_lock<std::mutex> lk1(clearMtx);
+        clearCV.wait(lk1);
+        //获取到锁之后立即通知
+        std::unique_lock<std::mutex> lk2(processMsgMtx);
+        processMsgCV.notify_one();
+        //可以过滤消息了
+
+        shared_ptr<QueueTS<MsgUnit>> pool;
+        if (msgPool.try_get(clearConsumerKey, pool)) {
+          MsgUnit msg;
+          if (pool->try_pop(msg)) {
+            shared_ptr<MsgMatchUnit> matchUnit;
+            if (MsgMatchUnits.try_get(msg.msgId, matchUnit)) {
+              {
+                std::unique_lock<std::mutex> lk(matchUnit->mtx);
+                matchUnit->status = MSG_CONSUME_ACK;
+                matchUnit->consumeStatus = RECONSUME_LATER;
+              }
+              matchUnit->cv.notify_all();
+            }
+          }
+        }
+      }
+    }
+
     void shutdownConsumer() {
       shared_ptr<ConsumerUnit> unit;
       std::vector<string> keys;
@@ -159,6 +193,10 @@ class MsgWorker {
 #ifdef DEBUG
             cout << keys[i] << " is going to shutdown!" << endl;
 #endif
+            clearCV.notify_one();
+            std::unique_lock<std::mutex> lk(processMsgMtx);
+            clearConsumerKey = keys[i];
+            processMsgCV.wait(lk);
             unit->consumer.shutdown();
 #ifdef DEBUG
             cout << keys[i] << " shutdown success!" << endl;
@@ -190,6 +228,10 @@ public:
 
     void startShutdownConsumer() {
       boost::thread(boost::bind(&MsgWorker::shutdownConsumer, this));
+    }
+
+    void startClearMsgForConsumer() {
+      boost::thread(boost::bind(&MsgWorker::clearMsgForConsumer, this));
     }
 
     MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;

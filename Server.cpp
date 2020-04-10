@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
   CallDataBase::msgWorker->startMatcher();
   CallDataBase::msgWorker->startNotifyTimeout();
   CallDataBase::msgWorker->startShutdownConsumer();
+  CallDataBase::msgWorker->startClearMsgForConsumer();
 
   server.Run();
 
