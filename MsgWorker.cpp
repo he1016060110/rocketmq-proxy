@@ -16,20 +16,24 @@ void MsgWorker::loopMatch() {
         }
         auto key = unit->topic + unit->group;
         //检查消息队列pool里面有没有消息
-        shared_ptr<QueueTS<MsgUnit>> pool;
-        if (msgPool.try_get(key, pool)) {
-          MsgUnit msg;
-          if (pool->try_pop(msg)) {
-            unit->msgId = msg.msgId;
+        {
+          std::unique_lock<std::mutex> lk(processMsgMtx);
+          shared_ptr<QueueTS<MsgUnit>> pool;
+          if (msgPool.try_get(key, pool)) {
+            MsgUnit msg;
+            if (pool->try_pop(msg)) {
+              unit->msgId = msg.msgId;
 #ifdef DEBUG
-            cout << msg.msgId << " consumed!" << endl;
+              cout << msg.msgId << " consumed!" << endl;
 #endif
-            unit->status = CLIENT_RECEIVE;
-            idUnitMap.insert_or_update(msg.msgId, unit);
-            unit->callData->responseMsg(0, "", msg.msgId, msg.body);
-            resetConsumerActive(unit->topic, unit->group);
+              unit->status = CLIENT_RECEIVE;
+              idUnitMap.insert_or_update(msg.msgId, unit);
+              unit->callData->responseMsg(0, "", msg.msgId, msg.body);
+              resetConsumerActive(unit->topic, unit->group);
+            }
           }
         }
+
         if (unit->getIsFetchMsgTimeout()) {
           resetConsumerActive(unit->topic, unit->group);
           unit->callData->responseTimeOut();
