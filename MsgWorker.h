@@ -22,7 +22,7 @@ using namespace std;
 using namespace rocketmq;
 
 #define MAX_MSG_WAIT_CONSUME_TIME 10
-#define MAX_MSG_WAIT_CONSUME_ACK_TIME 10
+#define MAX_MSG_WAIT_CONSUME_ACK_TIME 60
 
 enum MsgWorkerConsumeStatus {
     PROXY_CONSUME_INIT,
