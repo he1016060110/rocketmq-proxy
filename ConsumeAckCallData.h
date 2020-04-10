@@ -15,10 +15,7 @@ public:
       Proceed();
     }
 
-    void cancel() override {
-      status_ = FINISH;
-      Proceed();
-    }
+    void cancel() override;
 
 private:
     void del() override;

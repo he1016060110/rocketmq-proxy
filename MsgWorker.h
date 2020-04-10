@@ -46,7 +46,7 @@ public:
     int delayLevel;
     int status;//0
 public:
-    LogUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
+    MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
 };
 
 class ConsumerUnit {
@@ -144,6 +144,22 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
+    QueueTS<string> consumerShutdownQueue;
+
+    void shutdownConsumer()
+    {
+      string key;
+      shared_ptr<ConsumerUnit> unit;
+      while(true)
+      {
+        key = consumerShutdownQueue.wait_and_pop();
+        if (consumers.try_get(key, unit)){
+          unit->consumer.shutdown();
+          consumers.erase(key);
+        }
+      }
+    }
+
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::seconds(1));
@@ -154,12 +170,21 @@ class MsgWorker {
     void loopMatch();
 
 public:
+    pushConsumerShutdown(const string  key)
+    {
+      consumerShutdownQueue.push(key);
+    }
+
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
 
     void startNotifyTimeout() {
       boost::thread(boost::bind(&MsgWorker::notifyTimeout, this));
+    }
+
+    void startShutdownConsumer() {
+      boost::thread(boost::bind(&MsgWorker::shutdownConsumer, this));
     }
 
     MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;

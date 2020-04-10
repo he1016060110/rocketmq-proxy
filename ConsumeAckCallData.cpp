@@ -42,3 +42,11 @@ void ConsumeAckCallData::del() {
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }
+
+void ConsumeAckCallData::cancel()
+{
+  string key = request_.topic() + request_.consumer_group();
+  msgWorker->pushConsumerShutdown(key);
+  status_ = FINISH;
+  del();
+}

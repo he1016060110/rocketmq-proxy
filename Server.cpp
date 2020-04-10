@@ -85,6 +85,8 @@ int main(int argc, char *argv[]) {
   CallDataBase::msgWorker->setConfig(nameServer, accessKey, secretKey, "channel");
   CallDataBase::msgWorker->startMatcher();
   CallDataBase::msgWorker->startNotifyTimeout();
+  CallDataBase::msgWorker->startShutdownConsumer();
+
   server.Run();
 
   return 0;
