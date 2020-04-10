@@ -55,9 +55,8 @@ public:
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;
 
-    bool getIsTooInactive()
-    {
-      return time(0) - lastActiveAt >=MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
+    bool getIsTooInactive() {
+      return time(0) - lastActiveAt >= MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
     }
 };
 
@@ -133,7 +132,7 @@ class MsgWorker {
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
 
-    shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) ;
+    shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group);
 
     void initMsgQueue(const string &key) {
       shared_ptr<QueueTS<MsgUnit>> msgP(new QueueTS<MsgUnit>);
@@ -145,28 +144,26 @@ class MsgWorker {
       shared_ptr<ConsumerUnit> unit;
       return consumers.try_get(key, unit);
     }
+
     shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
-    void shutdownConsumer()
-    {
-      string key;
+    void shutdownConsumer() {
       shared_ptr<ConsumerUnit> unit;
       std::vector<string> keys;
-      while(true)
-      {
+      while (true) {
         consumers.getAllKeys(keys);
-        for( int i =0; i < keys.size(); i++) {
+        for (size_t i = 0; i < keys.size(); i++) {
           if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
 #ifdef DEBUG
-            cout<< key << " is going to shutdown!" << endl;
+            cout << keys[i] << " is going to shutdown!" << endl;
 #endif
             unit->consumer.shutdown();
 #ifdef DEBUG
-            cout<< key << " shutdown success!" << endl;
+            cout << keys[i] << " shutdown success!" << endl;
 #endif
-            consumers.erase(key);
+            consumers.erase(keys[i]);
           }
         }
         boost::this_thread::sleep(boost::posix_time::seconds(1));
