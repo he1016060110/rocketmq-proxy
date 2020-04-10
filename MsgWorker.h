@@ -154,7 +154,13 @@ class MsgWorker {
       {
         key = consumerShutdownQueue.wait_and_pop();
         if (consumers.try_get(key, unit)){
+#ifdef DEBUG
+          cout<< key << " is going to shutdown!" << endl;
+#endif
           unit->consumer.shutdown();
+#ifdef DEBUG
+          cout<< key << " shutdown success!" << endl;
+#endif
           consumers.erase(key);
         }
       }
@@ -170,7 +176,7 @@ class MsgWorker {
     void loopMatch();
 
 public:
-    pushConsumerShutdown(const string  key)
+    void pushConsumerShutdown(const string  key)
     {
       consumerShutdownQueue.push(key);
     }
