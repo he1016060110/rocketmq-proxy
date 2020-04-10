@@ -22,7 +22,8 @@ using namespace std;
 using namespace rocketmq;
 
 #define MAX_MSG_WAIT_CONSUME_TIME 10
-#define MAX_MSG_WAIT_CONSUME_ACK_TIME 60
+#define MAX_MSG_WAIT_CONSUME_ACK_TIME 10
+#define MAX_MSG_CONSUME_MAX_INACTIVE_TIME 20
 
 enum MsgWorkerConsumeStatus {
     PROXY_CONSUME_INIT,
@@ -32,7 +33,6 @@ enum MsgWorkerConsumeStatus {
 
 enum MsgConsumeStatus {
     MSG_FETCH_FROM_BROKER,
-    MSG_DISTRIBUTED,
     MSG_CONSUME_ACK
 };
 
@@ -54,6 +54,11 @@ public:
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;
+
+    bool getIsTooInactive()
+    {
+      return time(0) - lastActiveAt >=MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
+    }
 };
 
 class MsgMatchUnit {
@@ -144,25 +149,27 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
-    QueueTS<string> consumerShutdownQueue;
-
     void shutdownConsumer()
     {
       string key;
       shared_ptr<ConsumerUnit> unit;
+      std::vector<string> keys;
       while(true)
       {
-        key = consumerShutdownQueue.wait_and_pop();
-        if (consumers.try_get(key, unit)){
+        consumers.getAllKeys(keys);
+        for( int i =0; i < keys.size(); i++) {
+          if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
 #ifdef DEBUG
-          cout<< key << " is going to shutdown!" << endl;
+            cout<< key << " is going to shutdown!" << endl;
 #endif
-          unit->consumer.shutdown();
+            unit->consumer.shutdown();
 #ifdef DEBUG
-          cout<< key << " shutdown success!" << endl;
+            cout<< key << " shutdown success!" << endl;
 #endif
-          consumers.erase(key);
+            consumers.erase(key);
+          }
         }
+        boost::this_thread::sleep(boost::posix_time::seconds(1));
       }
     }
 

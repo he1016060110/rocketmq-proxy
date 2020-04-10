@@ -45,8 +45,6 @@ void ConsumeAckCallData::del() {
 
 void ConsumeAckCallData::cancel()
 {
-  string key = request_.topic() + request_.consumer_group();
-  msgWorker->pushConsumerShutdown(key);
   status_ = FINISH;
   del();
 }

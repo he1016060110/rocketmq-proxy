@@ -81,6 +81,15 @@ public:
         boost::mutex::scoped_lock lock(the_mutex);
         return the_map.size();
     }
+
+    void getAllKeys(std::vector<Key> &keys)
+    {
+      boost::mutex::scoped_lock lock(the_mutex);
+      keys.empty();
+      keys.reserve(the_map.size());
+      for(auto const& imap: the_map)
+        keys.push_back(imap.first);
+    }
 };
 
 #endif //ROCKETMQ_PROXY_MAPTS_H

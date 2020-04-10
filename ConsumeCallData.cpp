@@ -32,8 +32,6 @@ void ConsumeCallData::del() {
 
 void ConsumeCallData::cancel() {
   shared_ptr<MsgMatchUnit> matchUnit;
-  string key = request_.topic() + request_.consumer_group();
-  msgWorker->pushConsumerShutdown(key);
   if (msgId.size() && msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
     {
       std::unique_lock<std::mutex> lk(matchUnit->mtx);
