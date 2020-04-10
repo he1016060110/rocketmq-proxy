@@ -21,6 +21,7 @@ void ConsumeAckCallData::process() {
       unit->status = CONSUME_ACK;
     }
     reply_.set_code(0);
+    cout <<"ConsumeAckCallData [" << msgId << "] unit address[" << matchUnit.get() << "]" << endl;
     reply_.set_error_msg("msg ack succ!");
     status_ = FINISH;
     responder_.Finish(reply_, Status::OK, this);

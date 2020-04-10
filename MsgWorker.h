@@ -46,12 +46,13 @@ public:
 
 class MsgMatchUnit {
 public:
-    MsgMatchUnit() : status(MSG_FETCH_FROM_BROKER) {};
+    MsgMatchUnit() : status(MSG_FETCH_FROM_BROKER), counter(1) {};
     MsgConsumeStatus status;
     //rocketmq status
     ConsumeStatus consumeStatus;
     std::mutex mtx;
     std::condition_variable cv;
+    int counter;
 };
 
 class ConsumeMsgUnit {
@@ -112,12 +113,8 @@ class MsgWorker {
     string accessKey_;
     string secretKey_;
     string accessChannel_;
-
-
-
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
-
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) ;
 
@@ -138,7 +135,6 @@ class MsgWorker {
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::seconds(1));
-        cout << "notifyTimeout" << endl;
         notifyCV.notify_all();
       }
     }
