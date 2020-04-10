@@ -36,6 +36,18 @@ enum MsgConsumeStatus {
     MSG_CONSUME_ACK
 };
 
+class MsgUnit {
+public:
+    int type;//1,produce,consume
+    string msgId;
+    string topic;
+    string group;
+    string body;
+    int delayLevel;
+    int status;//0
+public:
+    LogUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
+};
 
 class ConsumerUnit {
 public:
@@ -119,7 +131,7 @@ class MsgWorker {
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group) ;
 
     void initMsgQueue(const string &key) {
-      shared_ptr<QueueTS<MQMessageExt>> msgP(new QueueTS<MQMessageExt>);
+      shared_ptr<QueueTS<MsgUnit>> msgP(new QueueTS<MsgUnit>);
       msgPool.insert(key, msgP);
     }
 
@@ -130,7 +142,7 @@ class MsgWorker {
     }
     shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
 
-    MapTS<string, shared_ptr<QueueTS<MQMessageExt>>> msgPool;
+    MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
     void notifyTimeout() {
       for (;;) {

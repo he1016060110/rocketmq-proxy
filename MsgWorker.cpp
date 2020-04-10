@@ -16,17 +16,17 @@ void MsgWorker::loopMatch() {
         }
         auto key = unit->topic + unit->group;
         //检查消息队列pool里面有没有消息
-        shared_ptr<QueueTS<MQMessageExt>> pool;
+        shared_ptr<QueueTS<MsgUnit>> pool;
         if (msgPool.try_get(key, pool)) {
-          MQMessageExt msg;
+          MsgUnit msg;
           if (pool->try_pop(msg)) {
-            unit->msgId = msg.getMsgId();
+            unit->msgId = msg.msgId;
 #ifdef DEBUG
-            cout << msg.getMsgId() << " consumed!" << endl;
+            cout << msg.msgId << " consumed!" << endl;
 #endif
             unit->status = CLIENT_RECEIVE;
-            idUnitMap.insert_or_update(msg.getMsgId(), unit);
-            unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
+            idUnitMap.insert_or_update(msg.msgId, unit);
+            unit->callData->responseMsg(0, "", msg.msgId, msg.body);
             resetConsumerActive(unit->topic, unit->group);
           }
         }
@@ -131,9 +131,16 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           cout << "thread id[" << std::this_thread::get_id() << "] msg id[" <<
                msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
 #endif
-          shared_ptr<QueueTS<MQMessageExt>> pool;
+          shared_ptr<QueueTS<MsgUnit>> pool;
+          MsgUnit msgUnit;
+          msgUnit.msgId = msg.getMsgId();
+          msgUnit.type = 1;
+          msgUnit.delayLevel = msg.getDelayTimeLevel();
+          msgUnit.body = msg.getBody();
+          msgUnit.topic = msg.getTopic();
+          msgUnit.group = group;
           if (this->msgPool.try_get(key, pool)) {
-            pool->push(msg);
+            pool->push(msgUnit);
           } else {
             //不应该出现这种情况
           }
