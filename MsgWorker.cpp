@@ -21,7 +21,9 @@ void MsgWorker::loopMatch() {
           MQMessageExt msg;
           if (pool->try_pop(msg)) {
             unit->msgId = msg.getMsgId();
+#ifdef DEBUG
             cout << msg.getMsgId() << " consumed!" << endl;
+#endif
             unit->status = CLIENT_RECEIVE;
             idUnitMap.insert_or_update(msg.getMsgId(), unit);
             unit->callData->responseMsg(0, "", msg.getMsgId(), msg.getBody());
@@ -125,8 +127,10 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           std::unique_lock<std::mutex> lk(unit->mtx);
           //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
           MsgMatchUnits.insert(msg.getMsgId(), unit);
+#ifdef DEBUG
           cout << "thread id[" << std::this_thread::get_id() << "] msg id[" <<
                msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
+#endif
           shared_ptr<QueueTS<MQMessageExt>> pool;
           if (this->msgPool.try_get(key, pool)) {
             pool->push(msg);
@@ -136,7 +140,9 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           this->notifyCV.notify_all();
           unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
         }
+#ifdef DEBUG
         cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
+#endif
         return unit->consumeStatus;
     };
     listener->setMsgCallback(callback);
