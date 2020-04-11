@@ -57,7 +57,11 @@ public:
 
       // Act upon its status.
       if (status.ok()) {
-        return reply.msg_id();
+        if (reply.code()) {
+          cout << reply.err_msg() << endl;
+        } else {
+          return reply.msg_id();
+        }
       } else {
         std::cout << status.error_code() << ": " << status.error_message()
                   << std::endl;

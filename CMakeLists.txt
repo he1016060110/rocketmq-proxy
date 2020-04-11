@@ -33,12 +33,6 @@ include(FindPkgConfig)
 
 add_executable(Server Server.cpp Proxy.grpc.pb.cc Proxy.pb.cc
         ConsumeCallData.cpp ConsumeAckCallData.cpp MsgWorker.cpp)
-#add_custom_command(
-#        TARGET Server PRE_BUILD
-#        COMMAND bash protoc -I ${CMAKE_SOURCE_DIR}/protos --cpp_out=${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/protos/Proxy.proto
-#        COMMAND bash protoc -I ${CMAKE_SOURCE_DIR}/protos --grpc_out=${CMAKE_SOURCE_DIR}
-#        --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` ${CMAKE_SOURCE_DIR}/protos/Proxy.proto
-#)
 
 add_executable(ConsumeClient ConsumeClient.cpp Proxy.grpc.pb.cc Proxy.pb.cc)
 add_executable(ConsumeClientSleep ConsumeClientSleep.cpp Proxy.grpc.pb.cc Proxy.pb.cc)

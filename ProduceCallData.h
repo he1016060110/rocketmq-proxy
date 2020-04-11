@@ -68,7 +68,16 @@ private:
             process();
           }
       };
-      msgWorker->produce(callback, request_.topic(), request_.group(), request_.tag(), request_.body());
+
+      try {
+        msgWorker->produce(callback, request_.topic(), request_.group(), request_.tag(), request_.body());
+      } catch (exception &e) {
+        string msgResp = e.what();
+        reply_.set_code(1);
+        reply_.set_err_msg(msgResp);
+        status_ = FINISH;
+        responder_.Finish(reply_, Status::OK, this);
+      }
     }
 
     ProduceRequest request_;
