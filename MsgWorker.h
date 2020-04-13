@@ -46,8 +46,9 @@ public:
     string body;
     int delayLevel;
     int status;//0
+    time_t fetchTime;
 public:
-    MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
+    MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0), fetchTime(time(0)){};
 };
 
 class MsgMatchUnit;
@@ -60,12 +61,13 @@ public:
     std::map<shared_ptr<MsgUnit>, ClientMsgConsumeStatus> clientStatusMap;
     std::map<shared_ptr<MsgUnit>, ConsumeStatus> statusMap;
     std::map<string, shared_ptr<MsgUnit>> idMsgMap;
-    std::map<string, time_t> idTime;
-    std::vector<shared_ptr<MsgUnit>> fetchedArr;
-    std::vector<shared_ptr<MsgUnit>> matchedArr;
-    std::vector<shared_ptr<MsgUnit>> ackArr;
+    std::queue<shared_ptr<MsgUnit>> fetchedArr;
+    std::queue<shared_ptr<MsgUnit>> matchedArr;
+    std::queue<shared_ptr<MsgUnit>> ackArr;
     //全部的status
     ConsumeStatus status;
+    bool getMsg(shared_ptr<MsgUnit> unit);
+    bool setMsgStatus(string msgId, ConsumeStatus s);
 };
 
 class ConsumerUnit {

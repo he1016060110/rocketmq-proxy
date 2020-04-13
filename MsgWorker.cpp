@@ -114,8 +114,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     auto listener = new ConsumerMsgListener();
     auto key = topic + group;
     auto callback = [this, topic, group, key, consumerUnit](const std::vector<MQMessageExt> &msgs) {
-      new ConsumerUnitLocker(msgs, group);
-        consumerUnit->insertLock();
+        new ConsumerUnitLocker(msgs, group);
         //找到了，就直接wait
         if (MsgMatchUnits.try_get(msg.getMsgId(), unit)) {
           std::unique_lock<std::mutex> lk(unit->mtx);
@@ -180,6 +179,7 @@ void MsgWorker::shutdownConsumer() {
     boost::this_thread::sleep(boost::posix_time::seconds(1));
   }
 }
+
 void MsgWorker::clearMsgForConsumer() {
   while (true) {
     //等待shutdown 处理程序通知
@@ -213,12 +213,12 @@ void MsgWorker::clearMsgForConsumer() {
   }
 }
 
-void ConsumerUnit::unlockAll()
-{
+void ConsumerUnit::unlockAll() {
 
 }
 
-ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string & group) : status(RECONSUME_LATER) {
+ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group) : status(
+    RECONSUME_LATER) {
   for (int i = 0; i < msgs.size(); i++) {
     auto msg = msgs[i];
     shared_ptr<MsgUnit> msgUnit;
@@ -230,17 +230,31 @@ ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, co
     msgUnit->group = group;
     clientStatusMap.insert(pair<shared_ptr<MsgUnit>, ClientMsgConsumeStatus>(msgUnit, MSG_FETCH_FROM_BROKER));
     statusMap.insert(pair<shared_ptr<MsgUnit>, ConsumeStatus>(msgUnit, RECONSUME_LATER));
+    idMsgMap.insert(pair<string, shared_ptr<MsgUnit>>(msg.getMsgId(), msgUnit));
+    fetchedArr.push(msgUnit);
   }
 }
 
-void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock)
-{
-  std::unique_lock<std::mutex> lk(lockersMtx);
-  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int> (lock, 1));
+bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> unit) {
+  std::unique_lock<std::mutex> lk(mtx);
+  if (fetchedArr.empty())
+    return false;
+  unit = std::move(fetchedArr.front());
+  fetchedArr.pop();
+  return true;
 }
 
-void ConsumerUnit::eraseLock(shared_ptr<ConsumerUnitLocker> lock)
-{
+bool ConsumerUnitLocker::setMsgStatus(string msgId, ConsumeStatus s) {
+  std::unique_lock<std::mutex> lk(mtx);
+
+}
+
+void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
+  std::unique_lock<std::mutex> lk(lockersMtx);
+  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(lock, 1));
+}
+
+void ConsumerUnit::eraseLock(shared_ptr<ConsumerUnitLocker> lock) {
   std::unique_lock<std::mutex> lk(lockersMtx);
   lockers.erase(lock);
 }
