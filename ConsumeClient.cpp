@@ -114,19 +114,20 @@ private:
 };
 
 int main(int argc, char **argv) {
-  if (argc < 2) {
-    cout << "输入host！" << endl;
+  if (argc < 3) {
+    cout << "输入host topic！" << endl;
     exit(1);
   }
   string host(*(argv + 1));
+  string topic(*(argv + 2));
   ConsumeClient client(grpc::CreateChannel(
       host, grpc::InsecureChannelCredentials()));
   while (true) {
-    client.Consume("test-topic", "test-topic");
+    client.Consume(topic, topic);
     //测试超时
     //boost::this_thread::sleep(boost::posix_time::seconds(20));
     if (client.msgId.size()) {
-      client.ConsumeAck("test-topic", "test-topic");
+      client.ConsumeAck(topic, topic);
     }
     client.emptyMsgId();
   }
