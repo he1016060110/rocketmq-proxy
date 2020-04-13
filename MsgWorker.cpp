@@ -17,7 +17,6 @@ void MsgWorker::loopMatch() {
         auto key = unit->topic + unit->group;
         //检查消息队列pool里面有没有消息
         {
-          std::unique_lock<std::mutex> lk(processMsgMtx);
           shared_ptr<QueueTS<MsgUnit>> pool;
           if (msgPool.try_get(key, pool)) {
             MsgUnit msg;
