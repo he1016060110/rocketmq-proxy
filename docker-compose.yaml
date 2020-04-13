@@ -45,7 +45,7 @@ services:
     ports:
       - 8090:8090
     volumes:
-      - /Users/hexi/Develop/rocketmq-proxy:/data/rocketmq-proxy
+      - /Users/hexi/Develop/rocketmq-proxy:/data/rocketmq-proxy:cached
       - /Users/hexi/Develop/rocketmq/rocketmq-client-cpp:/rocketmq-client-cpp:cached
     command:
       bash -c "sleep 100000000000"

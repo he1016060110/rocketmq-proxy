@@ -32,7 +32,7 @@ enum MsgWorkerConsumeStatus {
     CONSUME_ACK
 };
 
-enum MsgConsumeStatus {
+enum ClientMsgConsumeStatus {
     MSG_FETCH_FROM_BROKER,
     MSG_CONSUME_ACK
 };
@@ -51,20 +51,57 @@ public:
 };
 
 class MsgMatchUnit;
+
 class ConsumerUnit {
 public:
+    class ConsumerUnitLocker {
+    public:
+        ConsumerUnitLocker(std::vector<MQMessageExt> &msgs) : status(RECONSUME_LATER) {
+          for (int i = 0; i < msgs.size(); i++) {
+            auto msg = msgs[i];
+            shared_ptr<MsgUnit> msgUnit;
+            msgUnit->msgId = msg.getMsgId();
+            msgUnit->type = 1;
+            msgUnit->delayLevel = msg.getDelayTimeLevel();
+            msgUnit->body = msg.getBody();
+            msgUnit->topic = msg.getTopic();
+            msgUnit->group = group;
+            clientStatusMap.insert(pair<shared_ptr<MsgUnit>, ClientMsgConsumeStatus>(msgUnit, MSG_FETCH_FROM_BROKER));
+            statusMap.insert(pair<shared_ptr<MsgUnit>, ConsumeStatus>(msgUnit, RECONSUME_LATER));
+          }
+        }
+
+        std::mutex mtx;
+        std::condition_variable cv;
+        std::map<shared_ptr<MsgUnit>, ClientMsgConsumeStatus> clientStatusMap;
+        std::map<shared_ptr<MsgUnit>, ConsumeStatus> statusMap;
+        std::map<string, shared_ptr<MsgUnit>> idMsgMap;
+        std::map<string, time_t> idTime;
+        std::vector<shared_ptr<MsgUnit>> fetchedArr;
+        std::vector<shared_ptr<MsgUnit>> matchedArr;
+        std::vector<shared_ptr<MsgUnit>> ackArr;
+        //全部的status
+        ConsumeStatus status;
+    };
+
+    std::map<ConsumerUnitLocker, int> lockers;
+
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;
     std::mutex matchUnitsMtx;
     map<shared_ptr<MsgMatchUnit>, int> matchUnits;
+
     void unlockAll();
+
     void insertLock(shared_ptr<MsgMatchUnit> lock);
+
     void eraseLock(shared_ptr<MsgMatchUnit> lock);
 
     bool getIsTooInactive() {
       return time(0) - lastActiveAt >= MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
     }
+
 };
 
 class MsgMatchUnit {
@@ -163,7 +200,9 @@ class MsgWorker {
     string clearConsumerKey;
 
     void shutdownConsumer();
+
     void clearMsgForConsumer();
+
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::seconds(1));
