@@ -114,29 +114,8 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     auto listener = new ConsumerMsgListener();
     auto key = topic + group;
     auto callback = [this, topic, group, key, consumerUnit](const std::vector<MQMessageExt> &msgs) {
-        if (msgs.size() != 1) {
-          cout << "msg batch size is not eq 1" << endl;
-          exit(1);
-        }
-        auto msg = msgs[0];
-        shared_ptr<MsgMatchUnit> unit;
-
-        auto pushMsg = [msg, group, key, this] {
-            shared_ptr<QueueTS<MsgUnit>> pool;
-            MsgUnit msgUnit;
-            msgUnit.msgId = msg.getMsgId();
-            msgUnit.type = 1;
-            msgUnit.delayLevel = msg.getDelayTimeLevel();
-            msgUnit.body = msg.getBody();
-            msgUnit.topic = msg.getTopic();
-            msgUnit.group = group;
-            if (this->msgPool.try_get(key, pool)) {
-              pool->push(msgUnit);
-            } else {
-              //不应该出现这种情况
-            }
-        };
-
+      new ConsumerUnitLocker(msgs, group);
+        consumerUnit->insertLock();
         //找到了，就直接wait
         if (MsgMatchUnits.try_get(msg.getMsgId(), unit)) {
           std::unique_lock<std::mutex> lk(unit->mtx);
@@ -236,31 +215,34 @@ void MsgWorker::clearMsgForConsumer() {
 
 void ConsumerUnit::unlockAll()
 {
-  std::unique_lock<std::mutex> lk(matchUnitsMtx);
-  auto iter = matchUnits.begin();
-  while (iter != matchUnits.end()) {
-    auto matchUnit = iter->first;
-    {
-      std::unique_lock<std::mutex> lk(matchUnit->mtx);
-      matchUnit->status = MSG_CONSUME_ACK;
-      matchUnit->consumeStatus = RECONSUME_LATER;
-    }
-    matchUnit->cv.notify_all();
-    iter++;
+
+}
+
+ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string & group) : status(RECONSUME_LATER) {
+  for (int i = 0; i < msgs.size(); i++) {
+    auto msg = msgs[i];
+    shared_ptr<MsgUnit> msgUnit;
+    msgUnit->msgId = msg.getMsgId();
+    msgUnit->type = 1;
+    msgUnit->delayLevel = msg.getDelayTimeLevel();
+    msgUnit->body = msg.getBody();
+    msgUnit->topic = msg.getTopic();
+    msgUnit->group = group;
+    clientStatusMap.insert(pair<shared_ptr<MsgUnit>, ClientMsgConsumeStatus>(msgUnit, MSG_FETCH_FROM_BROKER));
+    statusMap.insert(pair<shared_ptr<MsgUnit>, ConsumeStatus>(msgUnit, RECONSUME_LATER));
   }
-  matchUnits.empty();
 }
 
-void ConsumerUnit::insertLock(shared_ptr<MsgMatchUnit> lock)
+void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock)
 {
-  std::unique_lock<std::mutex> lk(matchUnitsMtx);
-  matchUnits.insert(pair<shared_ptr<MsgMatchUnit>, int> (lock, 1));
+  std::unique_lock<std::mutex> lk(lockersMtx);
+  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int> (lock, 1));
 }
 
-void ConsumerUnit::eraseLock(shared_ptr<MsgMatchUnit> lock)
+void ConsumerUnit::eraseLock(shared_ptr<ConsumerUnitLocker> lock)
 {
-  std::unique_lock<std::mutex> lk(matchUnitsMtx);
-  matchUnits.erase(lock);
+  std::unique_lock<std::mutex> lk(lockersMtx);
+  lockers.erase(lock);
 }
 
 MsgWorker *CallDataBase::msgWorker = new MsgWorker();
