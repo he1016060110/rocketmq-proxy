@@ -114,7 +114,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
     auto listener = new ConsumerMsgListener();
     auto key = topic + group;
-    auto callback = [this, topic, group, key](const std::vector<MQMessageExt> &msgs) {
+    auto callback = [this, topic, group, key, consumerUnit](const std::vector<MQMessageExt> &msgs) {
         if (msgs.size() != 1) {
           cout << "msg batch size is not eq 1" << endl;
           exit(1);
@@ -146,6 +146,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
           unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
         } else {
           unit = shared_ptr<MsgMatchUnit>(new MsgMatchUnit);
+          consumerUnit->insertLock(unit);
           std::unique_lock<std::mutex> lk(unit->mtx);
           //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
           MsgMatchUnits.insert(msg.getMsgId(), unit);
@@ -160,6 +161,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
 #ifdef DEBUG
         cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
 #endif
+        consumerUnit->eraseLock(unit);
         return unit->consumeStatus;
     };
     listener->setMsgCallback(callback);
@@ -224,8 +226,42 @@ void MsgWorker::clearMsgForConsumer() {
           matchUnit->cv.notify_all();
         }
       }
+      shared_ptr<ConsumerUnit> unit;
+      //双重保险
+      if (consumers.try_get(clearConsumerKey, unit)) {
+        unit->unlockAll();
+      }
     }
   }
+}
+
+void ConsumerUnit::unlockAll()
+{
+  std::unique_lock<std::mutex> lk(matchUnitsMtx);
+  auto iter = matchUnits.begin();
+  while (iter != matchUnits.end()) {
+    auto matchUnit = iter->first;
+    {
+      std::unique_lock<std::mutex> lk(matchUnit->mtx);
+      matchUnit->status = MSG_CONSUME_ACK;
+      matchUnit->consumeStatus = RECONSUME_LATER;
+    }
+    matchUnit->cv.notify_all();
+    iter++;
+  }
+  matchUnits.empty();
+}
+
+void ConsumerUnit::insertLock(shared_ptr<MsgMatchUnit> lock)
+{
+  std::unique_lock<std::mutex> lk(matchUnitsMtx);
+  matchUnits.insert(pair<shared_ptr<MsgMatchUnit>, int> (lock, 1));
+}
+
+void ConsumerUnit::eraseLock(shared_ptr<MsgMatchUnit> lock)
+{
+  std::unique_lock<std::mutex> lk(matchUnitsMtx);
+  matchUnits.erase(lock);
 }
 
 MsgWorker *CallDataBase::msgWorker = new MsgWorker();

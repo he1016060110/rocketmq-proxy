@@ -50,11 +50,17 @@ public:
     MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0) {};
 };
 
+class MsgMatchUnit;
 class ConsumerUnit {
 public:
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;
+    std::mutex matchUnitsMtx;
+    map<shared_ptr<MsgMatchUnit>, int> matchUnits;
+    void unlockAll();
+    void insertLock(shared_ptr<MsgMatchUnit> lock);
+    void eraseLock(shared_ptr<MsgMatchUnit> lock);
 
     bool getIsTooInactive() {
       return time(0) - lastActiveAt >= MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
