@@ -67,7 +67,7 @@ public:
     ClientMsgConsumeStatus clientStatus;
     bool getMsg(shared_ptr<MsgUnit> &unit);
     bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
-    void waitForLock();
+    void waitForLock(std::function<void(std::unique_lock<std::mutex> &)> & );
     void triggerCheck();
 };
 
