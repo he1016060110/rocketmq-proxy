@@ -16,10 +16,11 @@ void MsgWorker::loopMatch() {
       unit->callData->responseMsg(0, "", msg->msgId, msg->body);
       resetConsumerActive(unit->topic, unit->group);
   };
+  shared_ptr<ConsumerUnit> consumer;
   while (true) {
     QueueTS<shared_ptr<ConsumeMsgUnit>> tmp;
     while (consumeMsgPool.try_pop(unit)) {
-      auto consumer = getConsumer(unit->topic, unit->group);
+      consumer = getConsumer(unit->topic, unit->group);
       if (unit->status == PROXY_CONSUME_INIT) {
         consumer->fetchAndConsume(func);
         if (unit->getIsFetchMsgTimeout()) {
