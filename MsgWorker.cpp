@@ -170,7 +170,9 @@ bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
   bool ret = false;
   while(iter != lockers.end()) {
     auto locker = iter->first;
-    ret = locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK);
+    if (locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
+      ret = true;
+    }
     iter++;
   }
   return ret;
