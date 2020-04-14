@@ -9,30 +9,25 @@ void MsgWorker::loopMatch() {
   while (true) {
     QueueTS<shared_ptr<ConsumeMsgUnit>> tmp;
     while (consumeMsgPool.try_pop(unit)) {
+      auto consumer = getConsumer(unit->topic, unit->group);
       if (unit->status == PROXY_CONSUME_INIT) {
-        //consumer不存在的时候创建consumer
-        if (!getConsumerExist(unit->topic, unit->group)) {
-          getConsumer(unit->topic, unit->group);
-        }
-        auto key = unit->topic + unit->group;
-        //检查消息队列pool里面有没有消息
-        {
-          shared_ptr<QueueTS<MsgUnit>> pool;
-          if (msgPool.try_get(key, pool)) {
-            MsgUnit msg;
-            if (pool->try_pop(msg)) {
-              unit->msgId = msg.msgId;
+        auto iter = consumer->lockers.begin();
+        while(iter != consumer->lockers.end()) {
+          auto locker = iter->first;
+          shared_ptr<MsgUnit> msg;
+          if (locker->getMsg(msg)) {
+            unit->msgId = msg->msgId;
 #ifdef DEBUG
-              cout << msg.msgId << " consumed!" << endl;
+            cout << msg->msgId << " consumed!" << endl;
 #endif
-              unit->status = CLIENT_RECEIVE;
-              idUnitMap.insert_or_update(msg.msgId, unit);
-              unit->callData->responseMsg(0, "", msg.msgId, msg.body);
-              resetConsumerActive(unit->topic, unit->group);
-            }
+            unit->status = CLIENT_RECEIVE;
+            idUnitMap.insert_or_update(msg->msgId, unit);
+            unit->callData->responseMsg(0, "", msg->msgId, msg->body);
+            resetConsumerActive(unit->topic, unit->group);
+            break;
           }
+          iter++;
         }
-
         if (unit->getIsFetchMsgTimeout()) {
           resetConsumerActive(unit->topic, unit->group);
           unit->callData->responseTimeOut();
@@ -43,12 +38,6 @@ void MsgWorker::loopMatch() {
         shared_ptr<MsgMatchUnit> matchUnit;
         if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
           if (unit->getIsAckTimeout()) {
-            {
-              std::unique_lock<std::mutex> lk(matchUnit->mtx);
-              matchUnit->status = MSG_CONSUME_ACK;
-              matchUnit->consumeStatus = RECONSUME_LATER;
-            }
-            matchUnit->cv.notify_all();
             continue;
           }
           tmp.push(unit);
@@ -116,6 +105,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
         shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
         consumerUnit->insertLock(locker);
         locker->waitForLock();
+        consumerUnit->eraseLock(locker);
         return locker->status;
     };
     listener->setMsgCallback(callback);
@@ -195,7 +185,7 @@ void ConsumerUnit::unlockAll() {
 }
 
 ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group) : status(
-    RECONSUME_LATER) {
+    RECONSUME_LATER), clientStatus(MSG_FETCH_FROM_BROKER) {
   for (int i = 0; i < msgs.size(); i++) {
     auto msg = msgs[i];
     shared_ptr<MsgUnit> msgUnit;
@@ -221,7 +211,7 @@ bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> unit) {
   return true;
 }
 
-bool ConsumerUnitLocker::setMsgStatus(string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
+bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
   std::unique_lock<std::mutex> lk(mtx);
   if (idMsgMap.find(msgId) != idMsgMap.end()) {
     auto unit = idMsgMap[msgId];
@@ -233,7 +223,7 @@ bool ConsumerUnitLocker::setMsgStatus(string msgId, ConsumeStatus s, ClientMsgCo
 void ConsumerUnitLocker::waitForLock()
 {
   std::unique_lock<std::mutex> lk(mtx);
-  cv.wait(lk);
+  cv.wait(lk, [this] {return clientStatus == MSG_CONSUME_ACK;});
 }
 
 void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
@@ -241,7 +231,7 @@ void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
   lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(lock, 1));
 }
 
-void ConsumerUnit::eraseLock(shared_ptr<ConsumerUnitLocker> lock) {
+void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> lock) {
   std::unique_lock<std::mutex> lk(lockersMtx);
   lockers.erase(lock);
 }

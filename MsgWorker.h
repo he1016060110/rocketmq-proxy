@@ -67,8 +67,9 @@ public:
     std::queue<shared_ptr<MsgUnit>> ackArr;
     //全部的status
     ConsumeStatus status;
+    ClientMsgConsumeStatus clientStatus;
     bool getMsg(shared_ptr<MsgUnit> unit);
-    bool setMsgStatus(string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
+    bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
     void waitForLock();
 };
 
