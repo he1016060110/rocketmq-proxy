@@ -6,28 +6,22 @@
 
 void MsgWorker::loopMatch() {
   shared_ptr<ConsumeMsgUnit> unit;
+  std::function<void(shared_ptr<MsgUnit> )> func = [&](shared_ptr<MsgUnit> msg) {
+      unit->msgId = msg->msgId;
+#ifdef DEBUG
+      cout << msg->msgId << " consumed!" << endl;
+#endif
+      unit->status = CLIENT_RECEIVE;
+      idUnitMap.insert_or_update(msg->msgId, unit);
+      unit->callData->responseMsg(0, "", msg->msgId, msg->body);
+      resetConsumerActive(unit->topic, unit->group);
+  };
   while (true) {
     QueueTS<shared_ptr<ConsumeMsgUnit>> tmp;
     while (consumeMsgPool.try_pop(unit)) {
       auto consumer = getConsumer(unit->topic, unit->group);
       if (unit->status == PROXY_CONSUME_INIT) {
-        auto iter = consumer->lockers.begin();
-        while(iter != consumer->lockers.end()) {
-          auto locker = iter->first;
-          shared_ptr<MsgUnit> msg;
-          if (locker->getMsg(msg)) {
-            unit->msgId = msg->msgId;
-#ifdef DEBUG
-            cout << msg->msgId << " consumed!" << endl;
-#endif
-            unit->status = CLIENT_RECEIVE;
-            idUnitMap.insert_or_update(msg->msgId, unit);
-            unit->callData->responseMsg(0, "", msg->msgId, msg->body);
-            resetConsumerActive(unit->topic, unit->group);
-            break;
-          }
-          iter++;
-        }
+        consumer->fetchAndConsume(func);
         if (unit->getIsFetchMsgTimeout()) {
           resetConsumerActive(unit->topic, unit->group);
           unit->callData->responseTimeOut();
@@ -160,6 +154,27 @@ void ConsumerUnit::unlockAll() {
 
 bool ConsumerUnit::setMsgReconsume(const string &msgId) {
   return setMsgAck(msgId, RECONSUME_LATER);
+}
+
+bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &callback) {
+  shared_ptr<MsgUnit> msg;
+  bool found = false;
+  {
+    auto iter = lockers.begin();
+    while(iter != lockers.end()) {
+      auto locker = iter->first;
+      if (locker->getMsg(msg)) {
+        found = true;
+        break;
+      }
+      iter++;
+    }
+  }
+
+  if (found) {
+    callback(msg);
+
+  }
 }
 
 bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
