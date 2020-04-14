@@ -33,7 +33,7 @@ void ConsumeAckCallData::process() {
 }
 
 void ConsumeAckCallData::del() {
-  //todo
+  msgWorker->idUnitMap.erase(msgId);
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }

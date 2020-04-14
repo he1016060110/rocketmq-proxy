@@ -81,7 +81,7 @@ public:
 
     void unlockAll();
 
-    void waitLock(shared_ptr<ConsumerUnitLocker> lock);
+    void waitLock(shared_ptr<ConsumerUnitLocker> &lock);
 
     void eraseLock(const shared_ptr<ConsumerUnitLocker> &lock);
 

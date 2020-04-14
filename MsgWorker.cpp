@@ -265,7 +265,7 @@ void ConsumerUnitLocker::triggerCheck() {
   }
 }
 
-void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> locker) {
+void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> &locker) {
   //锁的顺序很重要，先锁大锁
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
   std::function<void(std::unique_lock<std::mutex> &)> func = [&] (std::unique_lock<std::mutex> & lockerLock) {
