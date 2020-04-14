@@ -161,6 +161,7 @@ bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &ca
   bool found = false;
   {
     auto iter = lockers.begin();
+    boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
     while(iter != lockers.end()) {
       auto locker = iter->first;
       if (locker->getMsg(msg)) {
