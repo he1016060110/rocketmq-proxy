@@ -67,14 +67,14 @@ public:
     ClientMsgConsumeStatus clientStatus;
     bool getMsg(shared_ptr<MsgUnit> &unit);
     bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
-    void waitForLock();
+    void waitForLock(std::function<void(void)> &func);
     void triggerCheck();
 };
 
 class ConsumerUnit {
 public:
     std::map<shared_ptr<ConsumerUnitLocker>, int> lockers;
-    std::mutex lockersMtx;
+    boost::shared_mutex lockersMtx;
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;

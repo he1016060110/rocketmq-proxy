@@ -94,8 +94,10 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     auto listener = new ConsumerMsgListener();
     auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs) {
         shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
-        consumerUnit->insertLock(locker);
-        locker->waitForLock();
+        std::function<void(void)> func = [&] {
+            consumerUnit->insertLock(locker);
+        };
+        locker->waitForLock(func);
         consumerUnit->eraseLock(locker);
         return locker->status;
     };
@@ -157,25 +159,22 @@ void ConsumerUnit::unlockAll() {
 }
 
 bool ConsumerUnit::setMsgReconsume(const string &msgId) {
-  auto iter= lockers.begin();
-  while(iter != lockers.end()) {
-    auto locker = iter->first;
-    locker->setMsgStatus(msgId, RECONSUME_LATER, MSG_CONSUME_ACK);
-    locker->triggerCheck();
-    iter++;
-  }
+  return setMsgAck(msgId, RECONSUME_LATER);
 }
 
 bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
-  auto iter= lockers.begin();
   bool ret = false;
-  while(iter != lockers.end()) {
-    auto locker = iter->first;
-    if (locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
-      ret = true;
+  {
+    auto iter= lockers.begin();
+    boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
+    while(iter != lockers.end()) {
+      auto locker = iter->first;
+      if (locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
+        ret = true;
+      }
+      locker->triggerCheck();
+      iter++;
     }
-    locker->triggerCheck();
-    iter++;
   }
   return ret;
 }
@@ -219,9 +218,10 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
   return ret;
 }
 
-void ConsumerUnitLocker::waitForLock()
+void ConsumerUnitLocker::waitForLock(std::function<void(void)> &func)
 {
   std::unique_lock<std::mutex> lk(mtx);
+  func();
   cv.wait(lk, [this] {return clientStatus == MSG_CONSUME_ACK;});
 }
 
@@ -242,6 +242,7 @@ void ConsumerUnitLocker::triggerCheck() {
     if (statusMap[iter->first] == RECONSUME_LATER) {
       s = RECONSUME_LATER;
     }
+    iter++;
   }
   if (cs == MSG_CONSUME_ACK) {
     status = s;
@@ -251,12 +252,12 @@ void ConsumerUnitLocker::triggerCheck() {
 }
 
 void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
-  std::unique_lock<std::mutex> lk(lockersMtx);
+  boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
   lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(lock, 1));
 }
 
 void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> &lock) {
-  std::unique_lock<std::mutex> lk(lockersMtx);
+  boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
   lockers.erase(lock);
 }
 
