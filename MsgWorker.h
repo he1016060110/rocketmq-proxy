@@ -68,6 +68,7 @@ public:
     bool getMsg(shared_ptr<MsgUnit> &unit);
     bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
     void waitForLock();
+    void triggerCheck();
 };
 
 class ConsumerUnit {

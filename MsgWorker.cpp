@@ -161,6 +161,7 @@ bool ConsumerUnit::setMsgReconsume(const string &msgId) {
   while(iter != lockers.end()) {
     auto locker = iter->first;
     locker->setMsgStatus(msgId, RECONSUME_LATER, MSG_CONSUME_ACK);
+    locker->triggerCheck();
     iter++;
   }
 }
@@ -173,6 +174,7 @@ bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
     if (locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
       ret = true;
     }
+    locker->triggerCheck();
     iter++;
   }
   return ret;
@@ -221,6 +223,31 @@ void ConsumerUnitLocker::waitForLock()
 {
   std::unique_lock<std::mutex> lk(mtx);
   cv.wait(lk, [this] {return clientStatus == MSG_CONSUME_ACK;});
+}
+
+void ConsumerUnitLocker::triggerCheck() {
+  std::unique_lock<std::mutex> lk(mtx);
+  if (fetchedArr.size()) {
+    return;
+  }
+  auto iter = clientStatusMap.begin();
+  ConsumeStatus s(CONSUME_SUCCESS);
+  ClientMsgConsumeStatus cs(MSG_CONSUME_ACK);
+  while (iter != clientStatusMap.end()) {
+    cs = iter->second;
+    if (cs != MSG_CONSUME_ACK) {
+      break;
+    }
+
+    if (statusMap[iter->first] == RECONSUME_LATER) {
+      s = RECONSUME_LATER;
+    }
+  }
+  if (cs == MSG_CONSUME_ACK) {
+    status = s;
+    clientStatus = cs;
+    cv.notify_all();
+  }
 }
 
 void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
