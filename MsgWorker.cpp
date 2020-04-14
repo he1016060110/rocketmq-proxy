@@ -161,8 +161,7 @@ bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &ca
     auto iter = lockers.begin();
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
     while(iter != lockers.end()) {
-      auto locker = iter->first;
-      if (locker->getMsg(msg)) {
+      if (iter->first->getMsg(msg)) {
         found = true;
         break;
       }
@@ -182,11 +181,10 @@ bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
     auto iter= lockers.begin();
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
     while(iter != lockers.end()) {
-      auto locker = iter->first;
-      if (locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
+      if (iter->first->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
         ret = true;
       }
-      locker->triggerCheck();
+      iter->first->triggerCheck();
       iter++;
     }
   }
@@ -270,7 +268,8 @@ void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> &locker) {
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
   std::function<void(std::unique_lock<std::mutex> &)> func = [&] (std::unique_lock<std::mutex> & lockerLock) {
       lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(locker, 1));
-      lockerLock.unlock();
+      //todo 为什么锁解不掉
+      //lockerLock.unlock();
       lk.unlock();
   };
   locker->waitForLock(func);
