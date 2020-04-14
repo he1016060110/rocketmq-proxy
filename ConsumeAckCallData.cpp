@@ -6,23 +6,19 @@
 
 void ConsumeAckCallData::process() {
   new ConsumeAckCallData(service_, cq_);
-  auto msgId = request_.msg_id();
-  shared_ptr<MsgMatchUnit> matchUnit;
+  msgId = request_.msg_id();
+  group = request_.consumer_group();
+  topic = request_.topic();
   msgWorker->resetConsumerActive(request_.topic(), request_.consumer_group());
-  if (msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
-    {
-      std::unique_lock<std::mutex> lk(matchUnit->mtx);
-      matchUnit->status = MSG_CONSUME_ACK;
-      matchUnit->consumeStatus = (ConsumeStatus) request_.status();
-    }
-    matchUnit->cv.notify_all();
+  auto consumer = msgWorker->getConsumer(topic, group);
+  if (consumer->setMsgAck(msgId, (ConsumeStatus) request_.status())) {
     shared_ptr<ConsumeMsgUnit> unit;
     if (msgWorker->idUnitMap.try_get(msgId, unit)) {
       unit->status = CONSUME_ACK;
     }
     reply_.set_code(0);
 #ifdef DEBUG
-    cout <<"ConsumeAckCallData [" << msgId << "] unit address[" << matchUnit.get() << "]" << endl;
+    cout <<"ConsumeAckCallData [" << msgId << "]" << endl;
 #endif
     reply_.set_error_msg("msg ack succ!");
     status_ = FINISH;
@@ -37,8 +33,7 @@ void ConsumeAckCallData::process() {
 }
 
 void ConsumeAckCallData::del() {
-  msgWorker->idUnitMap.erase(request_.msg_id());
-  msgWorker->MsgMatchUnits.erase(request_.msg_id());
+  //todo
   GPR_ASSERT(status_ == FINISH);
   delete this;
 }

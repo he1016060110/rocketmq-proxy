@@ -10,11 +10,11 @@
 class ConsumeCallData : public CallDataBase {
 public:
     ConsumeCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq, REQUEST_CONSUME), responder_(&ctx_) ,msgId("") {
+        service, cq, REQUEST_CONSUME), responder_(&ctx_), msgId(""), topic(""), group("") {
       Proceed();
     }
 
-    void cancel() override ;
+    void cancel() override;
 
     void responseMsg(int code, string errMsg, string msgId, string body);
 
@@ -34,11 +34,15 @@ private:
       service_->RequestConsume(&ctx_, &request_, &responder_, cq_, cq_,
                                this);
     }
+
     void process() override;
+
     ConsumeRequest request_;
     ConsumeReply reply_;
     ServerAsyncResponseWriter<ConsumeReply> responder_;
     string msgId;
+    string topic;
+    string group;
 };
 
 

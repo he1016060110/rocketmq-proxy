@@ -7,7 +7,9 @@
 
 void ConsumeCallData::process() {
     new ConsumeCallData(service_, cq_);
-    shared_ptr<ConsumeMsgUnit> unit(new ConsumeMsgUnit(this, request_.topic(), request_.consumer_group()));
+    topic = request_.topic();
+    group =  request_.consumer_group();
+    shared_ptr<ConsumeMsgUnit> unit(new ConsumeMsgUnit(this, topic, group));
     {
       msgWorker->consumeMsgPool.push(unit);
       //通知有消息
@@ -31,19 +33,12 @@ void ConsumeCallData::del() {
 }
 
 void ConsumeCallData::cancel() {
-  shared_ptr<MsgMatchUnit> matchUnit;
-  if (msgId.size() && msgWorker->MsgMatchUnits.try_get(msgId, matchUnit)) {
-    {
-      std::unique_lock<std::mutex> lk(matchUnit->mtx);
-      matchUnit->status = MSG_CONSUME_ACK;
-      matchUnit->consumeStatus = RECONSUME_LATER;
-    }
-    matchUnit->cv.notify_all();
-  }
   if (msgId.size()) {
-    msgWorker->idUnitMap.erase(msgId);
-    msgWorker->MsgMatchUnits.erase(msgId);
+    auto consumer = msgWorker->getConsumer(topic, group);
+    consumer->setMsgReconsume(msgId);
+    //todo 需要删除什么
   }
+
   status_ = FINISH;
   Proceed();
 }

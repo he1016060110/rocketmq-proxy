@@ -35,16 +35,7 @@ void MsgWorker::loopMatch() {
         }
         tmp.push(unit);
       } else if (unit->status == CLIENT_RECEIVE) {
-        shared_ptr<MsgMatchUnit> matchUnit;
-        if (MsgMatchUnits.try_get(unit->msgId, matchUnit)) {
-          if (unit->getIsAckTimeout()) {
-            continue;
-          }
-          tmp.push(unit);
-        } else {
-          //如果找不到了，说明已经删除msg和请求绑定关系，需要删除掉
-          continue;
-        }
+        tmp.push(unit);
       } else {
         //CONSUME_ACK
         continue;
@@ -158,30 +149,29 @@ void MsgWorker::clearMsgForConsumer() {
     //可以过滤消息了
 
     shared_ptr<QueueTS<MsgUnit>> pool;
-    if (msgPool.try_get(clearConsumerKey, pool)) {
-      MsgUnit msg;
-      while (pool->try_pop(msg)) {
-        shared_ptr<MsgMatchUnit> matchUnit;
-        if (MsgMatchUnits.try_get(msg.msgId, matchUnit)) {
-          {
-            std::unique_lock<std::mutex> lk(matchUnit->mtx);
-            matchUnit->status = MSG_CONSUME_ACK;
-            matchUnit->consumeStatus = RECONSUME_LATER;
-          }
-          matchUnit->cv.notify_all();
-        }
-      }
-      shared_ptr<ConsumerUnit> unit;
-      //双重保险
-      if (consumers.try_get(clearConsumerKey, unit)) {
-        unit->unlockAll();
-      }
-    }
   }
 }
 
 void ConsumerUnit::unlockAll() {
 
+}
+
+bool ConsumerUnit::setMsgReconsume(const string &msgId) {
+  auto iter= lockers.begin();
+  while(iter != lockers.end()) {
+    auto locker = iter->first;
+    locker->setMsgStatus(msgId, RECONSUME_LATER, MSG_CONSUME_ACK);
+    iter++;
+  }
+}
+
+bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
+  auto iter= lockers.begin();
+  while(iter != lockers.end()) {
+    auto locker = iter->first;
+    locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK);
+    iter++;
+  }
 }
 
 ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group) : status(
@@ -231,7 +221,7 @@ void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
   lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(lock, 1));
 }
 
-void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> lock) {
+void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> &lock) {
   std::unique_lock<std::mutex> lk(lockersMtx);
   lockers.erase(lock);
 }

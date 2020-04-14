@@ -11,7 +11,7 @@
 class ConsumeAckCallData : public CallDataBase {
 public:
     ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
-        service, cq, REQUEST_CONSUME_ACK), responder_(&ctx_) {
+        service, cq, REQUEST_CONSUME_ACK), responder_(&ctx_), msgId(""), topic(""), group("") {
       Proceed();
     }
 
@@ -32,6 +32,9 @@ private:
     ConsumeAckRequest request_;
     ConsumeAckReply reply_;
     ServerAsyncResponseWriter<ConsumeAckReply> responder_;
+    string msgId;
+    string topic;
+    string group;
 };
 
 #endif //ROCKETMQ_PROXY_CONSUME_ACK_CALL_DATA_H

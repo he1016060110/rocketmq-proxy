@@ -34,7 +34,6 @@ enum MsgWorkerConsumeStatus {
 
 enum ClientMsgConsumeStatus {
     MSG_FETCH_FROM_BROKER,
-    CLIENT_RECEIVE,
     MSG_CONSUME_ACK
 };
 
@@ -51,8 +50,6 @@ public:
 public:
     MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0), fetchTime(time(0)){};
 };
-
-class MsgMatchUnit;
 
 class ConsumerUnitLocker {
 public:
@@ -85,23 +82,14 @@ public:
 
     void insertLock(shared_ptr<ConsumerUnitLocker> lock);
 
-    void eraseLock(shared_ptr<ConsumerUnitLocker> lock);
+    void eraseLock(const shared_ptr<ConsumerUnitLocker> &lock);
 
     bool getIsTooInactive() {
       return time(0) - lastActiveAt >= MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
     }
 
-};
-
-class MsgMatchUnit {
-public:
-    MsgMatchUnit() : status(MSG_FETCH_FROM_BROKER), counter(1) {};
-    MsgConsumeStatus status;
-    //rocketmq status
-    ConsumeStatus consumeStatus;
-    std::mutex mtx;
-    std::condition_variable cv;
-    int counter;
+    bool setMsgReconsume(const string & msgId);
+    bool setMsgAck(const string & msgId, ConsumeStatus s);
 };
 
 class ConsumeMsgUnit {
@@ -123,11 +111,6 @@ public:
     bool getIsAckTimeout() {
       return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_ACK_TIME;
     }
-
-    bool getIsAck() {
-      return status == CONSUME_ACK;
-    }
-
     MsgWorkerConsumeStatus status;
 };
 
@@ -178,7 +161,6 @@ class MsgWorker {
       return consumers.try_get(key, unit);
     }
 
-    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
@@ -202,6 +184,8 @@ class MsgWorker {
     void loopMatch();
 
 public:
+    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
+
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
     }
@@ -218,7 +202,6 @@ public:
       boost::thread(boost::bind(&MsgWorker::clearMsgForConsumer, this));
     }
 
-    MapTS<string, shared_ptr<MsgMatchUnit>> MsgMatchUnits;
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
 
     void resetConsumerActive(const string &topic, const string &group) {
