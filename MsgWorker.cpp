@@ -167,11 +167,13 @@ bool ConsumerUnit::setMsgReconsume(const string &msgId) {
 
 bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
   auto iter= lockers.begin();
+  bool ret = false;
   while(iter != lockers.end()) {
     auto locker = iter->first;
-    locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK);
+    ret = locker->setMsgStatus(msgId, s, MSG_CONSUME_ACK);
     iter++;
   }
+  return ret;
 }
 
 ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group) : status(
@@ -203,11 +205,14 @@ bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> &unit) {
 
 bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
   std::unique_lock<std::mutex> lk(mtx);
+  bool ret = false;
   if (idMsgMap.find(msgId) != idMsgMap.end()) {
     auto unit = idMsgMap[msgId];
     statusMap[unit] = s;
     clientStatusMap[unit] = cs;
+    ret = true;
   }
+  return ret;
 }
 
 void ConsumerUnitLocker::waitForLock()
