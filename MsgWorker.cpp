@@ -196,9 +196,10 @@ bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
 
 ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group) : status(
     RECONSUME_LATER), clientStatus(MSG_FETCH_FROM_BROKER) {
+  shared_ptr<MsgUnit> msgUnit;
   for (int i = 0; i < msgs.size(); i++) {
     auto msg = msgs[i];
-    shared_ptr<MsgUnit> msgUnit(new MsgUnit);
+    msgUnit = shared_ptr<MsgUnit>(new MsgUnit);
     msgUnit->msgId = msg.getMsgId();
     msgUnit->type = 1;
     msgUnit->delayLevel = msg.getDelayTimeLevel();
