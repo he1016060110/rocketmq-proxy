@@ -214,6 +214,7 @@ ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, co
 }
 
 bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> &unit) {
+  //这个锁是来让消息要wait之后才能消费
   std::unique_lock<std::mutex> lk(mtx);
   if (fetchedArr.empty())
     return false;
@@ -223,7 +224,6 @@ bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> &unit) {
 }
 
 bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
-  std::unique_lock<std::mutex> lk(mtx);
   bool ret = false;
   if (idMsgMap.find(msgId) != idMsgMap.end()) {
     auto unit = idMsgMap[msgId];
@@ -242,7 +242,6 @@ void ConsumerUnitLocker::waitForLock(std::function<void(void)> &func)
 }
 
 void ConsumerUnitLocker::triggerCheck() {
-  std::unique_lock<std::mutex> lk(mtx);
   if (fetchedArr.size()) {
     return;
   }
