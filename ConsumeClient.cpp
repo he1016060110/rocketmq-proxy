@@ -67,7 +67,7 @@ public:
       if (status.ok()) {
         if (!reply.code()) {
           msgId = reply.msg_id();
-          cout << msgId << " ack recieved!" << endl;
+          cout << msgId << " recieved!" << endl;
         } else {
           cout << "error!:" << reply.error_msg() << endl;
         }

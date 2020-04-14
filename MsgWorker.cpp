@@ -178,7 +178,7 @@ ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, co
     RECONSUME_LATER), clientStatus(MSG_FETCH_FROM_BROKER) {
   for (int i = 0; i < msgs.size(); i++) {
     auto msg = msgs[i];
-    shared_ptr<MsgUnit> msgUnit;
+    shared_ptr<MsgUnit> msgUnit(new MsgUnit);
     msgUnit->msgId = msg.getMsgId();
     msgUnit->type = 1;
     msgUnit->delayLevel = msg.getDelayTimeLevel();
@@ -192,7 +192,7 @@ ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, co
   }
 }
 
-bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> unit) {
+bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> &unit) {
   std::unique_lock<std::mutex> lk(mtx);
   if (fetchedArr.empty())
     return false;
