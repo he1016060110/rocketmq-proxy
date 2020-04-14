@@ -67,7 +67,7 @@ public:
     ClientMsgConsumeStatus clientStatus;
     bool getMsg(shared_ptr<MsgUnit> &unit);
     bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
-    void waitForLock(std::function<void(void)> &func);
+    void waitForLock();
     void triggerCheck();
 };
 
@@ -81,7 +81,7 @@ public:
 
     void unlockAll();
 
-    void insertLock(shared_ptr<ConsumerUnitLocker> lock);
+    void waitLock(shared_ptr<ConsumerUnitLocker> lock);
 
     void eraseLock(const shared_ptr<ConsumerUnitLocker> &lock);
 

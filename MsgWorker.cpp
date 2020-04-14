@@ -89,10 +89,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     auto listener = new ConsumerMsgListener();
     auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs) {
         shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
-        std::function<void(void)> func = [&] {
-            consumerUnit->insertLock(locker);
-        };
-        locker->waitForLock(func);
+        consumerUnit->waitLock(locker);
         consumerUnit->eraseLock(locker);
         return locker->status;
     };
@@ -236,10 +233,9 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
   return ret;
 }
 
-void ConsumerUnitLocker::waitForLock(std::function<void(void)> &func)
+void ConsumerUnitLocker::waitForLock()
 {
   std::unique_lock<std::mutex> lk(mtx);
-  func();
   cv.wait(lk, [this] {return clientStatus == MSG_CONSUME_ACK;});
 }
 
@@ -268,9 +264,11 @@ void ConsumerUnitLocker::triggerCheck() {
   }
 }
 
-void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
+void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> locker) {
+  //锁的顺序很重要，先锁大锁
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
-  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(lock, 1));
+  locker->waitForLock();
+  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(locker, 1));
 }
 
 void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> &lock) {
