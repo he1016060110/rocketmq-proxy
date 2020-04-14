@@ -1,7 +1,7 @@
 prefix=/usr/local
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+includedir=${prefix}/include/rocketmq
 
 Name: rocketmq libs
 Description: rocketmq libs

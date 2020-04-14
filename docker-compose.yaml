@@ -39,7 +39,7 @@ services:
       extnetwork:
         ipv4_address: 172.10.0.102
   rocketmq-proxy:
-    image: grpc-protobuf-boost-rocketmq:2.0.1
+    image: grpc-rocketmq-client-cpp:2.0.1
     cap_add:
       - SYS_PTRACE
     ports:
