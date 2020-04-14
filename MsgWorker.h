@@ -34,6 +34,7 @@ enum MsgWorkerConsumeStatus {
 
 enum ClientMsgConsumeStatus {
     MSG_FETCH_FROM_BROKER,
+    CLIENT_RECEIVE,
     MSG_CONSUME_ACK
 };
 
@@ -67,7 +68,8 @@ public:
     //全部的status
     ConsumeStatus status;
     bool getMsg(shared_ptr<MsgUnit> unit);
-    bool setMsgStatus(string msgId, ConsumeStatus s);
+    bool setMsgStatus(string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
+    void waitForLock();
 };
 
 class ConsumerUnit {

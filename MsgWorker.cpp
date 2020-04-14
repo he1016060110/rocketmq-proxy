@@ -112,34 +112,11 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     consumerUnit->consumer.setTcpTransportConnectTimeout(400);
     consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
     auto listener = new ConsumerMsgListener();
-    auto key = topic + group;
-    auto callback = [this, topic, group, key, consumerUnit](const std::vector<MQMessageExt> &msgs) {
-        new ConsumerUnitLocker(msgs, group);
-        //找到了，就直接wait
-        if (MsgMatchUnits.try_get(msg.getMsgId(), unit)) {
-          std::unique_lock<std::mutex> lk(unit->mtx);
-          pushMsg();
-          this->notifyCV.notify_all();
-          unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
-        } else {
-          unit = shared_ptr<MsgMatchUnit>(new MsgMatchUnit);
-          consumerUnit->insertLock(unit);
-          std::unique_lock<std::mutex> lk(unit->mtx);
-          //要先在MsgMatchUnits 插入消息，然后才能发送消息，不然会找不到消息消息中断
-          MsgMatchUnits.insert(msg.getMsgId(), unit);
-#ifdef DEBUG
-          cout << "thread id[" << std::this_thread::get_id() << "] msg id[" <<
-               msg.getMsgId() << "] unit address[" << unit.get() << "]" << endl;
-#endif
-          pushMsg();
-          this->notifyCV.notify_all();
-          unit->cv.wait(lk, [&] { return unit->status == MSG_CONSUME_ACK; });
-        }
-#ifdef DEBUG
-        cout << "thread id[" << std::this_thread::get_id() << "] msg id[" << msg.getMsgId() << "] unlock!" << endl;
-#endif
-        consumerUnit->eraseLock(unit);
-        return unit->consumeStatus;
+    auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs) {
+        shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
+        consumerUnit->insertLock(locker);
+        locker->waitForLock();
+        return locker->status;
     };
     listener->setMsgCallback(callback);
     consumerUnit->consumer.registerMessageListener(listener);
@@ -244,9 +221,19 @@ bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> unit) {
   return true;
 }
 
-bool ConsumerUnitLocker::setMsgStatus(string msgId, ConsumeStatus s) {
+bool ConsumerUnitLocker::setMsgStatus(string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
   std::unique_lock<std::mutex> lk(mtx);
+  if (idMsgMap.find(msgId) != idMsgMap.end()) {
+    auto unit = idMsgMap[msgId];
+    statusMap[unit] = s;
+    clientStatusMap[unit] = cs;
+  }
+}
 
+void ConsumerUnitLocker::waitForLock()
+{
+  std::unique_lock<std::mutex> lk(mtx);
+  cv.wait(lk);
 }
 
 void ConsumerUnit::insertLock(shared_ptr<ConsumerUnitLocker> lock) {
