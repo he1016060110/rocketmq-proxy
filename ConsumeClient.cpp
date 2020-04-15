@@ -23,6 +23,7 @@
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
 #include "boost/thread.hpp"
+#include <cstdlib>
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -84,6 +85,8 @@ public:
       request.set_topic(topic);
       request.set_consumer_group(group);
       request.set_msg_id(msgId);
+      //成功和失败
+      request.set_status(rand() % 2);
 
       // Container for the data we expect from the server.
       ConsumeAckReply reply;

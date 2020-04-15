@@ -94,9 +94,9 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
         if (locker->status == RECONSUME_LATER) {
           for (int i = 0; i< msgs.size(); i++) {
             if (locker->reconsumeMap.find(msgs[i].getMsgId()) == locker->reconsumeMap.end()) {
-              statusVector[i] = CONSUME_SUCCESS;
+              statusVector.push_back(CONSUME_SUCCESS);
             } else {
-              statusVector[i] = RECONSUME_LATER;
+              statusVector.push_back(RECONSUME_LATER);
             }
           }
         }
