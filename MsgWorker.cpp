@@ -158,8 +158,8 @@ bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &ca
   shared_ptr<MsgUnit> msg;
   bool found = false;
   {
-    auto iter = lockers.begin();
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
+    auto iter = lockers.begin();
     while(iter != lockers.end()) {
       if (iter->first->getMsg(msg)) {
         found = true;
@@ -178,8 +178,8 @@ bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &ca
 bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
   bool ret = false;
   {
-    auto iter= lockers.begin();
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
+    auto iter= lockers.begin();
     while(iter != lockers.end()) {
       if (iter->first->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
         ret = true;
