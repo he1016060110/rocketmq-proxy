@@ -179,7 +179,7 @@ class MsgWorker {
 
     void notifyTimeout() {
       for (;;) {
-        boost::this_thread::sleep(boost::posix_time::seconds(1));
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         notifyCV.notify_all();
       }
     }

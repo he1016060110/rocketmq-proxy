@@ -87,6 +87,7 @@ public:
       request.set_msg_id(msgId);
       //成功和失败
       request.set_status(rand() % 2);
+      request.set_status(0);
 
       // Container for the data we expect from the server.
       ConsumeAckReply reply;
