@@ -248,6 +248,7 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
       if (s == RECONSUME_LATER) {
         reconsumeMap[msgId] = 1;
       }
+      iter++;
     }
   }
   return ret;
