@@ -100,8 +100,8 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
       consumerUnit->consumer.start();
       consumers.insert(key, consumerUnit);
       return consumerUnit;
-    } catch (MQClientException &e) {
-      cout << e << endl;
+    }  catch (exception &e) {
+      PRINT_ERROR(e);
       return nullptr;
     }
   }

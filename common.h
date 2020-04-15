@@ -8,6 +8,6 @@
 
 #define PRINT_ERROR(e) do { \
   cout << "file: " << __FILE__ << " line: " << __LINE__ << " msg: " << e.what() << endl; \
-} while(0)
+} while(0);
 
 #endif //ROCKETMQ_PROXY_COMMON_H
