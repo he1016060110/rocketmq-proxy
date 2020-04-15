@@ -8,7 +8,7 @@ set(C_FLAGS
         -Wno-deprecated
         -fPIC
         -fno-strict-aliasing
-        -pthread
+        -lpthread
         )
 set(CXX_FLAGS
         -g
@@ -17,7 +17,7 @@ set(CXX_FLAGS
         -fPIC
         -fno-strict-aliasing
         -std=c++11
-        -pthread
+        -lpthread
         )
 
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
@@ -42,6 +42,9 @@ foreach (_target Server ProduceClient ConsumeClient ConsumeClientSleep)
     pkg_search_module(PROTOBUF REQUIRED protobuf)
     if (PROTOBUF_FOUND)
         include_directories(${PROTOBUF_INCLUDE_DIRS})
+        MESSAGE(STATUS "PROTOBUF_INCLUDE_DIRS = ${PROTOBUF_INCLUDE_DIRS}.")
+        MESSAGE(STATUS "PROTOBUF_LIBRARIES = ${PROTOBUF_LIBRARIES}.")
+        MESSAGE(STATUS "PROTOBUF_LIB_VERSION = ${PROTOBUF_LIB_VERSION}.")
         target_link_libraries(${_target} ${PROTOBUF_LIBRARIES})
         target_include_directories(${_target} PRIVATE ${PROTOBUF_INCLUDE_DIR})
     endif ()
@@ -49,6 +52,9 @@ foreach (_target Server ProduceClient ConsumeClient ConsumeClientSleep)
     pkg_search_module(GRPCPP REQUIRED grpc++)
     if (GRPCPP_FOUND)
         include_directories(${GRPCPP_INCLUDE_DIRS})
+        MESSAGE(STATUS "GRPCPP_INCLUDE_DIRS = ${GRPCPP_INCLUDE_DIRS}.")
+        MESSAGE(STATUS "GRPCPP_LIBRARIES = ${GRPCPP_LIBRARIES}.")
+        MESSAGE(STATUS "GRPCPP_LIB_VERSION = ${GRPCPP_LIB_VERSION}.")
         target_link_libraries(${_target} ${GRPCPP_LIBRARIES})
         target_include_directories(${_target} PRIVATE ${GRPCPP_INCLUDE_DIR})
     endif ()
