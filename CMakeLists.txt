@@ -8,6 +8,7 @@ set(C_FLAGS
         -Wno-deprecated
         -fPIC
         -fno-strict-aliasing
+        -pthread
         )
 set(CXX_FLAGS
         -g
@@ -16,6 +17,7 @@ set(CXX_FLAGS
         -fPIC
         -fno-strict-aliasing
         -std=c++11
+        -pthread
         )
 
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
