@@ -60,8 +60,7 @@ public:
     std::map<shared_ptr<MsgUnit>, ConsumeStatus> statusMap;
     std::map<string, shared_ptr<MsgUnit>> idMsgMap;
     std::queue<shared_ptr<MsgUnit>> fetchedArr;
-    std::queue<shared_ptr<MsgUnit>> matchedArr;
-    std::queue<shared_ptr<MsgUnit>> ackArr;
+    std::map<string, int> reconsumeMap;
     //全部的status
     ConsumeStatus status;
     ClientMsgConsumeStatus clientStatus;
@@ -123,16 +122,18 @@ public:
 
     virtual ~ConsumerMsgListener() {}
 
-    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {
-      return callback(msgs);
+    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {};
+
+    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> & statusVector) {
+      return callback(msgs, statusVector);
     }
 
-    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> paramCallback) {
+    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> &)> paramCallback) {
       callback = paramCallback;
     }
 
 private:
-    std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs)> callback;
+    std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> &)> callback;
 };
 
 class ProducerUnit {

@@ -87,10 +87,19 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     consumerUnit->consumer.setTcpTransportConnectTimeout(400);
     consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
     auto listener = new ConsumerMsgListener();
-    auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs) {
+    auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> & statusVector) {
         shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
         consumerUnit->waitLock(locker);
         consumerUnit->eraseLock(locker);
+        if (locker->status == RECONSUME_LATER) {
+          for (int i = 0; i< msgs.size(); i++) {
+            if (locker->reconsumeMap.find(msgs[i].getMsgId()) == locker->reconsumeMap.end()) {
+              statusVector[i] = CONSUME_SUCCESS;
+            } else {
+              statusVector[i] = RECONSUME_LATER;
+            }
+          }
+        }
         return locker->status;
     };
     listener->setMsgCallback(callback);
@@ -227,6 +236,9 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
     statusMap[unit] = s;
     clientStatusMap[unit] = cs;
     ret = true;
+    if (s == RECONSUME_LATER) {
+      reconsumeMap[msgId] = 1;
+    }
   }
   return ret;
 }
