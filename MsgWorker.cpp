@@ -214,7 +214,14 @@ ConsumerUnitLocker::ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, co
     msgUnit->group = group;
     clientStatusMap.insert(pair<shared_ptr<MsgUnit>, ClientMsgConsumeStatus>(msgUnit, MSG_FETCH_FROM_BROKER));
     statusMap.insert(pair<shared_ptr<MsgUnit>, ConsumeStatus>(msgUnit, RECONSUME_LATER));
-    idMsgMap.insert(pair<string, shared_ptr<MsgUnit>>(msg.getMsgId(), msgUnit));
+    if (idMsgMap.find(msg.getMsgId()) == idMsgMap.end()) {
+      map<shared_ptr<MsgUnit>, int> msgQueueTmp;
+      msgQueueTmp.insert(pair<shared_ptr<MsgUnit>, int>(msgUnit, 1));
+      idMsgMap.insert(pair<string, map<shared_ptr<MsgUnit>, int>>(msg.getMsgId(), msgQueueTmp));
+    } else {
+      map<shared_ptr<MsgUnit>, int> &msgQueueTmp = idMsgMap[msg.getMsgId()];
+      msgQueueTmp.insert(pair<shared_ptr<MsgUnit>, int>(msgUnit, 1));
+    }
     fetchedArr.push(msgUnit);
   }
 }
@@ -232,12 +239,15 @@ bool ConsumerUnitLocker::getMsg(shared_ptr<MsgUnit> &unit) {
 bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs) {
   bool ret = false;
   if (idMsgMap.find(msgId) != idMsgMap.end()) {
-    auto unit = idMsgMap[msgId];
-    statusMap[unit] = s;
-    clientStatusMap[unit] = cs;
-    ret = true;
-    if (s == RECONSUME_LATER) {
-      reconsumeMap[msgId] = 1;
+    auto &idMap = idMsgMap[msgId];
+    auto iter = idMap.begin();
+    while(iter != idMap.end()) {
+      statusMap[iter->first] = s;
+      clientStatusMap[iter->first] = cs;
+      ret = true;
+      if (s == RECONSUME_LATER) {
+        reconsumeMap[msgId] = 1;
+      }
     }
   }
   return ret;

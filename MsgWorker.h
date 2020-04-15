@@ -58,7 +58,7 @@ public:
     std::condition_variable cv;
     std::map<shared_ptr<MsgUnit>, ClientMsgConsumeStatus> clientStatusMap;
     std::map<shared_ptr<MsgUnit>, ConsumeStatus> statusMap;
-    std::map<string, shared_ptr<MsgUnit>> idMsgMap;
+    std::map<string, map<shared_ptr<MsgUnit>, int>> idMsgMap;
     std::queue<shared_ptr<MsgUnit>> fetchedArr;
     std::map<string, int> reconsumeMap;
     //全部的status
