@@ -89,6 +89,7 @@ public:
     }
 
     bool setMsgReconsume(const string & msgId);
+    bool pushMsgBack(const string & msgId);
     bool setMsgAck(const string & msgId, ConsumeStatus s);
     bool fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &callback);
 };

@@ -179,6 +179,18 @@ bool ConsumerUnit::setMsgReconsume(const string &msgId) {
   return setMsgAck(msgId, RECONSUME_LATER);
 }
 
+bool ConsumerUnit::pushMsgBack(const string & msgId) {
+  boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
+  auto iter = lockers.begin();
+  while (iter != lockers.end()) {
+    auto iter1 = iter->first->idMsgMap.find(msgId);
+    if (iter1 != iter->first->idMsgMap.end()) {
+      iter->first->fetchedArr.push(iter1->second.begin()->first);
+    }
+    iter++;
+  }
+}
+
 bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit>)> &callback) {
   shared_ptr<MsgUnit> msg;
   bool found = false;

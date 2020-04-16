@@ -36,7 +36,8 @@ void ConsumeCallData::cancel() {
   if (msgId.size()) {
     auto consumer = msgWorker->getConsumer(topic, group);
     consumer->setMsgReconsume(msgId);
-    //todo 需要删除什么
+    consumer->pushMsgBack(msgId);
+    msgWorker->idUnitMap.erase(msgId);
   }
 
   status_ = FINISH;
