@@ -30,6 +30,10 @@ void MsgWorker::loopMatch() {
         }
         tmp.push(unit);
       } else if (unit->status == CLIENT_RECEIVE) {
+        if (unit->getIsAckTimeout()) {
+          consumer->setMsgReconsume(unit->msgId);
+          continue;
+        }
         tmp.push(unit);
       } else {
         //CONSUME_ACK
