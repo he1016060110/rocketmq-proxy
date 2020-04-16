@@ -39,7 +39,7 @@ using Proxy::ConsumeRequest;
 using Proxy::ConsumeReply;
 using Proxy::ConsumeAckRequest;
 using Proxy::ConsumeAckReply;
-using Proxy::ProxyServer;
+using Proxy::RMQProxy;
 
 using namespace std;
 using namespace rocketmq;

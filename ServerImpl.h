@@ -28,7 +28,7 @@ using Proxy::ConsumeRequest;
 using Proxy::ConsumeReply;
 using Proxy::ConsumeAckRequest;
 using Proxy::ConsumeAckReply;
-using Proxy::ProxyServer;
+using Proxy::RMQProxy;
 
 class ServerImpl final {
 public:
@@ -103,7 +103,7 @@ private:
     }
 
     std::unique_ptr<ServerCompletionQueue> cq_;
-    ProxyServer::AsyncService service_;
+    RMQProxy::AsyncService service_;
     std::unique_ptr<Server> server_;
 };
 

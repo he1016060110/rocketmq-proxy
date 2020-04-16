@@ -27,14 +27,14 @@ using grpc::ClientContext;
 using grpc::Status;
 using Proxy::ProduceRequest;
 using Proxy::ProduceReply;
-using Proxy::ProxyServer;
+using Proxy::RMQProxy;
 
 using namespace std;
 
 class ProduceClient {
 public:
     ProduceClient(std::shared_ptr<Channel> channel)
-        : stub_(ProxyServer::NewStub(channel)) {}
+        : stub_(RMQProxy::NewStub(channel)) {}
 
     // Assembles the client's payload, sends it and presents the response back
     // from the server.
@@ -70,7 +70,7 @@ public:
     }
 
 private:
-    std::unique_ptr<ProxyServer::Stub> stub_;
+    std::unique_ptr<RMQProxy::Stub> stub_;
 };
 
 int main(int argc, char **argv) {

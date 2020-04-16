@@ -23,7 +23,7 @@ using Proxy::ConsumeRequest;
 using Proxy::ConsumeReply;
 using Proxy::ConsumeAckRequest;
 using Proxy::ConsumeAckReply;
-using Proxy::ProxyServer;
+using Proxy::RMQProxy;
 
 enum RequestType {
     REQUEST_PRODUCE,
@@ -38,7 +38,7 @@ enum CallStatus {
 class MsgWorker;
 class CallDataBase {
 public:
-    CallDataBase(ProxyServer::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
+    CallDataBase(RMQProxy::AsyncService *service, ServerCompletionQueue *cq, RequestType type)
         : service_(service), cq_(cq), status_(CREATE), type_(type), retryCount(0){
       Proceed();
     }
@@ -71,7 +71,7 @@ public:
     }
 
 protected:
-    ProxyServer::AsyncService *service_;
+    RMQProxy::AsyncService *service_;
     ServerCompletionQueue *cq_;
     ServerContext ctx_;
     CallStatus status_;

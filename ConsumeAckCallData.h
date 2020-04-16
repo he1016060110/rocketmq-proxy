@@ -10,7 +10,7 @@
 
 class ConsumeAckCallData : public CallDataBase {
 public:
-    ConsumeAckCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
+    ConsumeAckCallData(RMQProxy::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
         service, cq, REQUEST_CONSUME_ACK), responder_(&ctx_), msgId(""), topic(""), group("") {
       Proceed();
     }

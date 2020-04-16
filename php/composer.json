@@ -5,6 +5,7 @@
   "minimum-stability": "stable",
   "require": {
     "php": ">=7.0.0",
-    "ratchet/pawl": "~0.3.4"
+    "grpc/grpc": "^v1.3.0",
+    "google/protobuf": "^v3.3.0"
   }
 }

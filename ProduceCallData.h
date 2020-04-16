@@ -13,7 +13,7 @@
 
 class ProduceCallData : public CallDataBase {
 public:
-    ProduceCallData(ProxyServer::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
+    ProduceCallData(RMQProxy::AsyncService *service, ServerCompletionQueue *cq) : CallDataBase(
         service, cq, REQUEST_PRODUCE), responder_(&ctx_) {
       Proceed();
     }

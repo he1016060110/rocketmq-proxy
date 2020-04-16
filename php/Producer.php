@@ -1,41 +1,24 @@
 <?php
 
-include_once __DIR__ . "/vendor/autoload.php";
+require dirname(__FILE__).'/vendor/autoload.php';
 
-$msgId = false;
-$url = "ws://127.0.0.1:8090/producerEndpoint";
-$body = "this is test!";
-$topicName = "Test";
-$delayLevel = 0;
-$loop = \React\EventLoop\Factory::create();
-$reactConnector = new \React\Socket\Connector($loop, [
-]);
-$connector = new \Ratchet\Client\Connector($loop, $reactConnector);
+@include_once dirname(__FILE__).'/Helloworld/GreeterClient.php';
+@include_once dirname(__FILE__).'/Helloworld/ProduceReply.php';
+@include_once dirname(__FILE__).'/Helloworld/ProduceRequest.php';
+@include_once dirname(__FILE__).'/GPBMetadata/Proxy.php';
 
-$connector($url, [], [])
-    ->then(function (\Ratchet\Client\WebSocket $conn) use ($body, &$msgId, $topicName, $delayLevel) {
-        $conn->on('message', function (\Ratchet\RFC6455\Messaging\MessageInterface $msg) use ($conn, $body, &$msgId, $topicName, $delayLevel) {
-            $arr = json_decode($msg, true);
-            if (isset($arr["code"]) && $arr["code"] == "0") {
-                $msgId = $arr['data']['msgId'];
-            }
-            $conn->close();
-        });
-        $conn->on('close', function ($code = null, $reason = null) {
-        });
-        $data = [
-            "tag" => "*",
-            "topic" => $topicName,
-            "group" => $topicName,
-            "body" => $body,
-            "delayLevel" => $delayLevel,
-        ];
-        $json = json_encode($data);
-        $conn->send($json);
-    }, function (\Exception $e) use ($loop) {
-        echo $e->getMessage();
-        $loop->stop();
-    });
+function greet($name)
+{
+    $client = new Helloworld\GreeterClient('localhost:50051', [
+        'credentials' => Grpc\ChannelCredentials::createInsecure(),
+    ]);
+    $request = new Helloworld\HelloRequest();
+    $request->setName($name);
+    list($reply, $status) = $client->SayHello($request)->wait();
+    $message = $reply->getMessage();
 
-$loop->run();
-var_dump($msgId);
+    return $message;
+}
+
+$name = !empty($argv[1]) ? $argv[1] : 'world';
+echo greet($name)."\n";

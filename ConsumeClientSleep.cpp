@@ -31,13 +31,13 @@ using Proxy::ConsumeAckRequest;
 using Proxy::ConsumeRequest;
 using Proxy::ConsumeAckReply;
 using Proxy::ConsumeReply;
-using Proxy::ProxyServer;
+using Proxy::RMQProxy;
 using namespace std;
 
 class ConsumeClient {
 public:
     ConsumeClient(std::shared_ptr<Channel> channel)
-        : stub_(ProxyServer::NewStub(channel)), msgId("") {}
+        : stub_(RMQProxy::NewStub(channel)), msgId("") {}
 
     // Assembles the client's payload, sends it and presents the response back
     // from the server.
@@ -109,7 +109,7 @@ public:
     }
 
 private:
-    std::unique_ptr<ProxyServer::Stub> stub_;
+    std::unique_ptr<RMQProxy::Stub> stub_;
 };
 
 int main(int argc, char **argv) {
