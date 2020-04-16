@@ -6,7 +6,7 @@
 
 void MsgWorker::loopMatch() {
   shared_ptr<ConsumeMsgUnit> unit;
-  std::function<void(shared_ptr<MsgUnit> )> func = [&](shared_ptr<MsgUnit> msg) {
+  std::function<void(shared_ptr<MsgUnit>)> func = [&](shared_ptr<MsgUnit> msg) {
       unit->msgId = msg->msgId;
 #ifdef DEBUG
       cout << msg->msgId << " consumed!" << endl;
@@ -82,17 +82,19 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     consumerUnit->consumer.setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
     consumerUnit->consumer.setInstanceName(group);
     consumerUnit->consumer.subscribe(topic, "*");
-    consumerUnit->consumer.setConsumeThreadCount(3);
+    consumerUnit->consumer.setConsumeThreadCount(2);
+    consumerUnit->consumer.setMaxCacheMsgSizePerQueue(128);
     consumerUnit->consumer.setTcpTransportTryLockTimeout(1000);
     consumerUnit->consumer.setTcpTransportConnectTimeout(400);
     consumerUnit->consumer.setSessionCredentials(accessKey_, secretKey_, accessChannel_);
     auto listener = new ConsumerMsgListener();
-    auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> & statusVector) {
+    auto callback = [group, consumerUnit](const std::vector<MQMessageExt> &msgs,
+                                          std::vector<ConsumeStatus> &statusVector) {
         shared_ptr<ConsumerUnitLocker> locker(new ConsumerUnitLocker(msgs, group));
         consumerUnit->waitLock(locker);
         consumerUnit->eraseLock(locker);
         if (locker->status == RECONSUME_LATER) {
-          for (int i = 0; i< msgs.size(); i++) {
+          for (int i = 0; i < msgs.size(); i++) {
             if (locker->reconsumeMap.find(msgs[i].getMsgId()) == locker->reconsumeMap.end()) {
               statusVector.push_back(CONSUME_SUCCESS);
             } else {
@@ -109,7 +111,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
       consumerUnit->consumer.start();
       consumers.insert(key, consumerUnit);
       return consumerUnit;
-    }  catch (exception &e) {
+    } catch (exception &e) {
       PRINT_ERROR(e);
       return nullptr;
     }
@@ -142,6 +144,7 @@ void MsgWorker::shutdownConsumer() {
 }
 
 void MsgWorker::clearMsgForConsumer() {
+  shared_ptr<ConsumerUnit> consumer;
   while (true) {
     //等待shutdown 处理程序通知
     std::unique_lock<std::mutex> lk1(clearMtx);
@@ -150,26 +153,39 @@ void MsgWorker::clearMsgForConsumer() {
     std::unique_lock<std::mutex> lk2(processMsgMtx);
     processMsgCV.notify_one();
     //可以过滤消息了
-
-    shared_ptr<QueueTS<MsgUnit>> pool;
+    if (consumers.try_get(clearConsumerKey, consumer)) {
+      consumer->unlockAll();
+    }
   }
 }
 
 void ConsumerUnit::unlockAll() {
-
+  boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
+  auto iter = lockers.begin();
+  while (iter != lockers.end()) {
+    auto iter1 = iter->first->clientStatusMap.begin();
+    while (iter1 != iter->first->clientStatusMap.end()) {
+      if (iter1->second != MSG_CONSUME_ACK) {
+        iter1->second = MSG_CONSUME_ACK;
+        iter->first->statusMap[iter1->first] = RECONSUME_LATER;
+      }
+    }
+    iter->first->triggerCheck();
+    iter++;
+  }
 }
 
 bool ConsumerUnit::setMsgReconsume(const string &msgId) {
   return setMsgAck(msgId, RECONSUME_LATER);
 }
 
-bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &callback) {
+bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit>)> &callback) {
   shared_ptr<MsgUnit> msg;
   bool found = false;
   {
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
     auto iter = lockers.begin();
-    while(iter != lockers.end()) {
+    while (iter != lockers.end()) {
       if (iter->first->getMsg(msg)) {
         found = true;
         break;
@@ -184,12 +200,12 @@ bool ConsumerUnit::fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &ca
   }
 }
 
-bool ConsumerUnit::setMsgAck(const string & msgId, ConsumeStatus s) {
+bool ConsumerUnit::setMsgAck(const string &msgId, ConsumeStatus s) {
   bool ret = false;
   {
     boost::shared_lock<boost::shared_mutex> lk(lockersMtx);
-    auto iter= lockers.begin();
-    while(iter != lockers.end()) {
+    auto iter = lockers.begin();
+    while (iter != lockers.end()) {
       if (iter->first->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
         ret = true;
       }
@@ -241,7 +257,7 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
   if (idMsgMap.find(msgId) != idMsgMap.end()) {
     auto &idMap = idMsgMap[msgId];
     auto iter = idMap.begin();
-    while(iter != idMap.end()) {
+    while (iter != idMap.end()) {
       statusMap[iter->first] = s;
       clientStatusMap[iter->first] = cs;
       ret = true;
@@ -254,11 +270,10 @@ bool ConsumerUnitLocker::setMsgStatus(const string msgId, ConsumeStatus s, Clien
   return ret;
 }
 
-void ConsumerUnitLocker::waitForLock(std::function<void(std::unique_lock<std::mutex> &)> & func)
-{
+void ConsumerUnitLocker::waitForLock(std::function<void(std::unique_lock<std::mutex> &)> &func) {
   std::unique_lock<std::mutex> lk(mtx);
   func(lk);
-  cv.wait(lk, [this] {return clientStatus == MSG_CONSUME_ACK;});
+  cv.wait(lk, [this] { return clientStatus == MSG_CONSUME_ACK; });
 }
 
 void ConsumerUnitLocker::triggerCheck() {
@@ -289,7 +304,7 @@ void ConsumerUnitLocker::triggerCheck() {
 void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> &locker) {
   //锁的顺序很重要，先锁大锁
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
-  std::function<void(std::unique_lock<std::mutex> &)> func = [&] (std::unique_lock<std::mutex> & lockerLock) {
+  std::function<void(std::unique_lock<std::mutex> &)> func = [&](std::unique_lock<std::mutex> &lockerLock) {
       lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(locker, 1));
       //todo 为什么锁解不掉
       //lockerLock.unlock();
