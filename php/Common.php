@@ -6,20 +6,21 @@
  * Time: 5:16 PM
  */
 
-require dirname(__FILE__).'/vendor/autoload.php';
+require dirname(__FILE__) . '/vendor/autoload.php';
 
-include_once dirname(__FILE__).'/Proxy/RMQProxyClient.php';
-include_once dirname(__FILE__).'/Proxy/ProduceReply.php';
-include_once dirname(__FILE__).'/Proxy/ProduceRequest.php';
-include_once dirname(__FILE__).'/Proxy/ConsumeReply.php';
-include_once dirname(__FILE__).'/Proxy/ConsumeAckReply.php';
-include_once dirname(__FILE__).'/Proxy/ConsumeRequest.php';
-include_once dirname(__FILE__).'/Proxy/ConsumeAckRequest.php';
-include_once dirname(__FILE__).'/GPBMetadata/Proxy.php';
+include_once dirname(__FILE__) . '/Proxy/RMQProxyClient.php';
+include_once dirname(__FILE__) . '/Proxy/ProduceReply.php';
+include_once dirname(__FILE__) . '/Proxy/ProduceRequest.php';
+include_once dirname(__FILE__) . '/Proxy/ConsumeReply.php';
+include_once dirname(__FILE__) . '/Proxy/ConsumeAckReply.php';
+include_once dirname(__FILE__) . '/Proxy/ConsumeRequest.php';
+include_once dirname(__FILE__) . '/Proxy/ConsumeAckRequest.php';
+include_once dirname(__FILE__) . '/GPBMetadata/Proxy.php';
 
 class Client
 {
     private $_client;
+
     function __construct($server)
     {
         $this->_client = new Proxy\RMQProxyClient($server, [
@@ -47,14 +48,14 @@ class Client
             if ($reply->getCode() === 0) {
                 echo "consume msg ack id[" . $msgId . "]\n";
             } else {
-                throw new Exception("consume ack error!msg:" . $reply->getErrorMsg(). " msgId[" .$msgId. "]");
+                throw new Exception("consume ack error!msg:" . $reply->getErrorMsg() . " msgId[" . $msgId . "]");
             }
         } else {
             throw new Exception("consume error!msg:" . $reply->getErrorMsg());
         }
     }
 
-    public function produce($topic , $group, $delay, $body, $tag)
+    public function produce($topic, $group, $delay, $body, $tag)
     {
         $client = new Proxy\RMQProxyClient('192.168.1.78:8090', [
             'credentials' => Grpc\ChannelCredentials::createInsecure(),
@@ -69,9 +70,11 @@ class Client
         /**
          * @var $reply Proxy\ProduceReply
          */
-        $reply->getCode();
-        echo "code:" . $reply->getCode() . "\n";
-        echo "msgId:" . $reply->getMsgId() . "\n";
+        if ($reply->getCode() === 0) {
+            echo "produce msg id[" . $reply->getMsgId() . "] msg[" . $body . "]\n";
+        } else {
+            throw new Exception("consume ack error!msg:" . $reply->getErrorMsg());
+        }
     }
 
 }
