@@ -57,16 +57,13 @@ class Client
 
     public function produce($topic, $group, $delay, $body, $tag)
     {
-        $client = new Proxy\RMQProxyClient('192.168.1.78:8090', [
-            'credentials' => Grpc\ChannelCredentials::createInsecure(),
-        ]);
         $request = new Proxy\ProduceRequest();
         $request->setBody($body);
         $request->setGroup($group);
         $request->setDelayLevel($delay);
         $request->setTag($tag);
         $request->setTopic($topic);
-        list($reply, $status) = $client->Produce($request)->wait();
+        list($reply, $status) = $this->_client->Produce($request)->wait();
         /**
          * @var $reply Proxy\ProduceReply
          */
