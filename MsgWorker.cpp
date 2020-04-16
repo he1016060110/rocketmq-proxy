@@ -83,6 +83,8 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     consumerUnit->consumer.setInstanceName(group);
     consumerUnit->consumer.subscribe(topic, "*");
     consumerUnit->consumer.setConsumeThreadCount(2);
+    consumerUnit->consumer.setTcpTransportPullThreadNum(1);
+    consumerUnit->consumer.setPullMsgThreadPoolCount(1);
     consumerUnit->consumer.setMaxCacheMsgSizePerQueue(128);
     consumerUnit->consumer.setTcpTransportTryLockTimeout(1000);
     consumerUnit->consumer.setTcpTransportConnectTimeout(400);

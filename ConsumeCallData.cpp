@@ -17,13 +17,13 @@ void ConsumeCallData::process() {
     }
 }
 
-void ConsumeCallData::responseMsg(int code, string errMsg, string msgId, string body){
-  reply_.set_msg_id(msgId);
+void ConsumeCallData::responseMsg(int code, string errMsg, string id, string body){
+  reply_.set_msg_id(id);
   reply_.set_body(body);
   reply_.set_code(code);
   reply_.set_error_msg(errMsg);
   status_ = FINISH;
-  this->msgId = msgId;
+  msgId = id;
   responder_.Finish(reply_, Status::OK, this);
 }
 
@@ -33,10 +33,12 @@ void ConsumeCallData::del() {
 }
 
 void ConsumeCallData::cancel() {
+#ifdef DEBUG
+  cout << "ConsumeCallData::cancel!msgId:"<< msgId << endl;
+#endif
   if (msgId.size()) {
     auto consumer = msgWorker->getConsumer(topic, group);
     consumer->setMsgReconsume(msgId);
-    consumer->pushMsgBack(msgId);
     msgWorker->idUnitMap.erase(msgId);
   }
 
