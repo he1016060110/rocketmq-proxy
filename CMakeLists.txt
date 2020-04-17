@@ -77,6 +77,13 @@ if (ROCKETMQ_FOUND)
     target_include_directories(Server PRIVATE ${ROCKETMQ_INCLUDE_DIR})
 endif ()
 
+pkg_search_module(CURL REQUIRED libcurl)
+if (CURL_FOUND)
+    include_directories(${CURL_INCLUDE_DIRS})
+    target_link_libraries(Server ${CURL_LIBRARIES})
+    target_include_directories(Server PRIVATE ${CURL_INCLUDE_DIR})
+endif ()
+
 install(TARGETS Server DESTINATION bin)
 install(TARGETS ProduceClient DESTINATION bin)
 install(TARGETS ConsumeClient DESTINATION bin)

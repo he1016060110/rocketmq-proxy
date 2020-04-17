@@ -5,9 +5,11 @@
 #ifndef ROCKETMQ_PROXY_ESLOG
 #define ROCKETMQ_PROXY_ESLOG
 
-#include "common.hpp"
 #include "Ip.hpp"
+#include "curl/curl.h"
 #include <ctime>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 using namespace std;
 using namespace boost::property_tree;
