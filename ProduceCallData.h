@@ -54,6 +54,8 @@ private:
           reply_.set_msg_id(msgId);
           status_ = FINISH;
           responder_.Finish(reply_, Status::OK, this);
+          msgWorker->writeLog(PROXY_LOGGER_TYPE_PRODUCE, msgId, request_.topic(), request_.group(),
+              request_.body(), request_.delaylevel(),0);
       };
       //必须拷贝一份，不用引用
       callback->failureFunc = [this](const string &msgResp) {

@@ -15,6 +15,8 @@ void MsgWorker::loopMatch() {
       idUnitMap.insert_or_update(msg->msgId, unit);
       unit->callData->responseMsg(0, "", msg->msgId, msg->body);
       resetConsumerActive(unit->topic, unit->group);
+      writeLog(PROXY_LOGGER_TYPE_CONSUME, msg->msgId, msg->topic, msg->group,
+                          msg->body, msg->delayLevel,0);
   };
   shared_ptr<ConsumerUnit> consumer;
   while (true) {

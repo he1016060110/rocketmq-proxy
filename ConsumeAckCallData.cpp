@@ -20,6 +20,8 @@ void ConsumeAckCallData::process() {
 #ifdef DEBUG
     cout <<"ConsumeAckCallData [" << msgId << "]" << endl;
 #endif
+    msgWorker->writeLog(PROXY_LOGGER_TYPE_CONSUME_ACL, msgId, topic, group,
+             "", 0,request_.status());
     reply_.set_error_msg("msg ack succ!");
     status_ = FINISH;
     responder_.Finish(reply_, Status::OK, this);

@@ -49,12 +49,13 @@ public:
     int status;//0
     time_t fetchTime;
 public:
-    MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0), fetchTime(time(0)){};
+    MsgUnit() : type(0), msgId(""), topic(""), group(""), body(), delayLevel(0), status(0), fetchTime(time(0)) {};
 };
 
 class ConsumerUnitLocker {
 public:
-    ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string & group);
+    ConsumerUnitLocker(const std::vector<MQMessageExt> &msgs, const string &group);
+
     std::mutex mtx;
     std::condition_variable cv;
     std::map<shared_ptr<MsgUnit>, ClientMsgConsumeStatus> clientStatusMap;
@@ -65,9 +66,13 @@ public:
     //全部的status
     ConsumeStatus status;
     ClientMsgConsumeStatus clientStatus;
+
     bool getMsg(shared_ptr<MsgUnit> &unit);
+
     bool setMsgStatus(const string msgId, ConsumeStatus s, ClientMsgConsumeStatus cs);
-    void waitForLock(std::function<void(std::unique_lock<std::mutex> &)> & );
+
+    void waitForLock(std::function<void(std::unique_lock<std::mutex> &)> &);
+
     void triggerCheck();
 };
 
@@ -75,6 +80,7 @@ class ConsumerUnit {
 public:
     std::map<shared_ptr<ConsumerUnitLocker>, int> lockers;
     boost::shared_mutex lockersMtx;
+
     ConsumerUnit(string topic) : consumer(DefaultMQPushConsumer(topic)), lastActiveAt(time(0)) {};
     DefaultMQPushConsumer consumer;
     time_t lastActiveAt;
@@ -89,10 +95,13 @@ public:
       return time(0) - lastActiveAt >= MAX_MSG_CONSUME_MAX_INACTIVE_TIME;
     }
 
-    bool setMsgReconsume(const string & msgId);
-    bool pushMsgBack(const string & msgId);
-    bool setMsgAck(const string & msgId, ConsumeStatus s);
-    bool fetchAndConsume(std::function<void(shared_ptr<MsgUnit> )> &callback);
+    bool setMsgReconsume(const string &msgId);
+
+    bool pushMsgBack(const string &msgId);
+
+    bool setMsgAck(const string &msgId, ConsumeStatus s);
+
+    bool fetchAndConsume(std::function<void(shared_ptr<MsgUnit>)> &callback);
 };
 
 class ConsumeMsgUnit {
@@ -114,6 +123,7 @@ public:
     bool getIsAckTimeout() {
       return status == CLIENT_RECEIVE && time(0) - lastActiveAt >= MAX_MSG_WAIT_CONSUME_ACK_TIME;
     }
+
     MsgWorkerConsumeStatus status;
 };
 
@@ -126,11 +136,12 @@ public:
 
     ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs) {};
 
-    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> & statusVector) {
+    ConsumeStatus consumeMessage(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> &statusVector) {
       return callback(msgs, statusVector);
     }
 
-    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs, std::vector<ConsumeStatus> &)> paramCallback) {
+    void setMsgCallback(std::function<ConsumeStatus(const std::vector<MQMessageExt> &msgs,
+                                                    std::vector<ConsumeStatus> &)> paramCallback) {
       callback = paramCallback;
     }
 
@@ -152,7 +163,7 @@ class MsgWorker {
     string accessChannel_;
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
-    ProxyLogger * logger;
+    ProxyLogger *logger;
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group);
 
@@ -168,8 +179,11 @@ class MsgWorker {
     std::condition_variable clearCV;
     std::condition_variable processMsgCV;
     string clearConsumerKey;
+
     void shutdownConsumer();
+
     void clearMsgForConsumer();
+
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
@@ -179,8 +193,7 @@ class MsgWorker {
 
     void loopMatch();
 
-    void startLogger()
-    {
+    void startLogger() {
       boost::thread(boost::bind(&ProxyLogger::loopConsumeLog, this->logger));
     }
 
@@ -201,13 +214,17 @@ class MsgWorker {
     }
 
 public:
-    void setLogger(ProxyLogger * log) {
+    void setLogger(ProxyLogger *log) {
       logger = log;
     }
 
+    bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel, int status) {
+      logger->writeLog(type, msgId, topic, group, body, delayLevel, status);
+    }
+
     shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
-    void runAll()
-    {
+
+    void runAll() {
       startLogger();
       startMatcher();
       startNotifyTimeout();
@@ -216,6 +233,7 @@ public:
     }
 
     QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+
     void resetConsumerActive(const string &topic, const string &group) {
       auto key = topic + group;
       shared_ptr<ConsumerUnit> unit;

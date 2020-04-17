@@ -10,6 +10,10 @@
 #include <memory>
 #include "QueueTS.hpp"
 
+#define PROXY_LOGGER_TYPE_PRODUCE 1
+#define PROXY_LOGGER_TYPE_CONSUME 2
+#define PROXY_LOGGER_TYPE_CONSUME_ACL 3
+
 using namespace std;
 
 class LogUnit {
@@ -33,12 +37,12 @@ class ProxyLogger {
     int esErrorCount;
     int esErrorMax;
     bool logFileOpened;
+    void getTime(string &timeStr);
+    bool bulk(const string &url, const string &data);
 public:
     ProxyLogger(string esHost, string logFileName, int _max);
-    void getTime(string &timeStr);
     bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel, int status);
     void loopConsumeLog();
-    bool bulk(const string &url, const string &data);
 };
 
 
