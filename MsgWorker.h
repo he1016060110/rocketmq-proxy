@@ -218,7 +218,7 @@ public:
       logger = log;
     }
 
-    bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel, int status) {
+    bool writeLog(int type, const string msgId, const string topic, const string group, const string body, int delayLevel, int status) {
       logger->writeLog(type, msgId, topic, group, body, delayLevel, status);
     }
 
