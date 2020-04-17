@@ -18,6 +18,7 @@
 #include <memory>
 #include <thread>
 #include "common.h"
+#include "ProxyLogger.h"
 
 using namespace std;
 using namespace rocketmq;
@@ -159,13 +160,6 @@ class MsgWorker {
       msgPool.insert(key, msgP);
     }
 
-    bool getConsumerExist(const string &topic, const string &group) {
-      auto key = topic + group;
-      shared_ptr<ConsumerUnit> unit;
-      return consumers.try_get(key, unit);
-    }
-
-
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
     std::mutex clearMtx;
@@ -173,11 +167,8 @@ class MsgWorker {
     std::condition_variable clearCV;
     std::condition_variable processMsgCV;
     string clearConsumerKey;
-
     void shutdownConsumer();
-
     void clearMsgForConsumer();
-
     void notifyTimeout() {
       for (;;) {
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));

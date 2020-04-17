@@ -32,7 +32,7 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 include(FindPkgConfig)
 
 add_executable(Server Server.cpp Proxy.grpc.pb.cc Proxy.pb.cc
-        ConsumeCallData.cpp ConsumeAckCallData.cpp MsgWorker.cpp)
+        ConsumeCallData.cpp ConsumeAckCallData.cpp MsgWorker.cpp ProxyLogger.cpp)
 
 add_executable(ConsumeClient ConsumeClient.cpp Proxy.grpc.pb.cc Proxy.pb.cc)
 add_executable(ConsumeClientSleep ConsumeClientSleep.cpp Proxy.grpc.pb.cc Proxy.pb.cc)

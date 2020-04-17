@@ -5,8 +5,6 @@
 #ifndef ROCKETMQ_PROXY_COMMON_H
 #define ROCKETMQ_PROXY_COMMON_H
 
-#include "ProxyLogger.hpp"
-
 #define PRINT_ERROR(e) do { \
   cout << "file: " << __FILE__ << " line: " << __LINE__ << " msg: " << e.what() << endl; \
 } while(0);
