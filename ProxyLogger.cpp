@@ -1,10 +1,12 @@
 //
 // Created by hexi on 2020/4/17.
 //
-
-#include "ProxyLogger.h"
 #include <iostream>
+#include "ProxyLogger.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include "boost/thread.hpp"
+#include "Ip.hpp"
 
 using namespace std;
 using namespace boost::property_tree;
