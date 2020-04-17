@@ -152,6 +152,7 @@ class MsgWorker {
     string accessChannel_;
     map<string, shared_ptr<ProducerUnit>> producers;
     MapTS<string, shared_ptr<ConsumerUnit>> consumers;
+    ProxyLogger * logger;
 
     shared_ptr<ProducerUnit> getProducer(const string &topic, const string &group);
 
@@ -178,8 +179,10 @@ class MsgWorker {
 
     void loopMatch();
 
-public:
-    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
+    void startLogger()
+    {
+      boost::thread(boost::bind(&ProxyLogger::loopConsumeLog, this->logger));
+    }
 
     void startMatcher() {
       boost::thread(boost::bind(&MsgWorker::loopMatch, this));
@@ -197,8 +200,22 @@ public:
       boost::thread(boost::bind(&MsgWorker::clearMsgForConsumer, this));
     }
 
-    QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
+public:
+    void setLogger(ProxyLogger * log) {
+      logger = log;
+    }
 
+    shared_ptr<ConsumerUnit> getConsumer(const string &topic, const string &group);
+    void runAll()
+    {
+      startLogger();
+      startMatcher();
+      startNotifyTimeout();
+      startShutdownConsumer();
+      startClearMsgForConsumer();
+    }
+
+    QueueTS<shared_ptr<ConsumeMsgUnit>> consumeMsgPool;
     void resetConsumerActive(const string &topic, const string &group) {
       auto key = topic + group;
       shared_ptr<ConsumerUnit> unit;

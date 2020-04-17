@@ -82,11 +82,10 @@ int main(int argc, char *argv[]) {
   }
 
   ServerImpl server(host, port, nameServer, accessKey, secretKey, "channel");
+  ProxyLogger logger(esServer, logFileName, 100);
   CallDataBase::msgWorker->setConfig(nameServer, accessKey, secretKey, "channel");
-  CallDataBase::msgWorker->startMatcher();
-  CallDataBase::msgWorker->startNotifyTimeout();
-  CallDataBase::msgWorker->startShutdownConsumer();
-  CallDataBase::msgWorker->startClearMsgForConsumer();
+  CallDataBase::msgWorker->setLogger(&logger);
+  CallDataBase::msgWorker->runAll();
 
   server.Run();
 
