@@ -19,7 +19,7 @@ public:
     void responseMsg(int code, string errMsg, string msgId, string body);
 
     void responseTimeOut() {
-      reply_.set_code(1);
+      reply_.set_code(RESPONSE_TIMEOUT);
       string errMsg = "get msg timeout";
       reply_.set_error_msg(errMsg);
       status_ = FINISH;

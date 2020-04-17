@@ -16,7 +16,7 @@ void ConsumeAckCallData::process() {
     if (msgWorker->idUnitMap.try_get(msgId, unit)) {
       unit->status = CONSUME_ACK;
     }
-    reply_.set_code(0);
+    reply_.set_code(RESPONSE_SUCCESS);
 #ifdef DEBUG
     cout <<"ConsumeAckCallData [" << msgId << "]" << endl;
 #endif
@@ -27,7 +27,7 @@ void ConsumeAckCallData::process() {
     responder_.Finish(reply_, Status::OK, this);
   } else {
     status_ = FINISH;
-    reply_.set_code(1);
+    reply_.set_code(RESPONSE_ERROR);
     string errMsg = "msg[" + msgId + "] cannot be found!";
     reply_.set_error_msg(errMsg);
     responder_.Finish(reply_, Status::OK, this);

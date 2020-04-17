@@ -9,6 +9,7 @@
 #include <grpc/support/log.h>
 #include "Proxy.pb.h"
 #include "Proxy.grpc.pb.h"
+#include "common.h"
 
 using namespace std;
 using grpc::Server;

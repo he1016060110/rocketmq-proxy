@@ -41,7 +41,7 @@ private:
       auto callback = new ProducerCallback();
 
       if (!request_.topic().size() || !request_.group().size() || !request_.tag().size() || !request_.body().size()) {
-        reply_.set_code(1);
+        reply_.set_code(RESPONSE_ERROR);
         reply_.set_err_msg("params error!");
         status_ = FINISH;
         responder_.Finish(reply_, Status::OK, this);
@@ -50,7 +50,7 @@ private:
 
       //必须拷贝一份，不用引用
       callback->successFunc = [this](const string &msgId) {
-          reply_.set_code(0);
+          reply_.set_code(RESPONSE_SUCCESS);
           reply_.set_msg_id(msgId);
           status_ = FINISH;
           msgWorker->writeLog(PROXY_LOGGER_TYPE_PRODUCE, msgId, request_.topic(), request_.group(),
@@ -61,7 +61,7 @@ private:
       callback->failureFunc = [this](const string &msgResp) {
           retryCount++;
           if (retryCount > ROCKETMQ_PROXY_PRODUCE_MAX_RETRY_COUNT) {
-            reply_.set_code(1);
+            reply_.set_code(RESPONSE_ERROR);
             reply_.set_err_msg(msgResp);
             status_ = FINISH;
             responder_.Finish(reply_, Status::OK, this);
@@ -75,7 +75,7 @@ private:
         msgWorker->produce(callback, request_.topic(), request_.group(), request_.tag(), request_.body());
       } catch (exception &e) {
         string msgResp = e.what();
-        reply_.set_code(1);
+        reply_.set_code(RESPONSE_ERROR);
         reply_.set_err_msg(msgResp);
         status_ = FINISH;
         responder_.Finish(reply_, Status::OK, this);
