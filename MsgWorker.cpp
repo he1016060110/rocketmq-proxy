@@ -133,17 +133,13 @@ void MsgWorker::shutdownConsumer() {
     consumers.getAllKeys(keys);
     for (size_t i = 0; i < keys.size(); i++) {
       if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
-#ifdef DEBUG
         cout << keys[i] << " is going to shutdown!" << endl;
-#endif
         clearCV.notify_one();
         std::unique_lock<std::mutex> lk(processMsgMtx);
         clearConsumerKey = keys[i];
         processMsgCV.wait(lk);
         unit->consumer.shutdown();
-#ifdef DEBUG
         cout << keys[i] << " shutdown success!" << endl;
-#endif
         consumers.erase(keys[i]);
       }
     }
