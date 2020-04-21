@@ -151,6 +151,8 @@ void MsgWorker::clearMsgForConsumer() {
     //获取到锁之后立即通知
     //可以过滤消息了
     if (clearConsumerKey != "" && consumers.try_get(clearConsumerKey, consumer)) {
+      //sleep一下，保证肯定执行到shutdown了
+      boost::this_thread::sleep(boost::posix_time::seconds(1));
       consumer->unlockAll();
       clearConsumerKey = "";
     }
