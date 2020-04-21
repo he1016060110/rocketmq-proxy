@@ -174,10 +174,6 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
-    std::mutex clearMtx;
-    std::mutex processMsgMtx;
-    std::condition_variable clearCV;
-    std::condition_variable processMsgCV;
     string clearConsumerKey;
 
     void shutdownConsumer();

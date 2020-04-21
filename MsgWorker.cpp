@@ -16,7 +16,7 @@ void MsgWorker::loopMatch() {
       unit->callData->responseMsg(0, "", msg->msgId, msg->body);
       resetConsumerActive(unit->topic, unit->group);
       writeLog(PROXY_LOGGER_TYPE_CONSUME, msg->msgId, msg->topic, msg->group,
-                          msg->body, msg->delayLevel,0);
+               msg->body, msg->delayLevel, 0);
   };
   shared_ptr<ConsumerUnit> consumer;
   while (true) {
@@ -134,10 +134,7 @@ void MsgWorker::shutdownConsumer() {
     for (size_t i = 0; i < keys.size(); i++) {
       if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
         cout << keys[i] << " is going to shutdown!" << endl;
-        clearCV.notify_one();
-        std::unique_lock<std::mutex> lk(processMsgMtx);
         clearConsumerKey = keys[i];
-        processMsgCV.wait(lk);
         unit->consumer.shutdown();
         cout << keys[i] << " shutdown success!" << endl;
         consumers.erase(keys[i]);
@@ -151,15 +148,13 @@ void MsgWorker::clearMsgForConsumer() {
   shared_ptr<ConsumerUnit> consumer;
   while (true) {
     //等待shutdown 处理程序通知
-    std::unique_lock<std::mutex> lk1(clearMtx);
-    clearCV.wait(lk1);
     //获取到锁之后立即通知
-    std::unique_lock<std::mutex> lk2(processMsgMtx);
-    processMsgCV.notify_one();
     //可以过滤消息了
-    if (consumers.try_get(clearConsumerKey, consumer)) {
+    if (clearConsumerKey != "" && consumers.try_get(clearConsumerKey, consumer)) {
       consumer->unlockAll();
+      clearConsumerKey = "";
     }
+    boost::this_thread::sleep(boost::posix_time::seconds(1));
   }
 }
 
@@ -183,7 +178,7 @@ bool ConsumerUnit::setMsgReconsume(const string &msgId) {
   return setMsgAck(msgId, RECONSUME_LATER);
 }
 
-bool ConsumerUnit::pushMsgBack(const string & msgId) {
+bool ConsumerUnit::pushMsgBack(const string &msgId) {
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
   auto iter = lockers.begin();
   while (iter != lockers.end()) {
