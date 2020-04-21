@@ -62,6 +62,7 @@ shared_ptr<ProducerUnit> MsgWorker::getProducer(const string &topic, const strin
     producerUnit->producer.setNamesrvAddr(nameServerHost_);
     producerUnit->producer.setGroupName(group);
     producerUnit->producer.setInstanceName(topic);
+    producerUnit->producer.setTcpTransportPullThreadNum(1);
     producerUnit->producer.setSendMsgTimeout(500);
     producerUnit->producer.setTcpTransportTryLockTimeout(1000);
     producerUnit->producer.setTcpTransportConnectTimeout(400);
