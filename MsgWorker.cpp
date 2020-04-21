@@ -317,13 +317,10 @@ void ConsumerUnitLocker::triggerCheck() {
 void ConsumerUnit::waitLock(shared_ptr<ConsumerUnitLocker> &locker) {
   //锁的顺序很重要，先锁大锁
   boost::unique_lock<boost::shared_mutex> lk(lockersMtx);
-  std::function<void(std::unique_lock<std::mutex> &)> func = [&](std::unique_lock<std::mutex> &lockerLock) {
-      lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(locker, 1));
-      //todo 为什么锁解不掉
-      //lockerLock.unlock();
-      lk.unlock();
-  };
-  locker->waitForLock(func);
+  lockers.insert(pair<shared_ptr<ConsumerUnitLocker>, int>(locker, 1));
+  std::unique_lock<std::mutex> lk1(locker->mtx);
+  lk.unlock();
+  locker->cv.wait(lk1, [&] { return locker->clientStatus == MSG_CONSUME_ACK; });
 }
 
 void ConsumerUnit::eraseLock(const shared_ptr<ConsumerUnitLocker> &lock) {
