@@ -73,7 +73,7 @@ public:
 
     void waitForLock(std::function<void(std::unique_lock<std::mutex> &)> &);
 
-    void triggerCheck();
+    void triggerCheck(bool forced);
 };
 
 class ConsumerUnit {
@@ -174,6 +174,7 @@ class MsgWorker {
 
     MapTS<string, shared_ptr<QueueTS<MsgUnit>>> msgPool;
 
+    mutex clearConsumerKeyMtx;
     string clearConsumerKey;
 
     void shutdownConsumer();

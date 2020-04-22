@@ -134,8 +134,11 @@ void MsgWorker::shutdownConsumer() {
     consumers.getAllKeys(keys);
     for (size_t i = 0; i < keys.size(); i++) {
       if (consumers.try_get(keys[i], unit) && unit->getIsTooInactive()) {
-        cout << keys[i] << " is going to shutdown!" << endl;
-        clearConsumerKey = keys[i];
+        {
+          unique_lock<mutex> lk(clearConsumerKeyMtx);
+          cout << keys[i] << " is going to shutdown!" << endl;
+          clearConsumerKey = keys[i];
+        }
         unit->consumer.shutdown();
         cout << keys[i] << " shutdown success!" << endl;
         consumers.erase(keys[i]);
@@ -147,15 +150,25 @@ void MsgWorker::shutdownConsumer() {
 
 void MsgWorker::clearMsgForConsumer() {
   shared_ptr<ConsumerUnit> consumer;
+  string key;
   while (true) {
     //等待shutdown 处理程序通知
     //获取到锁之后立即通知
     //可以过滤消息了
-    if (clearConsumerKey != "" && consumers.try_get(clearConsumerKey, consumer)) {
+    {
+      unique_lock<mutex> lk(clearConsumerKeyMtx);
+      key = clearConsumerKey;
+    }
+    if (key != "" && consumers.try_get(clearConsumerKey, consumer)) {
       //sleep一下，保证肯定执行到shutdown了
       boost::this_thread::sleep(boost::posix_time::seconds(1));
+      cout << key << " unlockAll begin!" << endl;
       consumer->unlockAll();
-      clearConsumerKey = "";
+      cout << key << " unlockAll end!" << endl;
+      {
+        unique_lock<mutex> lk(clearConsumerKeyMtx);
+        clearConsumerKey = "";
+      }
     }
     boost::this_thread::sleep(boost::posix_time::seconds(1));
   }
@@ -173,7 +186,7 @@ void ConsumerUnit::unlockAll() {
       }
       iter1++;
     }
-    iter->first->triggerCheck();
+    iter->first->triggerCheck(true);
     iter++;
   }
 }
@@ -224,7 +237,7 @@ bool ConsumerUnit::setMsgAck(const string &msgId, ConsumeStatus s) {
       if (iter->first->setMsgStatus(msgId, s, MSG_CONSUME_ACK)) {
         ret = true;
       }
-      iter->first->triggerCheck();
+      iter->first->triggerCheck(false);
       iter++;
     }
   }
@@ -291,8 +304,8 @@ void ConsumerUnitLocker::waitForLock(std::function<void(std::unique_lock<std::mu
   cv.wait(lk, [this] { return clientStatus == MSG_CONSUME_ACK; });
 }
 
-void ConsumerUnitLocker::triggerCheck() {
-  if (fetchedArr.size()) {
+void ConsumerUnitLocker::triggerCheck(bool forced) {
+  if (!forced && fetchedArr.size()) {
     return;
   }
   auto iter = clientStatusMap.begin();
