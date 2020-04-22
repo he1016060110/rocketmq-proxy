@@ -162,9 +162,7 @@ void MsgWorker::clearMsgForConsumer() {
     if (key != "" && consumers.try_get(clearConsumerKey, consumer)) {
       //sleep一下，保证肯定执行到shutdown了
       boost::this_thread::sleep(boost::posix_time::seconds(1));
-      cout << key << " unlockAll begin!" << endl;
       consumer->unlockAll();
-      cout << key << " unlockAll end!" << endl;
       {
         unique_lock<mutex> lk(clearConsumerKeyMtx);
         clearConsumerKey = "";
