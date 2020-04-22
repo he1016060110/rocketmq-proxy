@@ -171,6 +171,7 @@ void ConsumerUnit::unlockAll() {
         iter1->second = MSG_CONSUME_ACK;
         iter->first->statusMap[iter1->first] = RECONSUME_LATER;
       }
+      iter1++;
     }
     iter->first->triggerCheck();
     iter++;
