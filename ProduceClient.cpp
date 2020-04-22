@@ -74,18 +74,23 @@ private:
 };
 
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    cout << "输入host topic！" << endl;
+  if (argc < 4) {
+    cout << "输入host topic body num！" << endl;
     exit(1);
   }
   string host(*(argv + 1));
   string topic(*(argv + 2));
+  string body(*(argv + 3));
+  int num = 1;
+  if (argc > 4) {
+    std::string::size_type sz;
+    string num_str(*(argv + 4));
+    num = std::stoi(num_str, &sz);
+  }
   ProduceClient client(grpc::CreateChannel(
       host, grpc::InsecureChannelCredentials()));
   std::string tag("*");
-  std::string body("this is test!");
-
-  for (int i = 0; i < 100000; i++) {
+  for (int i = 0; i < num; i++) {
     std::string reply = client.Produce(topic, topic, tag, body);
     std::cout << "received: " << reply << std::endl;
   }
