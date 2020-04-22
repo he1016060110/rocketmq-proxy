@@ -6,20 +6,7 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 *.cmake
-#Additions to https://github.com/github/gitignore/blob/master/CMake.gitignore
-Testing
-compile_commands.json
-.usages_clang
 
-*.crt
-*.key
-
-# executables
-ws_examples
-wss_examples
-crypto_test
-io_test
-parse_test
 bin
 valgrind_report.log
 core*
@@ -28,3 +15,4 @@ data
 *.o
 Server
 ProduceClient
+nohup.out
