@@ -61,7 +61,7 @@ shared_ptr<ProducerUnit> MsgWorker::getProducer(const string &topic, const strin
     shared_ptr<ProducerUnit> producerUnit(new ProducerUnit(topic));
     producerUnit->producer.setNamesrvAddr(nameServerHost_);
     producerUnit->producer.setGroupName(group);
-    producerUnit->producer.setInstanceName(topic);
+    producerUnit->producer.setInstanceName("RMQPROXY");
     producerUnit->producer.setTcpTransportPullThreadNum(1);
     producerUnit->producer.setSendMsgTimeout(500);
     producerUnit->producer.setTcpTransportTryLockTimeout(1000);
@@ -87,7 +87,7 @@ shared_ptr<ConsumerUnit> MsgWorker::getConsumer(const string &topic, const strin
     shared_ptr<ConsumerUnit> consumerUnit(new ConsumerUnit(group));
     consumerUnit->consumer.setNamesrvAddr(nameServerHost_);
     consumerUnit->consumer.setConsumeFromWhere(CONSUME_FROM_LAST_OFFSET);
-    consumerUnit->consumer.setInstanceName(group);
+    consumerUnit->consumer.setInstanceName("RMQPROXY");
     consumerUnit->consumer.subscribe(topic, "*");
     consumerUnit->consumer.setConsumeThreadCount(2);
     consumerUnit->consumer.setTcpTransportPullThreadNum(1);
