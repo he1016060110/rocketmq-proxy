@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(rocketmq-Proxy)
+project(rocketmq-proxy)
 
 set(C_FLAGS
         -g
