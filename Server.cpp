@@ -58,6 +58,8 @@ int main(int argc, char *argv[]) {
   string accessKey;
   string secretKey;
   string esServer;
+  string esUsername;
+  string esPassword;
   string logFileName;
   int port;
   try {
@@ -73,6 +75,9 @@ int main(int argc, char *argv[]) {
     accessKey = jsonItem.get<string>("accessKey");
     secretKey = jsonItem.get<string>("secretKey");
     esServer = jsonItem.get<string>("esServer");
+    esServer = jsonItem.get<string>("esServer");
+    esUsername = jsonItem.get<string>("esUsername");
+    esPassword = jsonItem.get<string>("esPassword");
     host = jsonItem.get<string>("host");
     logFileName = jsonItem.get<string>("logFileName");
     port = jsonItem.get<int>("port");
@@ -82,7 +87,7 @@ int main(int argc, char *argv[]) {
   }
 
   ServerImpl server(host, port, nameServer, accessKey, secretKey, "channel");
-  ProxyLogger logger(esServer, logFileName, 100);
+  ProxyLogger logger(esServer, esUsername, esPassword, logFileName, 100);
   CallDataBase::msgWorker->setConfig(nameServer, accessKey, secretKey, "channel");
   CallDataBase::msgWorker->setLogger(&logger);
   CallDataBase::msgWorker->runAll();
