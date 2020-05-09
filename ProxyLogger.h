@@ -33,6 +33,8 @@ class ProxyLogger {
     int max;
     QueueTS<shared_ptr<LogUnit>> logQueue;
     string host;
+    string esUsername;
+    string esPassword;
     FILE *logFile;
     int esErrorCount;
     int esErrorMax;
@@ -40,7 +42,7 @@ class ProxyLogger {
     void getTime(string &timeStr);
     bool bulk(const string &url, const string &data);
 public:
-    ProxyLogger(string esHost, string logFileName, int _max);
+    ProxyLogger(string esHost, string username, string password, string logFileName, int _max);
     bool writeLog(int type, string msgId, string topic, string group, string body, int delayLevel, int status);
     void loopConsumeLog();
 };

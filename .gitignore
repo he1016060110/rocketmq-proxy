@@ -16,3 +16,4 @@ data
 Server
 ProduceClient
 nohup.out
+config/serverLocal.json

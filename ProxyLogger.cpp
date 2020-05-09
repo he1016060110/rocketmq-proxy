@@ -18,8 +18,9 @@ size_t writeData(void *ptr, size_t size, size_t nmemb, string *str) {
   return numbytes;
 }
 
-ProxyLogger::ProxyLogger(string esHost, string logFileName, int _max = 100) : max(_max), host(esHost), esErrorCount(0),
-esErrorMax(10), logFileOpened(false) {
+ProxyLogger::ProxyLogger(string esHost, string username, string password, string logFileName, int _max = 100)
+    : max(_max), host(esHost), esUsername(username), esPassword(password), esErrorCount(0),
+      esErrorMax(10), logFileOpened(false) {
   size_t size = 16;
   char ip[size];
   if (getLocalIp("eth0", ip, size) != 0) {
@@ -44,7 +45,8 @@ void ProxyLogger::getTime(string &timeStr) {
   timeStr.append(t);
 }
 
-bool ProxyLogger::writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0, int status = 0) {
+bool ProxyLogger::writeLog(int type, string msgId, string topic, string group, string body, int delayLevel = 0,
+                           int status = 0) {
   shared_ptr<LogUnit> unit(new LogUnit);
   unit->type = type;
   unit->topic = topic;
@@ -64,7 +66,7 @@ void ProxyLogger::loopConsumeLog() {
   string url = host + "/_bulk";
   auto lastTime = time(0);
 
-  auto checkAndSendLog = [&] () {
+  auto checkAndSendLog = [&]() {
       if (count >= max || ((time(0) - lastTime > 1) && data.size())) {
         if (esErrorCount >= esErrorMax) {
           logFileOpened && fwrite(data.c_str(), data.size(), 1, logFile);
@@ -123,6 +125,8 @@ bool ProxyLogger::bulk(const string &url, const string &data) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
+    curl_easy_setopt(curl, CURLOPT_PASSWORD, esPassword.c_str());
+    curl_easy_setopt(curl, CURLOPT_USERNAME, esUsername.c_str());
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
     curl_slist_free_all(chunk);

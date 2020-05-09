@@ -1,9 +1,0 @@
-{
-  "host":"0.0.0.0",
-  "port": 8090,
-  "accessKey": "dsh2894h",
-  "secretKey": "ndsh2894Tshavq345",
-  "nameServer":"namesrv:9876",
-  "esServer": "http://es.com:9200",
-  "logFileName": "/data/log/es.log"
-}
